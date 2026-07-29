@@ -1,0 +1,19 @@
+# Sistema operativo / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Archivos subidos por el sistema (QR, fotos de baja, respaldos, documentos)
+storage/qr/*
+!storage/qr/.gitkeep
+storage/fotos_baja/*
+!storage/fotos_baja/.gitkeep
+storage/respaldos/*
+!storage/respaldos/.gitkeep
+storage/documentos/*
+!storage/documentos/.gitkeep
+
+# Dependencias (si en el futuro se agrega Composer/Node)
+vendor/
+node_modules/

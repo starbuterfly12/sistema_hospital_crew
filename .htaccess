@@ -1,0 +1,9 @@
+RewriteEngine On
+
+# Sirve archivos y carpetas reales tal cual (public/, storage/ solo si se permite listado directo de assets)
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# Todo lo demas pasa por el front controller
+RewriteRule ^(.*)$ index.php?url=$1 [QSA,L]
