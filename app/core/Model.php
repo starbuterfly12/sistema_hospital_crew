@@ -1,9 +1,8 @@
-<?php
-/**
- * Modelo base. Los modelos concretos extienden esta clase y usan $this->db
- * para consultar la base de datos existente via PDO.
- */
-abstract class Model
+﻿<?php
+
+require_once __DIR__ . '/Database.php';
+
+class Model
 {
     protected PDO $db;
 
@@ -14,19 +13,24 @@ abstract class Model
 
     protected function query(string $sql, array $params = []): PDOStatement
     {
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute($params);
-        return $stmt;
+        $statement = $this->db->prepare($sql);
+        $statement->execute($params);
+
+        return $statement;
     }
 
     protected function fetchOne(string $sql, array $params = []): array|false
     {
-        return $this->query($sql, $params)->fetch();
+        $statement = $this->query($sql, $params);
+
+        return $statement->fetch(PDO::FETCH_ASSOC);
     }
 
     protected function fetchAll(string $sql, array $params = []): array
     {
-        return $this->query($sql, $params)->fetchAll();
+        $statement = $this->query($sql, $params);
+
+        return $statement->fetchAll(PDO::FETCH_ASSOC);
     }
 
     protected function lastInsertId(): string

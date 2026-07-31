@@ -1,41 +1,38 @@
-<?php
-/**
- * Controlador base. Provee carga de vistas dentro del layout y acceso a modelos.
- */
-abstract class Controller
+﻿<?php
+
+class Controller
 {
+    public function __construct()
+    {
+        // Controlador base del sistema.
+    }
+
     protected function model(string $modelName): object
     {
-        $modelFile = APP_ROOT . '/app/models/' . $modelName . '.php';
+        $modelFile = __DIR__ . '/../models/' . $modelName . '.php';
+
+        if (!file_exists($modelFile)) {
+            throw new RuntimeException("Modelo no encontrado: {$modelName}");
+        }
+
         require_once $modelFile;
+
+        if (!class_exists($modelName)) {
+            throw new RuntimeException("Clase de modelo no encontrada: {$modelName}");
+        }
+
         return new $modelName();
     }
 
-    protected function view(string $view, array $data = [], ?string $layout = 'main'): void
+    protected function view(string $view, array $data = []): void
     {
-        extract($data);
+        $viewFile = __DIR__ . '/../views/' . $view . '.php';
 
-        $viewFile = APP_ROOT . '/app/views/' . $view . '.php';
         if (!file_exists($viewFile)) {
-            die('Vista no encontrada: ' . $view);
+            throw new RuntimeException("Vista no encontrada: {$view}");
         }
 
-        if ($layout === null) {
-            require $viewFile;
-            return;
-        }
-
-        ob_start();
+        extract($data, EXTR_SKIP);
         require $viewFile;
-        $content = ob_get_clean();
-
-        $layoutFile = APP_ROOT . '/app/views/layouts/' . $layout . '.php';
-        require $layoutFile;
-    }
-
-    protected function redirect(string $path): void
-    {
-        header('Location: ' . BASE_URL . '/' . ltrim($path, '/'));
-        exit;
     }
 }

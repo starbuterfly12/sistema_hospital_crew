@@ -2,10 +2,10 @@
 
 require_once __DIR__ . '/../core/Controller.php';
 
-class DashboardController extends Controller
+class ResponsablesController extends Controller
 {
     public function index(): void
     {
-        // Aquí se mostrará el panel principal del sistema.
+        // Aquí se mostrará el listado de responsables.
     }
 }
