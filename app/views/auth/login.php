@@ -9,6 +9,10 @@
     <h1>Hospital General de Chiquimula</h1>
     <h2>Sistema de Gestión de Bienes</h2>
 
+    <?php if (isset($error) && $error !== '') : ?>
+        <p><?php echo htmlspecialchars((string) $error); ?></p>
+    <?php endif; ?>
+
     <form method="POST">
         <div>
             <label for="usuario">Usuario</label>
