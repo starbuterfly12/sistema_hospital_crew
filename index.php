@@ -2,9 +2,12 @@
 
 session_start();
 
+require_once __DIR__ . '/vendor/autoload.php';
+
 require_once __DIR__ . '/app/core/Database.php';
 require_once __DIR__ . '/app/core/Model.php';
 require_once __DIR__ . '/app/core/Controller.php';
+require_once __DIR__ . '/app/helpers/url.php';
 
 $modulo = $_GET['modulo'] ?? 'auth';
 $accion = $_GET['accion'] ?? 'index';
@@ -38,6 +41,14 @@ switch ($modulo) {
 
         if ($accion === 'crear') {
             $bienesController->crear();
+        } elseif ($accion === 'ver') {
+            $bienesController->ver();
+        } elseif ($accion === 'editar') {
+            $bienesController->editar();
+        } elseif ($accion === 'cambiar_condicion') {
+            $bienesController->cambiarCondicion();
+        } elseif ($accion === 'generar_qr') {
+            $bienesController->generarQr();
         } else {
             $bienesController->index();
         }

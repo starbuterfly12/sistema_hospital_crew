@@ -37,4 +37,28 @@ class Model
     {
         return $this->db->lastInsertId();
     }
+
+    public function beginTransaction(): bool
+    {
+        return $this->db->beginTransaction();
+    }
+
+    public function commit(): bool
+    {
+        return $this->db->commit();
+    }
+
+    public function rollBack(): bool
+    {
+        if (! $this->db->inTransaction()) {
+            return false;
+        }
+
+        return $this->db->rollBack();
+    }
+
+    public function inTransaction(): bool
+    {
+        return $this->db->inTransaction();
+    }
 }

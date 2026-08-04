@@ -25,6 +25,7 @@
                     <th>Condición</th>
                     <th>Responsable actual</th>
                     <th>Ubicación actual</th>
+                    <th>Acciones</th>
                 </tr>
             </thead>
             <tbody>
@@ -41,6 +42,9 @@
                         <td><?= htmlspecialchars($bien['condicion_bien'] ?: '-', ENT_QUOTES, 'UTF-8') ?></td>
                         <td><?= htmlspecialchars($bien['responsable_actual'] ?: '-', ENT_QUOTES, 'UTF-8') ?></td>
                         <td><?= htmlspecialchars($bien['ubicacion_actual'] ?: '-', ENT_QUOTES, 'UTF-8') ?></td>
+                        <td>
+                            <a href="index.php?modulo=bienes&accion=ver&id=<?= (int) $bien['id_bien'] ?>">Ver</a>
+                        </td>
                     </tr>
                 <?php endforeach; ?>
             </tbody>
