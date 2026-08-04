@@ -3,7 +3,7 @@
 return [
     'host' => 'localhost',
     'database' => 'sistema_hospital',
-    'username' => 'root',
-    'password' => '',
+    'username' => 'USUARIO_BASE_DATOS',
+    'password' => 'CONTRASENA_BASE_DATOS',
     'charset' => 'utf8mb4',
 ];

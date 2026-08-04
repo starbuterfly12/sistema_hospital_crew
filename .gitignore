@@ -17,3 +17,7 @@ storage/documentos/*
 # Dependencias (si en el futuro se agrega Composer/Node)
 vendor/
 node_modules/
+
+# Configuracion local con credenciales reales
+config/Database.php
+config/app.php
