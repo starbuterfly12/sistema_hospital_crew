@@ -23,6 +23,8 @@
     <h1>Registrar bien</h1>
 
     <form method="POST" id="form-crear-bien">
+        <?= csrfField() ?>
+
         <div>
             <label for="id_forma_ingreso">Forma de ingreso</label>
             <select id="id_forma_ingreso" name="id_forma_ingreso" required>

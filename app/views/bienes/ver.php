@@ -100,9 +100,12 @@
 
         <p><?= htmlspecialchars($bien['codigo_qr'] ?? '', ENT_QUOTES, 'UTF-8') ?></p>
 
-        <form method="POST" action="index.php?modulo=bienes&accion=generar_qr&id=<?= (int) $bien['id_bien'] ?>">
-            <button type="submit">Regenerar QR</button>
-        </form>
+        <?php if (tieneRol(['Administrador', 'Operativo'])): ?>
+            <form method="POST" action="index.php?modulo=bienes&accion=generar_qr&id=<?= (int) $bien['id_bien'] ?>">
+                <?= csrfField() ?>
+                <button type="submit">Regenerar QR</button>
+            </form>
+        <?php endif; ?>
 
         <p>
             <a href="<?= htmlspecialchars($bien['ruta_qr'], ENT_QUOTES, 'UTF-8') ?>" target="_blank" rel="noopener noreferrer">
@@ -112,21 +115,26 @@
     <?php else: ?>
         <p>Este bien aún no tiene un código QR generado.</p>
 
-        <form method="POST" action="index.php?modulo=bienes&accion=generar_qr&id=<?= (int) $bien['id_bien'] ?>">
-            <button type="submit">Generar QR</button>
-        </form>
+        <?php if (tieneRol(['Administrador', 'Operativo'])): ?>
+            <form method="POST" action="index.php?modulo=bienes&accion=generar_qr&id=<?= (int) $bien['id_bien'] ?>">
+                <?= csrfField() ?>
+                <button type="submit">Generar QR</button>
+            </form>
+        <?php endif; ?>
     <?php endif; ?>
 
-    <p>
-        <a href="index.php?modulo=bienes&accion=editar&id=<?= (int) $bien['id_bien'] ?>">
-            Editar
-        </a>
-    </p>
-    <p>
-        <a href="index.php?modulo=bienes&accion=cambiar_condicion&id=<?= (int) $bien['id_bien'] ?>">
-            Cambiar condición
-        </a>
-    </p>
+    <?php if (tieneRol(['Administrador', 'Operativo'])): ?>
+        <p>
+            <a href="index.php?modulo=bienes&accion=editar&id=<?= (int) $bien['id_bien'] ?>">
+                Editar
+            </a>
+        </p>
+        <p>
+            <a href="index.php?modulo=bienes&accion=cambiar_condicion&id=<?= (int) $bien['id_bien'] ?>">
+                Cambiar condición
+            </a>
+        </p>
+    <?php endif; ?>
     <p><a href="index.php?modulo=bienes">Volver</a></p>
 </body>
 </html>

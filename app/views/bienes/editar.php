@@ -24,6 +24,8 @@
     <h1>Editar bien</h1>
 
     <form method="POST">
+        <?= csrfField() ?>
+
         <div>
             <label>Forma de ingreso</label>
             <p><?= htmlspecialchars($bien['nombre_forma'] ?? '', ENT_QUOTES, 'UTF-8') ?></p>

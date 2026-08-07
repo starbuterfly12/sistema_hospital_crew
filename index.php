@@ -8,6 +8,8 @@ require_once __DIR__ . '/app/core/Database.php';
 require_once __DIR__ . '/app/core/Model.php';
 require_once __DIR__ . '/app/core/Controller.php';
 require_once __DIR__ . '/app/helpers/url.php';
+require_once __DIR__ . '/app/helpers/auth.php';
+require_once __DIR__ . '/app/helpers/csrf.php';
 
 $modulo = $_GET['modulo'] ?? 'auth';
 $accion = $_GET['accion'] ?? 'index';

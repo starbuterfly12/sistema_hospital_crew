@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 require_once __DIR__ . '/../core/Controller.php';
 
@@ -29,6 +29,8 @@ class BienesController extends Controller
             exit;
         }
 
+        requireRole(['Administrador', 'Operativo']);
+
         $formaIngresoModel = $this->model('FormaIngreso');
         $categoriaBienModel = $this->model('CategoriaBien');
         $estadoBienModel = $this->model('EstadoBien');
@@ -53,6 +55,8 @@ class BienesController extends Controller
             ]);
             return;
         }
+
+        verifyCsrf();
 
         $codigoInterno = trim($_POST['codigo_interno'] ?? '');
         $codigoSicoin = trim($_POST['codigo_sicoin'] ?? '');
@@ -155,10 +159,14 @@ class BienesController extends Controller
             $error = 'El estado del bien es obligatorio.';
         } elseif ($condicionBien === '') {
             $error = 'La condición del bien es obligatoria.';
+        } elseif (!in_array($condicionBien, ['Bueno', 'Regular', 'Malo'], true)) {
+            $error = 'La condición seleccionada no es válida.';
         } elseif ($idFormaIngreso <= 0) {
             $error = 'La forma de ingreso es obligatoria.';
         } elseif ($fechaIngreso === '') {
             $error = 'La fecha de ingreso es obligatoria.';
+        } elseif (!$this->esFechaValida($fechaIngreso)) {
+            $error = 'La fecha de ingreso no es válida.';
         } elseif ($idUbicacionActual <= 0) {
             $error = 'La ubicación actual es obligatoria.';
         } else {
@@ -266,6 +274,8 @@ class BienesController extends Controller
                             $error = 'El número de factura es obligatorio para la compra.';
                         } elseif ($fechaFactura === '') {
                             $error = 'La fecha de factura es obligatoria para la compra.';
+                        } elseif (!$this->esFechaValida($fechaFactura)) {
+                            $error = 'La fecha de factura no es válida.';
                         } elseif ($datos['costo'] === null) {
                             $error = 'El costo es obligatorio para compra.';
                         } elseif ($tieneGarantia === 1 && $tiempoGarantia === '') {
@@ -278,6 +288,8 @@ class BienesController extends Controller
                             $error = 'La entidad donante es obligatoria para la donación.';
                         } elseif ($numeroActa === '') {
                             $error = 'El número de acta es obligatorio para la donación.';
+                        } elseif ($fechaActa !== '' && !$this->esFechaValida($fechaActa)) {
+                            $error = 'La fecha de acta no es válida.';
                         } elseif ($datos['valor_estimado'] === null) {
                             $error = 'El valor estimado es obligatorio para donación.';
                         }
@@ -290,6 +302,8 @@ class BienesController extends Controller
                             $error = 'El código de la unidad de origen es obligatorio para el traslado.';
                         } elseif ($numeroActa === '') {
                             $error = 'El número de acta es obligatorio para el traslado.';
+                        } elseif ($fechaActa !== '' && !$this->esFechaValida($fechaActa)) {
+                            $error = 'La fecha de acta no es válida.';
                         } elseif ($datos['costo'] === null) {
                             $error = 'El costo es obligatorio para traslado.';
                         }
@@ -382,6 +396,18 @@ class BienesController extends Controller
                 $qr = $this->generarArchivoQr($idBien);
 
                 $bienModel->actualizarQr($idBien, $qr['codigo_qr'], $qr['ruta_qr']);
+
+                $bitacoraModel->registrar(
+                    idUsuario: (int) $_SESSION['id_usuario'],
+                    accion: 'GENERAR_QR_BIEN',
+                    modulo: 'Bienes',
+                    resultado: 'exitoso',
+                    descripcion: 'Se generó el código QR del bien con código interno ' . $datos['codigo_interno'] . '.',
+                    tablaAfectada: 'bienes',
+                    idRegistroAfectado: $idBien,
+                    ipOrigen: $_SERVER['REMOTE_ADDR'] ?? null,
+                    usuarioIntentado: null
+                );
             } catch (Throwable $qrError) {
                 error_log(
                     'El bien ' . $idBien .
@@ -400,7 +426,10 @@ class BienesController extends Controller
                 $bienModel->rollBack();
             }
 
-            $error = 'No fue posible registrar el bien. Verifique los datos e intente nuevamente.';
+            error_log('Error al registrar el bien: ' . $e->getMessage());
+
+            $error = $this->mensajeErrorDuplicado($e)
+                ?? 'No fue posible registrar el bien. Verifique los datos e intente nuevamente.';
 
             $datosFormulario = array_merge(
                 $datos,
@@ -470,6 +499,8 @@ class BienesController extends Controller
             exit;
         }
 
+        requireRole(['Administrador', 'Operativo']);
+
         $idBien = (int) ($_GET['id'] ?? 0);
 
         if ($idBien <= 0) {
@@ -488,6 +519,7 @@ class BienesController extends Controller
         $ingresoCompraModel = $this->model('IngresoCompra');
         $ingresoDonacionModel = $this->model('IngresoDonacion');
         $ingresoTrasladoModel = $this->model('IngresoTraslado');
+        $bitacoraModel = $this->model('Bitacora');
         $formaIngresoModel = $this->model('FormaIngreso');
         $categoriaBienModel = $this->model('CategoriaBien');
         $estadoBienModel = $this->model('EstadoBien');
@@ -570,6 +602,8 @@ class BienesController extends Controller
 
             return;
         }
+
+        verifyCsrf();
 
         $codigoInterno = trim($_POST['codigo_interno'] ?? '');
         $codigoSicoin = trim($_POST['codigo_sicoin'] ?? '');
@@ -668,8 +702,12 @@ class BienesController extends Controller
             $error = 'El estado del bien es obligatorio.';
         } elseif ($condicionBien === '') {
             $error = 'La condición del bien es obligatoria.';
+        } elseif (!in_array($condicionBien, ['Bueno', 'Regular', 'Malo'], true)) {
+            $error = 'La condición seleccionada no es válida.';
         } elseif ($fechaIngreso === '') {
             $error = 'La fecha de ingreso es obligatoria.';
+        } elseif (!$this->esFechaValida($fechaIngreso)) {
+            $error = 'La fecha de ingreso no es válida.';
         } elseif ($idUbicacionActual <= 0) {
             $error = 'La ubicación actual es obligatoria.';
         } else {
@@ -755,6 +793,8 @@ class BienesController extends Controller
                         $error = 'El número de factura es obligatorio para la compra.';
                     } elseif ($fechaFactura === '') {
                         $error = 'La fecha de factura es obligatoria para la compra.';
+                    } elseif (!$this->esFechaValida($fechaFactura)) {
+                        $error = 'La fecha de factura no es válida.';
                     } elseif ($datos['costo'] === null) {
                         $error = 'El costo es obligatorio para compra.';
                     } elseif ($tieneGarantia === 1 && $tiempoGarantia === '') {
@@ -767,6 +807,8 @@ class BienesController extends Controller
                         $error = 'La entidad donante es obligatoria para la donación.';
                     } elseif ($numeroActa === '') {
                         $error = 'El número de acta es obligatorio para la donación.';
+                    } elseif ($fechaActa !== '' && !$this->esFechaValida($fechaActa)) {
+                        $error = 'La fecha de acta no es válida.';
                     } elseif ($datos['valor_estimado'] === null) {
                         $error = 'El valor estimado es obligatorio para donación.';
                     }
@@ -779,6 +821,8 @@ class BienesController extends Controller
                         $error = 'El código de la unidad de origen es obligatorio para el traslado.';
                     } elseif ($numeroActa === '') {
                         $error = 'El número de acta es obligatorio para el traslado.';
+                    } elseif ($fechaActa !== '' && !$this->esFechaValida($fechaActa)) {
+                        $error = 'La fecha de acta no es válida.';
                     } elseif ($datos['costo'] === null) {
                         $error = 'El costo es obligatorio para traslado.';
                     }
@@ -836,6 +880,18 @@ class BienesController extends Controller
                 $ingresoTrasladoModel->actualizarPorBienId($idBien, $datosIngresoTraslado);
             }
 
+            $bitacoraModel->registrar(
+                idUsuario: (int) $_SESSION['id_usuario'],
+                accion: 'MODIFICAR_BIEN',
+                modulo: 'Bienes',
+                resultado: 'exitoso',
+                descripcion: 'Se modificó la información del bien con código interno ' . $datos['codigo_interno'] . '.',
+                tablaAfectada: 'bienes',
+                idRegistroAfectado: $idBien,
+                ipOrigen: $_SERVER['REMOTE_ADDR'] ?? null,
+                usuarioIntentado: null
+            );
+
             $bienModel->commit();
 
             header('Location: index.php?modulo=bienes&accion=ver&id=' . $idBien);
@@ -845,7 +901,10 @@ class BienesController extends Controller
                 $bienModel->rollBack();
             }
 
-            $error = 'No fue posible actualizar el bien. Verifique los datos e intente nuevamente.';
+            error_log('Error al actualizar el bien: ' . $e->getMessage());
+
+            $error = $this->mensajeErrorDuplicado($e)
+                ?? 'No fue posible actualizar el bien. Verifique los datos e intente nuevamente.';
 
             $datosFormulario = array_merge(
                 $datos,
@@ -891,6 +950,8 @@ class BienesController extends Controller
             exit;
         }
 
+        requireRole(['Administrador', 'Operativo']);
+
         $idBien = (int) ($_GET['id'] ?? 0);
 
         if ($idBien <= 0) {
@@ -899,6 +960,7 @@ class BienesController extends Controller
         }
 
         $bienModel = $this->model('Bien');
+        $bitacoraModel = $this->model('Bitacora');
         $bien = $bienModel->findById($idBien);
 
         if ($bien === false) {
@@ -914,6 +976,8 @@ class BienesController extends Controller
             return;
         }
 
+        verifyCsrf();
+
         $condicion = trim($_POST['condicion_bien'] ?? '');
         $condicionesValidas = ['Bueno', 'Regular', 'Malo'];
 
@@ -925,7 +989,37 @@ class BienesController extends Controller
             return;
         }
 
-        $bienModel->cambiarCondicion($idBien, $condicion);
+        $condicionAnterior = $bien['condicion_bien'] ?? '';
+
+        try {
+            $bienModel->beginTransaction();
+
+            $bienModel->cambiarCondicion($idBien, $condicion);
+
+            $bitacoraModel->registrar(
+                idUsuario: (int) $_SESSION['id_usuario'],
+                accion: 'CAMBIAR_CONDICION_BIEN',
+                modulo: 'Bienes',
+                resultado: 'exitoso',
+                descripcion: 'Cambio de condición: ' . $condicionAnterior . ' → ' . $condicion . '.',
+                tablaAfectada: 'bienes',
+                idRegistroAfectado: $idBien,
+                ipOrigen: $_SERVER['REMOTE_ADDR'] ?? null,
+                usuarioIntentado: null
+            );
+
+            $bienModel->commit();
+        } catch (Throwable $e) {
+            if ($bienModel->inTransaction()) {
+                $bienModel->rollBack();
+            }
+
+            $this->view('bienes/cambiar_condicion', [
+                'bien' => $bien,
+                'error' => 'No fue posible cambiar la condición del bien. Intente nuevamente.',
+            ]);
+            return;
+        }
 
         header('Location: index.php?modulo=bienes&accion=ver&id=' . $idBien);
         exit;
@@ -938,11 +1032,15 @@ class BienesController extends Controller
             exit;
         }
 
+        requireRole(['Administrador', 'Operativo']);
+
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             http_response_code(405);
             echo 'Método no permitido.';
             return;
         }
+
+        verifyCsrf();
 
         $idBien = (int) ($_GET['id'] ?? 0);
 
@@ -952,6 +1050,7 @@ class BienesController extends Controller
         }
 
         $bienModel = $this->model('Bien');
+        $bitacoraModel = $this->model('Bitacora');
         $bien = $bienModel->findById($idBien);
 
         if ($bien === false) {
@@ -959,10 +1058,30 @@ class BienesController extends Controller
             return;
         }
 
+        if (empty($bien['codigo_qr'])) {
+            $accionBitacora = 'GENERAR_QR_BIEN';
+            $descripcionBitacora = 'Se generó el código QR del bien con código interno ' . $bien['codigo_interno'] . '.';
+        } else {
+            $accionBitacora = 'REGENERAR_QR_BIEN';
+            $descripcionBitacora = 'Se regeneró el código QR del bien con código interno ' . $bien['codigo_interno'] . '.';
+        }
+
         try {
             $qr = $this->generarArchivoQr($idBien);
 
             $bienModel->actualizarQr($idBien, $qr['codigo_qr'], $qr['ruta_qr']);
+
+            $bitacoraModel->registrar(
+                idUsuario: (int) $_SESSION['id_usuario'],
+                accion: $accionBitacora,
+                modulo: 'Bienes',
+                resultado: 'exitoso',
+                descripcion: $descripcionBitacora,
+                tablaAfectada: 'bienes',
+                idRegistroAfectado: $idBien,
+                ipOrigen: $_SERVER['REMOTE_ADDR'] ?? null,
+                usuarioIntentado: null
+            );
 
             $_SESSION['mensaje_exito'] = 'Código QR generado correctamente.';
 
@@ -1016,6 +1135,40 @@ class BienesController extends Controller
             'ruta_qr' => $rutaQr,
             'ruta_absoluta' => $rutaAbsoluta,
         ];
+    }
+
+    private function esFechaValida(string $fecha): bool
+    {
+        $fechaObjeto = DateTime::createFromFormat('!Y-m-d', $fecha);
+
+        return $fechaObjeto !== false && $fechaObjeto->format('Y-m-d') === $fecha;
+    }
+
+    private function mensajeErrorDuplicado(Throwable $e): ?string
+    {
+        if (!($e instanceof PDOException)) {
+            return null;
+        }
+
+        if (($e->errorInfo[0] ?? null) !== '23000') {
+            return null;
+        }
+
+        $detalleError = $e->errorInfo[2] ?? '';
+
+        if (str_contains($detalleError, 'uq_bienes_codigo_interno')) {
+            return 'El código interno ingresado ya está registrado.';
+        }
+
+        if (str_contains($detalleError, 'uq_bienes_codigo_sicoin')) {
+            return 'El código SICOIN ingresado ya está registrado.';
+        }
+
+        if (str_contains($detalleError, 'uq_bienes_serie')) {
+            return 'La serie ingresada ya está registrada.';
+        }
+
+        return null;
     }
 }
 

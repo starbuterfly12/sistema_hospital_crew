@@ -25,6 +25,8 @@
     <?php endif; ?>
 
     <form method="POST">
+        <?= csrfField() ?>
+
         <div>
             <label for="condicion_bien">Condición del bien</label>
             <select id="condicion_bien" name="condicion_bien" required>
