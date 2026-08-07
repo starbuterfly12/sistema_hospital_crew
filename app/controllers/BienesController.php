@@ -358,6 +358,21 @@ class BienesController extends Controller
 
             $bienModel->commit();
 
+            try {
+                $qr = $this->generarArchivoQr($idBien);
+
+                $bienModel->actualizarQr($idBien, $qr['codigo_qr'], $qr['ruta_qr']);
+            } catch (Throwable $qrError) {
+                error_log(
+                    'El bien ' . $idBien .
+                    ' fue registrado, pero no se pudo generar su QR: ' .
+                    $qrError->getMessage()
+                );
+
+                $_SESSION['mensaje_error'] =
+                    'El bien fue registrado correctamente, pero no fue posible generar el código QR. Puede generarlo desde la ficha del bien.';
+            }
+
             header('Location: index.php?modulo=bienes&accion=ver&id=' . $idBien);
             exit;
         } catch (Throwable $e) {
@@ -925,32 +940,9 @@ class BienesController extends Controller
         }
 
         try {
-            $codigoQr = url('index.php?modulo=bienes&accion=ver&id=' . $idBien);
+            $qr = $this->generarArchivoQr($idBien);
 
-            $rutaQr = 'storage/qr/bien_' . $idBien . '.png';
-            $rutaAbsoluta = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR
-                . str_replace('/', DIRECTORY_SEPARATOR, $rutaQr);
-
-            $resultado = (new Builder())->build(
-                writer: new PngWriter(),
-                data: $codigoQr,
-                size: 300,
-                margin: 10
-            );
-
-            $resultado->saveToFile($rutaAbsoluta);
-
-            if (!file_exists($rutaAbsoluta) || filesize($rutaAbsoluta) <= 0) {
-                throw new RuntimeException('El archivo del QR no se generó correctamente.');
-            }
-
-            $info = getimagesize($rutaAbsoluta);
-
-            if ($info === false || ($info['mime'] ?? '') !== 'image/png') {
-                throw new RuntimeException('El archivo generado no es un PNG válido.');
-            }
-
-            $bienModel->actualizarQr($idBien, $codigoQr, $rutaQr);
+            $bienModel->actualizarQr($idBien, $qr['codigo_qr'], $qr['ruta_qr']);
 
             $_SESSION['mensaje_exito'] = 'Código QR generado correctamente.';
 
@@ -964,6 +956,46 @@ class BienesController extends Controller
             header('Location: index.php?modulo=bienes&accion=ver&id=' . $idBien);
             exit;
         }
+    }
+
+    private function generarArchivoQr(int $idBien): array
+    {
+        $codigoQr = url('index.php?modulo=bienes&accion=ver&id=' . $idBien);
+
+        $rutaQr = 'storage/qr/bien_' . $idBien . '.png';
+        $rutaAbsoluta = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR
+            . str_replace('/', DIRECTORY_SEPARATOR, $rutaQr);
+
+        $resultado = (new Builder())->build(
+            writer: new PngWriter(),
+            data: $codigoQr,
+            size: 300,
+            margin: 10
+        );
+
+        $resultado->saveToFile($rutaAbsoluta);
+
+        if (!file_exists($rutaAbsoluta) || filesize($rutaAbsoluta) <= 0) {
+            if (file_exists($rutaAbsoluta)) {
+                unlink($rutaAbsoluta);
+            }
+
+            throw new RuntimeException('El archivo del QR no se generó correctamente.');
+        }
+
+        $info = getimagesize($rutaAbsoluta);
+
+        if ($info === false || ($info['mime'] ?? '') !== 'image/png') {
+            unlink($rutaAbsoluta);
+
+            throw new RuntimeException('El archivo generado no es un PNG válido.');
+        }
+
+        return [
+            'codigo_qr' => $codigoQr,
+            'ruta_qr' => $rutaQr,
+            'ruta_absoluta' => $rutaAbsoluta,
+        ];
     }
 }
 
