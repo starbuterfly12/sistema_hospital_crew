@@ -336,6 +336,7 @@ class BienesController extends Controller
         $ingresoCompraModel = $this->model('IngresoCompra');
         $ingresoDonacionModel = $this->model('IngresoDonacion');
         $ingresoTrasladoModel = $this->model('IngresoTraslado');
+        $bitacoraModel = $this->model('Bitacora');
 
         try {
             $bienModel->beginTransaction();
@@ -355,6 +356,25 @@ class BienesController extends Controller
                 $datosIngresoTraslado['id_bien'] = $idBien;
                 $ingresoTrasladoModel->crear($datosIngresoTraslado);
             }
+
+            $nombreFormaTexto = match ($nombreForma) {
+                'compra' => 'Compra',
+                'donacion' => 'Donación',
+                'traslado' => 'Traslado',
+                default => ucfirst($nombreForma),
+            };
+
+            $bitacoraModel->registrar(
+                idUsuario: (int) $_SESSION['id_usuario'],
+                accion: 'REGISTRAR_BIEN',
+                modulo: 'Bienes',
+                resultado: 'exitoso',
+                descripcion: 'Se registró el bien con código interno ' . $datos['codigo_interno'] . ' mediante ' . $nombreFormaTexto . '.',
+                tablaAfectada: 'bienes',
+                idRegistroAfectado: $idBien,
+                ipOrigen: $_SERVER['REMOTE_ADDR'] ?? null,
+                usuarioIntentado: null
+            );
 
             $bienModel->commit();
 
