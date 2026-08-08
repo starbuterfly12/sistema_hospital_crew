@@ -56,6 +56,28 @@ switch ($modulo) {
         }
         break;
 
+    case 'responsables':
+        if (!isset($_SESSION['id_usuario'])) {
+            header('Location: index.php');
+            exit;
+        }
+
+        require_once __DIR__ . '/app/controllers/ResponsablesController.php';
+        $responsablesController = new ResponsablesController();
+
+        if ($accion === 'crear') {
+            $responsablesController->crear();
+        } elseif ($accion === 'ver') {
+            $responsablesController->ver();
+        } elseif ($accion === 'editar') {
+            $responsablesController->editar();
+        } elseif ($accion === 'cambiar_estado') {
+            $responsablesController->cambiarEstado();
+        } else {
+            $responsablesController->index();
+        }
+        break;
+
     default:
         echo 'Módulo no encontrado';
         break;

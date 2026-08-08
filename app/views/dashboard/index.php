@@ -14,8 +14,8 @@
 
     <h2>Módulos</h2>
     <ul>
-        <li>Bienes</li>
-        <li>Responsables</li>
+        <li><a href="index.php?modulo=bienes">Bienes</a></li>
+        <li><a href="index.php?modulo=responsables">Responsables</a></li>
         <li>Áreas y ubicaciones</li>
         <li>Asignaciones</li>
         <li>Tarjetas de responsabilidad</li>

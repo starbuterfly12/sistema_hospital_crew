@@ -8,6 +8,12 @@
 <body>
     <h1>Bienes institucionales</h1>
 
+    <?php if (tieneRol(['Administrador', 'Operativo'])): ?>
+        <p>
+            <a href="index.php?modulo=bienes&accion=crear">Registrar bien</a>
+        </p>
+    <?php endif; ?>
+
     <?php if (empty($bienes)): ?>
         <p>No hay bienes registrados.</p>
     <?php else: ?>
@@ -50,5 +56,7 @@
             </tbody>
         </table>
     <?php endif; ?>
+
+    <p><a href="index.php?modulo=dashboard">Volver al panel principal</a></p>
 </body>
 </html>
