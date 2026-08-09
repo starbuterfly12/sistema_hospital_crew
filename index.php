@@ -78,6 +78,28 @@ switch ($modulo) {
         }
         break;
 
+    case 'ubicaciones':
+        if (!isset($_SESSION['id_usuario'])) {
+            header('Location: index.php');
+            exit;
+        }
+
+        require_once __DIR__ . '/app/controllers/UbicacionesController.php';
+        $ubicacionesController = new UbicacionesController();
+
+        if ($accion === 'crear') {
+            $ubicacionesController->crear();
+        } elseif ($accion === 'ver') {
+            $ubicacionesController->ver();
+        } elseif ($accion === 'editar') {
+            $ubicacionesController->editar();
+        } elseif ($accion === 'cambiar_estado') {
+            $ubicacionesController->cambiarEstado();
+        } else {
+            $ubicacionesController->index();
+        }
+        break;
+
     default:
         echo 'Módulo no encontrado';
         break;

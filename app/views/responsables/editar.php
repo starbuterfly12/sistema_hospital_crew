@@ -85,7 +85,7 @@
                     <option
                         value="<?= (int) $ubicacion['id_ubicacion'] ?>"
                         <?= ((int) ($datosFormulario['id_ubicacion'] ?? 0) === (int) $ubicacion['id_ubicacion']) ? ' selected' : '' ?>
-                    ><?= htmlspecialchars($ubicacion['nombre_ubicacion'] . ' - ' . $ubicacion['tipo_ubicacion'], ENT_QUOTES, 'UTF-8') ?></option>
+                    ><?= htmlspecialchars($ubicacion['nombre_ubicacion'] . ' - ' . $ubicacion['tipo_ubicacion'], ENT_QUOTES, 'UTF-8') ?><?= !empty($ubicacion['es_inactiva']) ? ' (Inactiva)' : '' ?></option>
                 <?php endforeach; ?>
             </select>
         </div>

@@ -532,6 +532,55 @@ class BienesController extends Controller
         $responsables = $responsableModel->getActivos();
         $ubicaciones = $ubicacionModel->getActivas();
 
+        $idUbicacionOriginal = $bien['id_ubicacion_actual'] !== null
+            ? (int) $bien['id_ubicacion_actual']
+            : null;
+
+        $idResponsableOriginal = $bien['id_responsable_actual'] !== null
+            ? (int) $bien['id_responsable_actual']
+            : null;
+
+        $ubicacionesFormulario = $ubicaciones;
+
+        if ($idUbicacionOriginal !== null) {
+            $ubicacionOriginalPresente = false;
+            foreach ($ubicaciones as $ubicacion) {
+                if ((int) $ubicacion['id_ubicacion'] === $idUbicacionOriginal) {
+                    $ubicacionOriginalPresente = true;
+                    break;
+                }
+            }
+
+            if (!$ubicacionOriginalPresente) {
+                $ubicacionesFormulario[] = [
+                    'id_ubicacion' => $idUbicacionOriginal,
+                    'nombre_ubicacion' => $bien['ubicacion_actual'],
+                    'tipo_ubicacion' => $bien['tipo_ubicacion'],
+                    'es_inactiva' => true,
+                ];
+            }
+        }
+
+        $responsablesFormulario = $responsables;
+
+        if ($idResponsableOriginal !== null) {
+            $responsableOriginalPresente = false;
+            foreach ($responsables as $responsable) {
+                if ((int) $responsable['id_responsable'] === $idResponsableOriginal) {
+                    $responsableOriginalPresente = true;
+                    break;
+                }
+            }
+
+            if (!$responsableOriginalPresente) {
+                $responsablesFormulario[] = [
+                    'id_responsable' => $idResponsableOriginal,
+                    'nombre_completo' => $bien['responsable_actual'],
+                    'es_inactivo' => true,
+                ];
+            }
+        }
+
         $idFormaIngresoOriginal = (int) ($bien['id_forma_ingreso'] ?? 0);
 
         $formaNombre = mb_strtolower(trim($bien['nombre_forma'] ?? ''), 'UTF-8');
@@ -595,8 +644,8 @@ class BienesController extends Controller
                 'formasIngreso' => $formasIngreso,
                 'categorias' => $categorias,
                 'estados' => $estados,
-                'responsables' => $responsables,
-                'ubicaciones' => $ubicaciones,
+                'responsables' => $responsablesFormulario,
+                'ubicaciones' => $ubicacionesFormulario,
                 'error' => null,
             ]);
 
@@ -746,6 +795,10 @@ class BienesController extends Controller
                     }
                 }
 
+                if (!$ubicacionValida && $idUbicacionOriginal !== null && $idUbicacionActual === $idUbicacionOriginal) {
+                    $ubicacionValida = true;
+                }
+
                 if (!$ubicacionValida) {
                     $error = 'La ubicación seleccionada no es válida.';
                 }
@@ -758,6 +811,10 @@ class BienesController extends Controller
                         $responsableValido = true;
                         break;
                     }
+                }
+
+                if (!$responsableValido && $idResponsableOriginal !== null && $datos['id_responsable_actual'] === $idResponsableOriginal) {
+                    $responsableValido = true;
                 }
 
                 if (!$responsableValido) {
@@ -860,8 +917,8 @@ class BienesController extends Controller
                 'formasIngreso' => $formasIngreso,
                 'categorias' => $categorias,
                 'estados' => $estados,
-                'responsables' => $responsables,
-                'ubicaciones' => $ubicaciones,
+                'responsables' => $responsablesFormulario,
+                'ubicaciones' => $ubicacionesFormulario,
             ]);
 
             return;
@@ -935,8 +992,8 @@ class BienesController extends Controller
                 'formasIngreso' => $formasIngreso,
                 'categorias' => $categorias,
                 'estados' => $estados,
-                'responsables' => $responsables,
-                'ubicaciones' => $ubicaciones,
+                'responsables' => $responsablesFormulario,
+                'ubicaciones' => $ubicacionesFormulario,
             ]);
 
             return;

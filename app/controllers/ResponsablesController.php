@@ -112,6 +112,18 @@ class ResponsablesController extends Controller
             $error = 'El teléfono no puede superar los 20 caracteres.';
         } elseif ($idUbicacion <= 0) {
             $error = 'Debe seleccionar una ubicación.';
+        } else {
+            $ubicacionValida = false;
+            foreach ($ubicaciones as $ubicacion) {
+                if ((int) $ubicacion['id_ubicacion'] === $idUbicacion) {
+                    $ubicacionValida = true;
+                    break;
+                }
+            }
+
+            if (!$ubicacionValida) {
+                $error = 'La ubicación seleccionada no es válida.';
+            }
         }
 
         if ($error !== null) {
@@ -202,10 +214,31 @@ class ResponsablesController extends Controller
 
         $ubicaciones = $ubicacionModel->getActivas();
 
+        $idUbicacionOriginal = (int) $responsable['id_ubicacion'];
+
+        $ubicacionesFormulario = $ubicaciones;
+
+        $ubicacionOriginalPresente = false;
+        foreach ($ubicaciones as $ubicacion) {
+            if ((int) $ubicacion['id_ubicacion'] === $idUbicacionOriginal) {
+                $ubicacionOriginalPresente = true;
+                break;
+            }
+        }
+
+        if (!$ubicacionOriginalPresente) {
+            $ubicacionesFormulario[] = [
+                'id_ubicacion' => $idUbicacionOriginal,
+                'nombre_ubicacion' => $responsable['nombre_ubicacion'],
+                'tipo_ubicacion' => $responsable['tipo_ubicacion'],
+                'es_inactiva' => true,
+            ];
+        }
+
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             $this->view('responsables/editar', [
                 'responsable' => $responsable,
-                'ubicaciones' => $ubicaciones,
+                'ubicaciones' => $ubicacionesFormulario,
                 'error' => null,
                 'datosFormulario' => $responsable,
             ]);
@@ -246,12 +279,28 @@ class ResponsablesController extends Controller
             $error = 'El teléfono no puede superar los 20 caracteres.';
         } elseif ($idUbicacion <= 0) {
             $error = 'Debe seleccionar una ubicación.';
+        } else {
+            $ubicacionValida = false;
+            foreach ($ubicaciones as $ubicacion) {
+                if ((int) $ubicacion['id_ubicacion'] === $idUbicacion) {
+                    $ubicacionValida = true;
+                    break;
+                }
+            }
+
+            if (!$ubicacionValida && $idUbicacion === $idUbicacionOriginal) {
+                $ubicacionValida = true;
+            }
+
+            if (!$ubicacionValida) {
+                $error = 'La ubicación seleccionada no es válida.';
+            }
         }
 
         if ($error !== null) {
             $this->view('responsables/editar', [
                 'responsable' => $responsable,
-                'ubicaciones' => $ubicaciones,
+                'ubicaciones' => $ubicacionesFormulario,
                 'error' => $error,
                 'datosFormulario' => $datosFormulario,
             ]);
@@ -301,7 +350,7 @@ class ResponsablesController extends Controller
 
             $this->view('responsables/editar', [
                 'responsable' => $responsable,
-                'ubicaciones' => $ubicaciones,
+                'ubicaciones' => $ubicacionesFormulario,
                 'error' => $error,
                 'datosFormulario' => $datosFormulario,
             ]);

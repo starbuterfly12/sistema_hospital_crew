@@ -119,7 +119,7 @@
             <select id="id_responsable_actual" name="id_responsable_actual">
                 <option value="">Seleccione</option>
                 <?php foreach ($responsables as $responsable): ?>
-                    <option value="<?= (int) $responsable['id_responsable'] ?>"<?= ((int) ($datos['id_responsable_actual'] ?? 0) === (int) $responsable['id_responsable']) ? ' selected' : '' ?>><?= htmlspecialchars($responsable['nombre_completo'], ENT_QUOTES, 'UTF-8') ?></option>
+                    <option value="<?= (int) $responsable['id_responsable'] ?>"<?= ((int) ($datos['id_responsable_actual'] ?? 0) === (int) $responsable['id_responsable']) ? ' selected' : '' ?>><?= htmlspecialchars($responsable['nombre_completo'], ENT_QUOTES, 'UTF-8') ?><?= !empty($responsable['es_inactivo']) ? ' (Inactivo)' : '' ?></option>
                 <?php endforeach; ?>
             </select>
         </div>
@@ -129,7 +129,7 @@
             <select id="id_ubicacion_actual" name="id_ubicacion_actual" required>
                 <option value="">Seleccione</option>
                 <?php foreach ($ubicaciones as $ubicacion): ?>
-                    <option value="<?= (int) $ubicacion['id_ubicacion'] ?>"<?= ((int) ($datos['id_ubicacion_actual'] ?? 0) === (int) $ubicacion['id_ubicacion']) ? ' selected' : '' ?>><?= htmlspecialchars($ubicacion['nombre_ubicacion'] . ' - ' . $ubicacion['tipo_ubicacion'], ENT_QUOTES, 'UTF-8') ?></option>
+                    <option value="<?= (int) $ubicacion['id_ubicacion'] ?>"<?= ((int) ($datos['id_ubicacion_actual'] ?? 0) === (int) $ubicacion['id_ubicacion']) ? ' selected' : '' ?>><?= htmlspecialchars($ubicacion['nombre_ubicacion'] . ' - ' . $ubicacion['tipo_ubicacion'], ENT_QUOTES, 'UTF-8') ?><?= !empty($ubicacion['es_inactiva']) ? ' (Inactiva)' : '' ?></option>
                 <?php endforeach; ?>
             </select>
         </div>
