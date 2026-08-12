@@ -10,11 +10,15 @@ class Responsable extends Model
     {
         $sql = "
             SELECT
-                id_responsable,
-                nombre_completo
-            FROM responsables
-            WHERE estado_responsable = 'activo'
-            ORDER BY nombre_completo ASC
+                r.id_responsable,
+                r.nombre_completo,
+                r.id_ubicacion,
+                u.nombre_ubicacion,
+                u.tipo_ubicacion
+            FROM responsables r
+            JOIN ubicaciones u ON r.id_ubicacion = u.id_ubicacion
+            WHERE r.estado_responsable = 'activo'
+            ORDER BY r.nombre_completo ASC
         ";
 
         return $this->fetchAll($sql);
@@ -206,5 +210,42 @@ class Responsable extends Model
             ':termino_nombre' => $like,
             ':termino_nit' => $like,
         ]);
+    }
+
+    // Debe ejecutarse dentro de una transacción activa para que el bloqueo FOR UPDATE tenga efecto.
+    public function findActivoByIdForUpdate(int $idResponsable): array|false
+    {
+        $sql = "
+            SELECT
+                id_responsable,
+                nombre_completo,
+                id_ubicacion,
+                estado_responsable
+            FROM responsables
+            WHERE id_responsable = :id_responsable
+              AND estado_responsable = 'activo'
+            LIMIT 1
+            FOR UPDATE
+        ";
+
+        return $this->fetchOne($sql, [':id_responsable' => $idResponsable]);
+    }
+
+    // Debe ejecutarse dentro de una transacción activa para que el bloqueo FOR UPDATE tenga efecto.
+    public function findByIdForUpdate(int $idResponsable): array|false
+    {
+        $sql = "
+            SELECT
+                id_responsable,
+                nombre_completo,
+                id_ubicacion,
+                estado_responsable
+            FROM responsables
+            WHERE id_responsable = :id_responsable
+            LIMIT 1
+            FOR UPDATE
+        ";
+
+        return $this->fetchOne($sql, [':id_responsable' => $idResponsable]);
     }
 }

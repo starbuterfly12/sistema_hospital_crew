@@ -16,6 +16,8 @@
         };
 
         $bien = $bien ?? [];
+        $formaNombre = $formaNombre ?? '';
+        $datosIngreso = $datosIngreso ?? [];
 
         $mensajeExito = $_SESSION['mensaje_exito'] ?? null;
         $mensajeError = $_SESSION['mensaje_error'] ?? null;
@@ -90,6 +92,98 @@
         <dt>Fecha de actualización</dt>
         <dd><?= $mostrar($bien['updated_at'] ?? null) ?></dd>
     </dl>
+
+    <?php if ($formaNombre === 'compra'): ?>
+        <h2>Datos de compra</h2>
+
+        <dl>
+            <dt>Proveedor</dt>
+            <dd><?= $mostrar($datosIngreso['proveedor'] ?? null) ?></dd>
+
+            <dt>Número de factura</dt>
+            <dd><?= $mostrar($datosIngreso['numero_factura'] ?? null) ?></dd>
+
+            <dt>Serie de factura</dt>
+            <dd><?= $mostrar($datosIngreso['serie_factura'] ?? null) ?></dd>
+
+            <dt>Fecha de factura</dt>
+            <dd><?= $mostrar($datosIngreso['fecha_factura'] ?? null) ?></dd>
+
+            <dt>Número de liquidación</dt>
+            <dd><?= $mostrar($datosIngreso['numero_liquidacion'] ?? null) ?></dd>
+
+            <dt>Forma de compra</dt>
+            <dd><?= $mostrar($datosIngreso['forma_compra'] ?? null) ?></dd>
+
+            <dt>¿Tiene garantía?</dt>
+            <dd><?= ((int) ($datosIngreso['tiene_garantia'] ?? 0) === 1) ? 'Sí' : 'No' ?></dd>
+
+            <dt>Tiempo de garantía</dt>
+            <dd><?= $mostrar($datosIngreso['tiempo_garantia'] ?? null) ?></dd>
+
+            <dt>Documento de respaldo</dt>
+            <dd>
+                <?php if (!empty($datosIngreso['documento_respaldo'])): ?>
+                    <a href="<?= htmlspecialchars($datosIngreso['documento_respaldo'], ENT_QUOTES, 'UTF-8') ?>" target="_blank" rel="noopener noreferrer">Ver documento</a>
+                <?php else: ?>
+                    Sin documento de respaldo
+                <?php endif; ?>
+            </dd>
+        </dl>
+    <?php elseif ($formaNombre === 'donacion'): ?>
+        <h2>Datos de donación</h2>
+
+        <dl>
+            <dt>Procedencia</dt>
+            <dd><?= $mostrar($datosIngreso['procedencia'] ?? null) ?></dd>
+
+            <dt>Entidad donante</dt>
+            <dd><?= $mostrar($datosIngreso['entidad_donante'] ?? null) ?></dd>
+
+            <dt>Número de acta</dt>
+            <dd><?= $mostrar($datosIngreso['numero_acta'] ?? null) ?></dd>
+
+            <dt>Fecha de acta</dt>
+            <dd><?= $mostrar($datosIngreso['fecha_acta'] ?? null) ?></dd>
+
+            <dt>Documento de respaldo</dt>
+            <dd>
+                <?php if (!empty($datosIngreso['documento_respaldo'])): ?>
+                    <a href="<?= htmlspecialchars($datosIngreso['documento_respaldo'], ENT_QUOTES, 'UTF-8') ?>" target="_blank" rel="noopener noreferrer">Ver documento</a>
+                <?php else: ?>
+                    Sin documento de respaldo
+                <?php endif; ?>
+            </dd>
+        </dl>
+    <?php elseif ($formaNombre === 'traslado'): ?>
+        <h2>Datos de traslado</h2>
+
+        <dl>
+            <dt>Procedencia</dt>
+            <dd><?= $mostrar($datosIngreso['procedencia'] ?? null) ?></dd>
+
+            <dt>Unidad ejecutora de origen</dt>
+            <dd><?= $mostrar($datosIngreso['unidad_ejecutora_origen'] ?? null) ?></dd>
+
+            <dt>Código de unidad de origen</dt>
+            <dd><?= $mostrar($datosIngreso['codigo_unidad_origen'] ?? null) ?></dd>
+
+            <dt>Número de acta</dt>
+            <dd><?= $mostrar($datosIngreso['numero_acta'] ?? null) ?></dd>
+
+            <dt>Fecha de acta</dt>
+            <dd><?= $mostrar($datosIngreso['fecha_acta'] ?? null) ?></dd>
+
+            <dt>Documento de respaldo</dt>
+            <dd>
+                <?php if (!empty($datosIngreso['documento_respaldo'])): ?>
+                    <a href="<?= htmlspecialchars($datosIngreso['documento_respaldo'], ENT_QUOTES, 'UTF-8') ?>" target="_blank" rel="noopener noreferrer">Ver documento</a>
+                <?php else: ?>
+                    Sin documento de respaldo
+                <?php endif; ?>
+            </dd>
+        </dl>
+    <?php endif; ?>
 
     <h2>Código QR</h2>
 

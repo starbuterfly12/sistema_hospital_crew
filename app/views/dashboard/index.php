@@ -17,7 +17,7 @@
         <li><a href="index.php?modulo=bienes">Bienes</a></li>
         <li><a href="index.php?modulo=responsables">Responsables</a></li>
         <li><a href="index.php?modulo=ubicaciones">Áreas y ubicaciones</a></li>
-        <li>Asignaciones</li>
+        <li><a href="index.php?modulo=asignaciones">Asignaciones</a></li>
         <li>Tarjetas de responsabilidad</li>
         <li>Movimientos</li>
         <li>Préstamos</li>

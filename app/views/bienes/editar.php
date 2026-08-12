@@ -4,6 +4,34 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Editar bien</title>
+    <style>
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-overlay.modal-abierto {
+            display: flex;
+        }
+
+        .modal-caja {
+            background: #fff;
+            padding: 1.5rem;
+            width: 90%;
+            max-width: 420px;
+        }
+
+        .modal-mensaje {
+            color: #b30000;
+        }
+    </style>
 </head>
 <body>
     <?php
@@ -13,8 +41,7 @@
         $formaNombre = $formaNombre ?? '';
         $categorias = $categorias ?? [];
         $estados = $estados ?? [];
-        $responsables = $responsables ?? [];
-        $ubicaciones = $ubicaciones ?? [];
+        $documentoActual = $documentoActual ?? null;
     ?>
 
     <?php if (!empty($error)): ?>
@@ -23,7 +50,7 @@
 
     <h1>Editar bien</h1>
 
-    <form method="POST">
+    <form method="POST" id="form-editar-bien" enctype="multipart/form-data">
         <?= csrfField() ?>
 
         <div>
@@ -75,6 +102,7 @@
                     <option value="<?= (int) $categoria['id_categoria'] ?>"<?= ((int) ($datos['id_categoria'] ?? 0) === (int) $categoria['id_categoria']) ? ' selected' : '' ?>><?= htmlspecialchars($categoria['nombre_categoria'], ENT_QUOTES, 'UTF-8') ?></option>
                 <?php endforeach; ?>
             </select>
+            <button type="button" id="btn-nueva-categoria">Nueva categoría</button>
         </div>
 
         <div>
@@ -115,23 +143,25 @@
         <?php endif; ?>
 
         <div>
-            <label for="id_responsable_actual">Responsable actual</label>
-            <select id="id_responsable_actual" name="id_responsable_actual">
-                <option value="">Seleccione</option>
-                <?php foreach ($responsables as $responsable): ?>
-                    <option value="<?= (int) $responsable['id_responsable'] ?>"<?= ((int) ($datos['id_responsable_actual'] ?? 0) === (int) $responsable['id_responsable']) ? ' selected' : '' ?>><?= htmlspecialchars($responsable['nombre_completo'], ENT_QUOTES, 'UTF-8') ?><?= !empty($responsable['es_inactivo']) ? ' (Inactivo)' : '' ?></option>
-                <?php endforeach; ?>
-            </select>
+            <label>Responsable actual</label>
+            <p>
+                <?php if (!empty($bien['responsable_actual'])): ?>
+                    <?= htmlspecialchars($bien['responsable_actual'], ENT_QUOTES, 'UTF-8') ?>
+                <?php else: ?>
+                    Sin asignar
+                <?php endif; ?>
+            </p>
         </div>
 
         <div>
-            <label for="id_ubicacion_actual">Ubicación actual</label>
-            <select id="id_ubicacion_actual" name="id_ubicacion_actual" required>
-                <option value="">Seleccione</option>
-                <?php foreach ($ubicaciones as $ubicacion): ?>
-                    <option value="<?= (int) $ubicacion['id_ubicacion'] ?>"<?= ((int) ($datos['id_ubicacion_actual'] ?? 0) === (int) $ubicacion['id_ubicacion']) ? ' selected' : '' ?>><?= htmlspecialchars($ubicacion['nombre_ubicacion'] . ' - ' . $ubicacion['tipo_ubicacion'], ENT_QUOTES, 'UTF-8') ?><?= !empty($ubicacion['es_inactiva']) ? ' (Inactiva)' : '' ?></option>
-                <?php endforeach; ?>
-            </select>
+            <label>Ubicación actual</label>
+            <p>
+                <?php if (!empty($bien['ubicacion_actual'])): ?>
+                    <?= htmlspecialchars($bien['ubicacion_actual'] . (!empty($bien['tipo_ubicacion']) ? ' - ' . $bien['tipo_ubicacion'] : ''), ENT_QUOTES, 'UTF-8') ?>
+                <?php else: ?>
+                    Sin asignar
+                <?php endif; ?>
+            </p>
         </div>
 
         <div>
@@ -188,8 +218,19 @@
                 </div>
 
                 <div>
-                    <label for="documento_respaldo">Documento de respaldo</label>
-                    <input type="text" id="documento_respaldo" name="documento_respaldo" value="<?= htmlspecialchars($datos['documento_respaldo'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
+                    <label>Documento actual</label>
+                    <p>
+                        <?php if (!empty($documentoActual)): ?>
+                            <a href="<?= htmlspecialchars($documentoActual, ENT_QUOTES, 'UTF-8') ?>" target="_blank" rel="noopener noreferrer">Ver documento actual</a>
+                        <?php else: ?>
+                            Sin documento de respaldo
+                        <?php endif; ?>
+                    </p>
+                </div>
+
+                <div>
+                    <label for="documento_respaldo">Nuevo documento de respaldo</label>
+                    <input type="file" id="documento_respaldo" name="documento_respaldo" accept=".pdf,.jpg,.jpeg,.png">
                 </div>
             </fieldset>
         <?php elseif ($formaNombre === 'donacion'): ?>
@@ -217,8 +258,19 @@
                 </div>
 
                 <div>
-                    <label for="documento_respaldo">Documento de respaldo</label>
-                    <input type="text" id="documento_respaldo" name="documento_respaldo" value="<?= htmlspecialchars($datos['documento_respaldo'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
+                    <label>Documento actual</label>
+                    <p>
+                        <?php if (!empty($documentoActual)): ?>
+                            <a href="<?= htmlspecialchars($documentoActual, ENT_QUOTES, 'UTF-8') ?>" target="_blank" rel="noopener noreferrer">Ver documento actual</a>
+                        <?php else: ?>
+                            Sin documento de respaldo
+                        <?php endif; ?>
+                    </p>
+                </div>
+
+                <div>
+                    <label for="documento_respaldo">Nuevo documento de respaldo</label>
+                    <input type="file" id="documento_respaldo" name="documento_respaldo" accept=".pdf,.jpg,.jpeg,.png">
                 </div>
             </fieldset>
         <?php elseif ($formaNombre === 'traslado'): ?>
@@ -251,14 +303,48 @@
                 </div>
 
                 <div>
-                    <label for="documento_respaldo">Documento de respaldo</label>
-                    <input type="text" id="documento_respaldo" name="documento_respaldo" value="<?= htmlspecialchars($datos['documento_respaldo'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
+                    <label>Documento actual</label>
+                    <p>
+                        <?php if (!empty($documentoActual)): ?>
+                            <a href="<?= htmlspecialchars($documentoActual, ENT_QUOTES, 'UTF-8') ?>" target="_blank" rel="noopener noreferrer">Ver documento actual</a>
+                        <?php else: ?>
+                            Sin documento de respaldo
+                        <?php endif; ?>
+                    </p>
+                </div>
+
+                <div>
+                    <label for="documento_respaldo">Nuevo documento de respaldo</label>
+                    <input type="file" id="documento_respaldo" name="documento_respaldo" accept=".pdf,.jpg,.jpeg,.png">
                 </div>
             </fieldset>
         <?php endif; ?>
 
         <button type="submit">Guardar cambios</button>
     </form>
+
+    <div id="modal-nueva-categoria" class="modal-overlay">
+        <div class="modal-caja">
+            <h2>Nueva categoría</h2>
+
+            <p id="modal-categoria-mensaje" class="modal-mensaje"></p>
+
+            <div>
+                <label for="modal-nombre-categoria">Nombre de la categoría *</label>
+                <input type="text" id="modal-nombre-categoria" maxlength="100">
+            </div>
+
+            <div>
+                <label for="modal-descripcion-categoria">Descripción</label>
+                <textarea id="modal-descripcion-categoria"></textarea>
+            </div>
+
+            <div>
+                <button type="button" id="btn-cancelar-categoria">Cancelar</button>
+                <button type="button" id="btn-guardar-categoria">Guardar categoría</button>
+            </div>
+        </div>
+    </div>
 
     <p><a href="index.php?modulo=bienes&accion=ver&id=<?= (int) $bien['id_bien'] ?>">Volver al detalle</a></p>
     <p><a href="index.php?modulo=bienes">Volver al listado</a></p>
@@ -290,5 +376,97 @@
             })();
         </script>
     <?php endif; ?>
+
+    <script>
+        (function () {
+            var modal = document.getElementById('modal-nueva-categoria');
+            var btnAbrir = document.getElementById('btn-nueva-categoria');
+            var btnCancelar = document.getElementById('btn-cancelar-categoria');
+            var btnGuardar = document.getElementById('btn-guardar-categoria');
+            var campoNombre = document.getElementById('modal-nombre-categoria');
+            var campoDescripcion = document.getElementById('modal-descripcion-categoria');
+            var campoMensaje = document.getElementById('modal-categoria-mensaje');
+            var selectCategoria = document.getElementById('id_categoria');
+
+            function obtenerTokenCsrf() {
+                var campoToken = document.querySelector('#form-editar-bien input[name="csrf_token"]');
+                return campoToken ? campoToken.value : '';
+            }
+
+            function mostrarMensajeModal(texto) {
+                campoMensaje.textContent = texto || '';
+            }
+
+            function limpiarModal() {
+                campoNombre.value = '';
+                campoDescripcion.value = '';
+                mostrarMensajeModal('');
+            }
+
+            function abrirModal() {
+                limpiarModal();
+                modal.classList.add('modal-abierto');
+                campoNombre.focus();
+            }
+
+            function cerrarModal() {
+                modal.classList.remove('modal-abierto');
+            }
+
+            function agregarCategoriaAlSelect(categoria) {
+                var opcion = document.createElement('option');
+                opcion.value = String(categoria.id_categoria);
+                opcion.textContent = categoria.nombre_categoria;
+
+                selectCategoria.appendChild(opcion);
+                selectCategoria.value = String(categoria.id_categoria);
+            }
+
+            function guardarCategoria() {
+                var nombre = campoNombre.value.trim();
+
+                mostrarMensajeModal('');
+                btnGuardar.disabled = true;
+
+                var cuerpo = new URLSearchParams();
+                cuerpo.set('csrf_token', obtenerTokenCsrf());
+                cuerpo.set('nombre_categoria', nombre);
+                cuerpo.set('descripcion', campoDescripcion.value.trim());
+
+                fetch('index.php?modulo=bienes&accion=crear_categoria', {
+                    method: 'POST',
+                    body: cuerpo
+                })
+                    .then(function (respuesta) {
+                        var tipoContenido = respuesta.headers.get('Content-Type') || '';
+
+                        if (tipoContenido.indexOf('application/json') === -1) {
+                            throw new Error('respuesta_no_json');
+                        }
+
+                        return respuesta.json();
+                    })
+                    .then(function (payload) {
+                        if (payload && payload.ok === true && payload.categoria) {
+                            agregarCategoriaAlSelect(payload.categoria);
+                            cerrarModal();
+                            return;
+                        }
+
+                        mostrarMensajeModal((payload && payload.mensaje) || 'No se pudo registrar la categoría.');
+                    })
+                    .catch(function () {
+                        mostrarMensajeModal('La sesión puede haber expirado. Recargue la página e intente nuevamente.');
+                    })
+                    .finally(function () {
+                        btnGuardar.disabled = false;
+                    });
+            }
+
+            btnAbrir.addEventListener('click', abrirModal);
+            btnCancelar.addEventListener('click', cerrarModal);
+            btnGuardar.addEventListener('click', guardarCategoria);
+        })();
+    </script>
 </body>
 </html>

@@ -1,5 +1,7 @@
 <?php
 
+date_default_timezone_set('America/Guatemala');
+
 session_start();
 
 require_once __DIR__ . '/vendor/autoload.php';
@@ -51,6 +53,8 @@ switch ($modulo) {
             $bienesController->cambiarCondicion();
         } elseif ($accion === 'generar_qr') {
             $bienesController->generarQr();
+        } elseif ($accion === 'crear_categoria') {
+            $bienesController->crearCategoria();
         } else {
             $bienesController->index();
         }
@@ -97,6 +101,32 @@ switch ($modulo) {
             $ubicacionesController->cambiarEstado();
         } else {
             $ubicacionesController->index();
+        }
+        break;
+
+    case 'asignaciones':
+        if (!isset($_SESSION['id_usuario'])) {
+            header('Location: index.php');
+            exit;
+        }
+
+        require_once __DIR__ . '/app/controllers/AsignacionesController.php';
+        $asignacionesController = new AsignacionesController();
+
+        if ($accion === 'crear') {
+            $asignacionesController->crear();
+        } elseif ($accion === 'ver') {
+            $asignacionesController->ver();
+        } elseif ($accion === 'editar') {
+            $asignacionesController->editar();
+        } elseif ($accion === 'agregar_bien') {
+            $asignacionesController->agregarBien();
+        } elseif ($accion === 'retirar_bien') {
+            $asignacionesController->retirarBien();
+        } elseif ($accion === 'confirmar') {
+            $asignacionesController->confirmar();
+        } else {
+            $asignacionesController->index();
         }
         break;
 

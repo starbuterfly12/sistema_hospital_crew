@@ -164,8 +164,6 @@ class Bien extends Model
                 fecha_ingreso = :fecha_ingreso,
                 costo = :costo,
                 valor_estimado = :valor_estimado,
-                id_responsable_actual = :id_responsable_actual,
-                id_ubicacion_actual = :id_ubicacion_actual,
                 observaciones = :observaciones,
                 updated_at = NOW()
             WHERE id_bien = :id_bien
@@ -185,8 +183,6 @@ class Bien extends Model
             ':fecha_ingreso' => $datos['fecha_ingreso'] ?? null,
             ':costo' => $datos['costo'] ?? null,
             ':valor_estimado' => $datos['valor_estimado'] ?? null,
-            ':id_responsable_actual' => $datos['id_responsable_actual'] ?? null,
-            ':id_ubicacion_actual' => $datos['id_ubicacion_actual'] ?? null,
             ':observaciones' => $datos['observaciones'] ?? null,
             ':id_bien' => $idBien,
         ];
@@ -234,6 +230,125 @@ class Bien extends Model
         ];
 
         $this->query($sql, $params);
+
+        return true;
+    }
+
+    public function getDisponiblesParaAsignacion(): array
+    {
+        $sql = "
+            SELECT
+                b.id_bien,
+                b.codigo_interno,
+                b.codigo_sicoin,
+                b.descripcion,
+                b.marca,
+                b.modelo,
+                b.serie,
+                b.condicion_bien,
+                u.nombre_ubicacion,
+                u.tipo_ubicacion
+            FROM bienes b
+            LEFT JOIN estados_bien eb ON b.id_estado_bien = eb.id_estado_bien
+            LEFT JOIN ubicaciones u ON b.id_ubicacion_actual = u.id_ubicacion
+            WHERE eb.nombre_estado = 'Activo'
+              AND b.id_asignacion_actual IS NULL
+              AND NOT EXISTS (
+                    SELECT 1
+                    FROM detalle_asignacion da
+                    INNER JOIN asignaciones a2 ON a2.id_asignacion = da.id_asignacion
+                    WHERE da.id_bien = b.id_bien
+                      AND da.estado_detalle = 'activo'
+                      AND a2.estado_asignacion = 'Pendiente'
+              )
+            ORDER BY b.codigo_interno ASC
+        ";
+
+        return $this->fetchAll($sql);
+    }
+
+    // Debe ejecutarse dentro de una transacción activa para que el bloqueo FOR UPDATE tenga efecto.
+    public function findDisponibleParaAsignacion(int $idBien): array|false
+    {
+        $sql = "
+            SELECT
+                b.id_bien,
+                b.codigo_interno,
+                b.codigo_sicoin,
+                b.descripcion,
+                b.marca,
+                b.modelo,
+                b.serie,
+                b.condicion_bien
+            FROM bienes b
+            LEFT JOIN estados_bien eb ON b.id_estado_bien = eb.id_estado_bien
+            WHERE b.id_bien = :id_bien
+              AND eb.nombre_estado = 'Activo'
+              AND b.id_asignacion_actual IS NULL
+              AND NOT EXISTS (
+                    SELECT 1
+                    FROM detalle_asignacion da
+                    INNER JOIN asignaciones a2 ON a2.id_asignacion = da.id_asignacion
+                    WHERE da.id_bien = b.id_bien
+                      AND da.estado_detalle = 'activo'
+                      AND a2.estado_asignacion = 'Pendiente'
+              )
+            LIMIT 1
+            FOR UPDATE
+        ";
+
+        return $this->fetchOne($sql, [':id_bien' => $idBien]);
+    }
+
+    // Debe ejecutarse dentro de una transacción activa para que el bloqueo FOR UPDATE tenga efecto.
+    public function findConfirmableParaAsignacion(int $idBien, int $idAsignacion): array|false
+    {
+        $sql = "
+            SELECT
+                b.id_bien,
+                b.codigo_interno
+            FROM bienes b
+            LEFT JOIN estados_bien eb ON b.id_estado_bien = eb.id_estado_bien
+            WHERE b.id_bien = :id_bien
+              AND eb.nombre_estado = 'Activo'
+              AND b.id_asignacion_actual IS NULL
+              AND NOT EXISTS (
+                    SELECT 1
+                    FROM detalle_asignacion da
+                    INNER JOIN asignaciones a2 ON a2.id_asignacion = da.id_asignacion
+                    WHERE da.id_bien = b.id_bien
+                      AND da.estado_detalle = 'activo'
+                      AND a2.estado_asignacion = 'Pendiente'
+                      AND da.id_asignacion <> :id_asignacion
+              )
+            LIMIT 1
+            FOR UPDATE
+        ";
+
+        return $this->fetchOne($sql, [
+            ':id_bien' => $idBien,
+            ':id_asignacion' => $idAsignacion,
+        ]);
+    }
+
+    public function asignarActual(int $idBien, int $idAsignacion, int $idResponsable, int $idUbicacion): bool
+    {
+        $sql = "
+            UPDATE bienes
+            SET
+                id_asignacion_actual = :id_asignacion,
+                id_responsable_actual = :id_responsable,
+                id_ubicacion_actual = :id_ubicacion
+            WHERE id_bien = :id_bien
+              AND id_asignacion_actual IS NULL
+        ";
+
+        $this->query($sql, [
+            ':id_asignacion' => $idAsignacion,
+            ':id_responsable' => $idResponsable,
+            ':id_ubicacion' => $idUbicacion,
+            ':id_bien' => $idBien,
+        ]);
 
         return true;
     }

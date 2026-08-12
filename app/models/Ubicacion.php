@@ -175,4 +175,23 @@ class Ubicacion extends Model
             ':termino_tipo' => $like,
         ]);
     }
+
+    // Debe ejecutarse dentro de una transacción activa para que el bloqueo FOR UPDATE tenga efecto.
+    public function findActivaByIdForUpdate(int $idUbicacion): array|false
+    {
+        $sql = "
+            SELECT
+                id_ubicacion,
+                nombre_ubicacion,
+                tipo_ubicacion,
+                estado_ubicacion
+            FROM ubicaciones
+            WHERE id_ubicacion = :id_ubicacion
+              AND estado_ubicacion = 'activa'
+            LIMIT 1
+            FOR UPDATE
+        ";
+
+        return $this->fetchOne($sql, [':id_ubicacion' => $idUbicacion]);
+    }
 }

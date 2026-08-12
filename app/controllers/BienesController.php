@@ -34,22 +34,16 @@ class BienesController extends Controller
         $formaIngresoModel = $this->model('FormaIngreso');
         $categoriaBienModel = $this->model('CategoriaBien');
         $estadoBienModel = $this->model('EstadoBien');
-        $responsableModel = $this->model('Responsable');
-        $ubicacionModel = $this->model('Ubicacion');
 
         $formasIngreso = $formaIngresoModel->getActivas();
         $categorias = $categoriaBienModel->getActivas();
         $estados = $estadoBienModel->getActivos();
-        $responsables = $responsableModel->getActivos();
-        $ubicaciones = $ubicacionModel->getActivas();
 
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             $this->view('bienes/crear', [
                 'formasIngreso' => $formasIngreso,
                 'categorias' => $categorias,
                 'estados' => $estados,
-                'responsables' => $responsables,
-                'ubicaciones' => $ubicaciones,
                 'datos' => [],
                 'error' => null,
             ]);
@@ -71,8 +65,6 @@ class BienesController extends Controller
         $fechaIngreso = trim($_POST['fecha_ingreso'] ?? '');
         $costo = trim($_POST['costo'] ?? '');
         $valorEstimado = trim($_POST['valor_estimado'] ?? '');
-        $idResponsableActual = trim($_POST['id_responsable_actual'] ?? '');
-        $idUbicacionActual = (int) ($_POST['id_ubicacion_actual'] ?? 0);
         $observaciones = trim($_POST['observaciones'] ?? '');
 
         $proveedor = trim($_POST['proveedor'] ?? '');
@@ -85,7 +77,6 @@ class BienesController extends Controller
             ? ((int) ($_POST['tiene_garantia'] === '1' || $_POST['tiene_garantia'] === 'on' ? 1 : 0))
             : 0;
         $tiempoGarantia = trim($_POST['tiempo_garantia'] ?? '');
-        $documentoRespaldo = trim($_POST['documento_respaldo'] ?? '');
         $procedencia = trim($_POST['procedencia'] ?? '');
         $entidadDonante = trim($_POST['entidad_donante'] ?? '');
         $numeroActa = trim($_POST['numero_acta'] ?? '');
@@ -107,8 +98,8 @@ class BienesController extends Controller
             'fecha_ingreso' => $fechaIngreso,
             'costo' => $costo !== '' ? $costo : null,
             'valor_estimado' => $valorEstimado !== '' ? $valorEstimado : null,
-            'id_responsable_actual' => $idResponsableActual !== '' ? (int) $idResponsableActual : null,
-            'id_ubicacion_actual' => $idUbicacionActual,
+            'id_responsable_actual' => null,
+            'id_ubicacion_actual' => null,
             'observaciones' => $observaciones !== '' ? $observaciones : null,
         ];
 
@@ -122,7 +113,7 @@ class BienesController extends Controller
             'forma_compra' => $formaCompra !== '' ? $formaCompra : null,
             'tiene_garantia' => $tieneGarantia,
             'tiempo_garantia' => $tieneGarantia === 1 && $tiempoGarantia !== '' ? $tiempoGarantia : null,
-            'documento_respaldo' => $documentoRespaldo !== '' ? $documentoRespaldo : null,
+            'documento_respaldo' => null,
             'observaciones' => $observaciones !== '' ? $observaciones : null,
         ];
 
@@ -132,7 +123,7 @@ class BienesController extends Controller
             'entidad_donante' => $entidadDonante !== '' ? $entidadDonante : null,
             'numero_acta' => $numeroActa !== '' ? $numeroActa : null,
             'fecha_acta' => $fechaActa !== '' ? $fechaActa : null,
-            'documento_respaldo' => $documentoRespaldo !== '' ? $documentoRespaldo : null,
+            'documento_respaldo' => null,
             'observaciones' => $observaciones !== '' ? $observaciones : null,
         ];
 
@@ -143,11 +134,12 @@ class BienesController extends Controller
             'codigo_unidad_origen' => $codigoUnidadOrigen !== '' ? $codigoUnidadOrigen : null,
             'numero_acta' => $numeroActa !== '' ? $numeroActa : null,
             'fecha_acta' => $fechaActa !== '' ? $fechaActa : null,
-            'documento_respaldo' => $documentoRespaldo !== '' ? $documentoRespaldo : null,
+            'documento_respaldo' => null,
             'observaciones' => $observaciones !== '' ? $observaciones : null,
         ];
 
         $error = null;
+        $rutaDocumentoRespaldo = null;
 
         if ($codigoInterno === '') {
             $error = 'El código interno es obligatorio.';
@@ -167,8 +159,6 @@ class BienesController extends Controller
             $error = 'La fecha de ingreso es obligatoria.';
         } elseif (!$this->esFechaValida($fechaIngreso)) {
             $error = 'La fecha de ingreso no es válida.';
-        } elseif ($idUbicacionActual <= 0) {
-            $error = 'La ubicación actual es obligatoria.';
         } else {
             $formaSeleccionada = null;
             foreach ($formasIngreso as $forma) {
@@ -207,34 +197,6 @@ class BienesController extends Controller
 
                 if (!$estadoValido) {
                     $error = 'El estado seleccionado no es válido.';
-                }
-            }
-
-            if ($error === null) {
-                $ubicacionValida = false;
-                foreach ($ubicaciones as $ubicacion) {
-                    if ((int) $ubicacion['id_ubicacion'] === $idUbicacionActual) {
-                        $ubicacionValida = true;
-                        break;
-                    }
-                }
-
-                if (!$ubicacionValida) {
-                    $error = 'La ubicación seleccionada no es válida.';
-                }
-            }
-
-            if ($error === null && $datos['id_responsable_actual'] !== null) {
-                $responsableValido = false;
-                foreach ($responsables as $responsable) {
-                    if ((int) $responsable['id_responsable'] === $datos['id_responsable_actual']) {
-                        $responsableValido = true;
-                        break;
-                    }
-                }
-
-                if (!$responsableValido) {
-                    $error = 'El responsable seleccionado no es válido.';
                 }
             }
 
@@ -310,6 +272,14 @@ class BienesController extends Controller
                     }
                 }
             }
+
+            if ($error === null) {
+                try {
+                    $rutaDocumentoRespaldo = $this->guardarDocumentoRespaldo($_FILES['documento_respaldo'] ?? null);
+                } catch (RuntimeException $errorArchivo) {
+                    $error = $errorArchivo->getMessage();
+                }
+            }
         }
 
         if ($error !== null) {
@@ -324,7 +294,6 @@ class BienesController extends Controller
                     'forma_compra' => $formaCompra,
                     'tiene_garantia' => $tieneGarantia,
                     'tiempo_garantia' => $tiempoGarantia,
-                    'documento_respaldo' => $documentoRespaldo,
                     'procedencia' => $procedencia,
                     'entidad_donante' => $entidadDonante,
                     'numero_acta' => $numeroActa,
@@ -340,11 +309,13 @@ class BienesController extends Controller
                 'formasIngreso' => $formasIngreso,
                 'categorias' => $categorias,
                 'estados' => $estados,
-                'responsables' => $responsables,
-                'ubicaciones' => $ubicaciones,
             ]);
             return;
         }
+
+        $datosIngresoCompra['documento_respaldo'] = $rutaDocumentoRespaldo;
+        $datosIngresoDonacion['documento_respaldo'] = $rutaDocumentoRespaldo;
+        $datosIngresoTraslado['documento_respaldo'] = $rutaDocumentoRespaldo;
 
         $bienModel = $this->model('Bien');
         $ingresoCompraModel = $this->model('IngresoCompra');
@@ -428,6 +399,15 @@ class BienesController extends Controller
 
             error_log('Error al registrar el bien: ' . $e->getMessage());
 
+            if ($rutaDocumentoRespaldo !== null) {
+                $rutaAbsolutaLimpieza = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR
+                    . str_replace('/', DIRECTORY_SEPARATOR, $rutaDocumentoRespaldo);
+
+                if (is_file($rutaAbsolutaLimpieza)) {
+                    @unlink($rutaAbsolutaLimpieza);
+                }
+            }
+
             $error = $this->mensajeErrorDuplicado($e)
                 ?? 'No fue posible registrar el bien. Verifique los datos e intente nuevamente.';
 
@@ -442,7 +422,6 @@ class BienesController extends Controller
                     'forma_compra' => $formaCompra,
                     'tiene_garantia' => $tieneGarantia,
                     'tiempo_garantia' => $tiempoGarantia,
-                    'documento_respaldo' => $documentoRespaldo,
                     'procedencia' => $procedencia,
                     'entidad_donante' => $entidadDonante,
                     'numero_acta' => $numeroActa,
@@ -458,8 +437,6 @@ class BienesController extends Controller
                 'formasIngreso' => $formasIngreso,
                 'categorias' => $categorias,
                 'estados' => $estados,
-                'responsables' => $responsables,
-                'ubicaciones' => $ubicaciones,
             ]);
             return;
         }
@@ -487,8 +464,26 @@ class BienesController extends Controller
             return;
         }
 
+        $formaNombre = mb_strtolower(trim($bien['nombre_forma'] ?? ''), 'UTF-8');
+        $formaNombre = str_replace(['á', 'é', 'í', 'ó', 'ú'], ['a', 'e', 'i', 'o', 'u'], $formaNombre);
+
+        $datosIngreso = false;
+
+        if ($formaNombre === 'compra') {
+            $ingresoCompraModel = $this->model('IngresoCompra');
+            $datosIngreso = $ingresoCompraModel->findByBienId($idBien);
+        } elseif ($formaNombre === 'donacion') {
+            $ingresoDonacionModel = $this->model('IngresoDonacion');
+            $datosIngreso = $ingresoDonacionModel->findByBienId($idBien);
+        } elseif ($formaNombre === 'traslado') {
+            $ingresoTrasladoModel = $this->model('IngresoTraslado');
+            $datosIngreso = $ingresoTrasladoModel->findByBienId($idBien);
+        }
+
         $this->view('bienes/ver', [
             'bien' => $bien,
+            'formaNombre' => $formaNombre,
+            'datosIngreso' => $datosIngreso !== false ? $datosIngreso : [],
         ]);
     }
 
@@ -523,63 +518,10 @@ class BienesController extends Controller
         $formaIngresoModel = $this->model('FormaIngreso');
         $categoriaBienModel = $this->model('CategoriaBien');
         $estadoBienModel = $this->model('EstadoBien');
-        $responsableModel = $this->model('Responsable');
-        $ubicacionModel = $this->model('Ubicacion');
 
         $formasIngreso = $formaIngresoModel->getActivas();
         $categorias = $categoriaBienModel->getActivas();
         $estados = $estadoBienModel->getActivos();
-        $responsables = $responsableModel->getActivos();
-        $ubicaciones = $ubicacionModel->getActivas();
-
-        $idUbicacionOriginal = $bien['id_ubicacion_actual'] !== null
-            ? (int) $bien['id_ubicacion_actual']
-            : null;
-
-        $idResponsableOriginal = $bien['id_responsable_actual'] !== null
-            ? (int) $bien['id_responsable_actual']
-            : null;
-
-        $ubicacionesFormulario = $ubicaciones;
-
-        if ($idUbicacionOriginal !== null) {
-            $ubicacionOriginalPresente = false;
-            foreach ($ubicaciones as $ubicacion) {
-                if ((int) $ubicacion['id_ubicacion'] === $idUbicacionOriginal) {
-                    $ubicacionOriginalPresente = true;
-                    break;
-                }
-            }
-
-            if (!$ubicacionOriginalPresente) {
-                $ubicacionesFormulario[] = [
-                    'id_ubicacion' => $idUbicacionOriginal,
-                    'nombre_ubicacion' => $bien['ubicacion_actual'],
-                    'tipo_ubicacion' => $bien['tipo_ubicacion'],
-                    'es_inactiva' => true,
-                ];
-            }
-        }
-
-        $responsablesFormulario = $responsables;
-
-        if ($idResponsableOriginal !== null) {
-            $responsableOriginalPresente = false;
-            foreach ($responsables as $responsable) {
-                if ((int) $responsable['id_responsable'] === $idResponsableOriginal) {
-                    $responsableOriginalPresente = true;
-                    break;
-                }
-            }
-
-            if (!$responsableOriginalPresente) {
-                $responsablesFormulario[] = [
-                    'id_responsable' => $idResponsableOriginal,
-                    'nombre_completo' => $bien['responsable_actual'],
-                    'es_inactivo' => true,
-                ];
-            }
-        }
 
         $idFormaIngresoOriginal = (int) ($bien['id_forma_ingreso'] ?? 0);
 
@@ -606,6 +548,8 @@ class BienesController extends Controller
             return;
         }
 
+        $rutaDocumentoActual = $datosEspecificos['documento_respaldo'] ?? null;
+
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             $datosGenerales = [
                 'codigo_interno' => $bien['codigo_interno'] ?? '',
@@ -621,8 +565,6 @@ class BienesController extends Controller
                 'fecha_ingreso' => $bien['fecha_ingreso'] ?? '',
                 'costo' => $bien['costo'] ?? '',
                 'valor_estimado' => $bien['valor_estimado'] ?? '',
-                'id_responsable_actual' => $bien['id_responsable_actual'] !== null ? (int) $bien['id_responsable_actual'] : null,
-                'id_ubicacion_actual' => (int) ($bien['id_ubicacion_actual'] ?? 0),
                 'observaciones' => $bien['observaciones'] ?? '',
             ];
 
@@ -644,8 +586,7 @@ class BienesController extends Controller
                 'formasIngreso' => $formasIngreso,
                 'categorias' => $categorias,
                 'estados' => $estados,
-                'responsables' => $responsablesFormulario,
-                'ubicaciones' => $ubicacionesFormulario,
+                'documentoActual' => $rutaDocumentoActual,
                 'error' => null,
             ]);
 
@@ -666,8 +607,6 @@ class BienesController extends Controller
         $fechaIngreso = trim($_POST['fecha_ingreso'] ?? '');
         $costo = trim($_POST['costo'] ?? '');
         $valorEstimado = trim($_POST['valor_estimado'] ?? '');
-        $idResponsableActual = trim($_POST['id_responsable_actual'] ?? '');
-        $idUbicacionActual = (int) ($_POST['id_ubicacion_actual'] ?? 0);
         $observaciones = trim($_POST['observaciones'] ?? '');
 
         $proveedor = trim($_POST['proveedor'] ?? '');
@@ -680,7 +619,6 @@ class BienesController extends Controller
             ? ((int) ($_POST['tiene_garantia'] === '1' || $_POST['tiene_garantia'] === 'on' ? 1 : 0))
             : 0;
         $tiempoGarantia = trim($_POST['tiempo_garantia'] ?? '');
-        $documentoRespaldo = trim($_POST['documento_respaldo'] ?? '');
         $procedencia = trim($_POST['procedencia'] ?? '');
         $entidadDonante = trim($_POST['entidad_donante'] ?? '');
         $numeroActa = trim($_POST['numero_acta'] ?? '');
@@ -702,8 +640,6 @@ class BienesController extends Controller
             'fecha_ingreso' => $fechaIngreso,
             'costo' => $costo !== '' ? $costo : null,
             'valor_estimado' => $valorEstimado !== '' ? $valorEstimado : null,
-            'id_responsable_actual' => $idResponsableActual !== '' ? (int) $idResponsableActual : null,
-            'id_ubicacion_actual' => $idUbicacionActual,
             'observaciones' => $observaciones !== '' ? $observaciones : null,
         ];
 
@@ -716,7 +652,7 @@ class BienesController extends Controller
             'forma_compra' => $formaCompra !== '' ? $formaCompra : null,
             'tiene_garantia' => $tieneGarantia,
             'tiempo_garantia' => $tieneGarantia === 1 && $tiempoGarantia !== '' ? $tiempoGarantia : null,
-            'documento_respaldo' => $documentoRespaldo !== '' ? $documentoRespaldo : null,
+            'documento_respaldo' => null,
             'observaciones' => $observaciones !== '' ? $observaciones : null,
         ];
 
@@ -725,7 +661,7 @@ class BienesController extends Controller
             'entidad_donante' => $entidadDonante !== '' ? $entidadDonante : null,
             'numero_acta' => $numeroActa !== '' ? $numeroActa : null,
             'fecha_acta' => $fechaActa !== '' ? $fechaActa : null,
-            'documento_respaldo' => $documentoRespaldo !== '' ? $documentoRespaldo : null,
+            'documento_respaldo' => null,
             'observaciones' => $observaciones !== '' ? $observaciones : null,
         ];
 
@@ -735,7 +671,7 @@ class BienesController extends Controller
             'codigo_unidad_origen' => $codigoUnidadOrigen !== '' ? $codigoUnidadOrigen : null,
             'numero_acta' => $numeroActa !== '' ? $numeroActa : null,
             'fecha_acta' => $fechaActa !== '' ? $fechaActa : null,
-            'documento_respaldo' => $documentoRespaldo !== '' ? $documentoRespaldo : null,
+            'documento_respaldo' => null,
             'observaciones' => $observaciones !== '' ? $observaciones : null,
         ];
 
@@ -757,8 +693,6 @@ class BienesController extends Controller
             $error = 'La fecha de ingreso es obligatoria.';
         } elseif (!$this->esFechaValida($fechaIngreso)) {
             $error = 'La fecha de ingreso no es válida.';
-        } elseif ($idUbicacionActual <= 0) {
-            $error = 'La ubicación actual es obligatoria.';
         } else {
             $categoriaValida = false;
             foreach ($categorias as $categoria) {
@@ -783,42 +717,6 @@ class BienesController extends Controller
 
                 if (!$estadoValido) {
                     $error = 'El estado seleccionado no es válido.';
-                }
-            }
-
-            if ($error === null) {
-                $ubicacionValida = false;
-                foreach ($ubicaciones as $ubicacion) {
-                    if ((int) $ubicacion['id_ubicacion'] === $idUbicacionActual) {
-                        $ubicacionValida = true;
-                        break;
-                    }
-                }
-
-                if (!$ubicacionValida && $idUbicacionOriginal !== null && $idUbicacionActual === $idUbicacionOriginal) {
-                    $ubicacionValida = true;
-                }
-
-                if (!$ubicacionValida) {
-                    $error = 'La ubicación seleccionada no es válida.';
-                }
-            }
-
-            if ($error === null && $datos['id_responsable_actual'] !== null) {
-                $responsableValido = false;
-                foreach ($responsables as $responsable) {
-                    if ((int) $responsable['id_responsable'] === $datos['id_responsable_actual']) {
-                        $responsableValido = true;
-                        break;
-                    }
-                }
-
-                if (!$responsableValido && $idResponsableOriginal !== null && $datos['id_responsable_actual'] === $idResponsableOriginal) {
-                    $responsableValido = true;
-                }
-
-                if (!$responsableValido) {
-                    $error = 'El responsable seleccionado no es válido.';
                 }
             }
 
@@ -887,6 +785,18 @@ class BienesController extends Controller
             }
         }
 
+        $rutaDocumentoNuevo = null;
+
+        if ($error === null) {
+            try {
+                $rutaDocumentoNuevo = $this->guardarDocumentoRespaldo($_FILES['documento_respaldo'] ?? null);
+            } catch (RuntimeException $errorArchivo) {
+                $error = $errorArchivo->getMessage();
+            }
+        }
+
+        $rutaDocumentoFinal = $rutaDocumentoNuevo ?? $rutaDocumentoActual;
+
         if ($error !== null) {
             $datosFormulario = array_merge(
                 $datos,
@@ -899,7 +809,6 @@ class BienesController extends Controller
                     'forma_compra' => $formaCompra,
                     'tiene_garantia' => $tieneGarantia,
                     'tiempo_garantia' => $tiempoGarantia,
-                    'documento_respaldo' => $documentoRespaldo,
                     'procedencia' => $procedencia,
                     'entidad_donante' => $entidadDonante,
                     'numero_acta' => $numeroActa,
@@ -917,12 +826,15 @@ class BienesController extends Controller
                 'formasIngreso' => $formasIngreso,
                 'categorias' => $categorias,
                 'estados' => $estados,
-                'responsables' => $responsablesFormulario,
-                'ubicaciones' => $ubicacionesFormulario,
+                'documentoActual' => $rutaDocumentoActual,
             ]);
 
             return;
         }
+
+        $datosIngresoCompra['documento_respaldo'] = $rutaDocumentoFinal;
+        $datosIngresoDonacion['documento_respaldo'] = $rutaDocumentoFinal;
+        $datosIngresoTraslado['documento_respaldo'] = $rutaDocumentoFinal;
 
         try {
             $bienModel->beginTransaction();
@@ -960,6 +872,15 @@ class BienesController extends Controller
 
             error_log('Error al actualizar el bien: ' . $e->getMessage());
 
+            if ($rutaDocumentoNuevo !== null) {
+                $rutaAbsolutaLimpieza = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR
+                    . str_replace('/', DIRECTORY_SEPARATOR, $rutaDocumentoNuevo);
+
+                if (is_file($rutaAbsolutaLimpieza)) {
+                    @unlink($rutaAbsolutaLimpieza);
+                }
+            }
+
             $error = $this->mensajeErrorDuplicado($e)
                 ?? 'No fue posible actualizar el bien. Verifique los datos e intente nuevamente.';
 
@@ -974,7 +895,6 @@ class BienesController extends Controller
                     'forma_compra' => $formaCompra,
                     'tiene_garantia' => $tieneGarantia,
                     'tiempo_garantia' => $tiempoGarantia,
-                    'documento_respaldo' => $documentoRespaldo,
                     'procedencia' => $procedencia,
                     'entidad_donante' => $entidadDonante,
                     'numero_acta' => $numeroActa,
@@ -992,8 +912,7 @@ class BienesController extends Controller
                 'formasIngreso' => $formasIngreso,
                 'categorias' => $categorias,
                 'estados' => $estados,
-                'responsables' => $responsablesFormulario,
-                'ubicaciones' => $ubicacionesFormulario,
+                'documentoActual' => $rutaDocumentoActual,
             ]);
 
             return;
@@ -1154,6 +1073,130 @@ class BienesController extends Controller
         }
     }
 
+    public function crearCategoria(): void
+    {
+        if (!isset($_SESSION['id_usuario'])) {
+            $this->responderJson(401, [
+                'ok' => false,
+                'mensaje' => 'Debe iniciar sesión para realizar esta acción.',
+            ]);
+        }
+
+        if (!tieneRol(['Administrador', 'Operativo'])) {
+            $this->responderJson(403, [
+                'ok' => false,
+                'mensaje' => 'No tiene permisos para realizar esta acción.',
+            ]);
+        }
+
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->responderJson(405, [
+                'ok' => false,
+                'mensaje' => 'Método no permitido.',
+            ]);
+        }
+
+        $tokenEnviado = $_POST['csrf_token'] ?? '';
+        $tokenSesion = $_SESSION['csrf_token'] ?? '';
+
+        if ($tokenEnviado === '' || $tokenSesion === '' || !hash_equals($tokenSesion, $tokenEnviado)) {
+            $this->responderJson(403, [
+                'ok' => false,
+                'mensaje' => 'Solicitud no válida.',
+            ]);
+        }
+
+        $nombreCategoria = trim($_POST['nombre_categoria'] ?? '');
+        $descripcion = trim($_POST['descripcion'] ?? '');
+
+        if ($nombreCategoria === '') {
+            $this->responderJson(422, [
+                'ok' => false,
+                'mensaje' => 'El nombre de la categoría es obligatorio.',
+            ]);
+        }
+
+        if (strlen($nombreCategoria) > 100) {
+            $this->responderJson(422, [
+                'ok' => false,
+                'mensaje' => 'El nombre de la categoría no puede superar los 100 caracteres.',
+            ]);
+        }
+
+        $categoriaModel = $this->model('CategoriaBien');
+
+        if ($categoriaModel->existeNombre($nombreCategoria)) {
+            $this->responderJson(422, [
+                'ok' => false,
+                'mensaje' => 'Ya existe una categoría con ese nombre.',
+            ]);
+        }
+
+        $bitacoraModel = $this->model('Bitacora');
+
+        try {
+            $categoriaModel->beginTransaction();
+
+            $idCategoria = $categoriaModel->crear([
+                'nombre_categoria' => $nombreCategoria,
+                'descripcion' => $descripcion !== '' ? $descripcion : null,
+            ]);
+
+            $bitacoraModel->registrar(
+                idUsuario: (int) $_SESSION['id_usuario'],
+                accion: 'REGISTRAR_CATEGORIA_BIEN',
+                modulo: 'Bienes',
+                resultado: 'exitoso',
+                descripcion: 'Se registró la categoría de bien "' . $nombreCategoria . '".',
+                tablaAfectada: 'categorias_bien',
+                idRegistroAfectado: $idCategoria,
+                ipOrigen: $_SERVER['REMOTE_ADDR'] ?? null,
+                usuarioIntentado: null
+            );
+
+            $categoriaModel->commit();
+
+            $this->responderJson(200, [
+                'ok' => true,
+                'mensaje' => 'Categoría registrada correctamente.',
+                'categoria' => [
+                    'id_categoria' => $idCategoria,
+                    'nombre_categoria' => $nombreCategoria,
+                ],
+            ]);
+        } catch (Throwable $e) {
+            if ($categoriaModel->inTransaction()) {
+                $categoriaModel->rollBack();
+            }
+
+            error_log('Error al registrar la categoría de bien: ' . $e->getMessage());
+
+            if (
+                $e instanceof PDOException
+                && ($e->errorInfo[0] ?? null) === '23000'
+                && str_contains($e->errorInfo[2] ?? '', 'uq_categorias_bien_nombre')
+            ) {
+                $this->responderJson(422, [
+                    'ok' => false,
+                    'mensaje' => 'Ya existe una categoría con ese nombre.',
+                ]);
+            }
+
+            $this->responderJson(500, [
+                'ok' => false,
+                'mensaje' => 'No se pudo registrar la categoría.',
+            ]);
+        }
+    }
+
+    private function responderJson(int $codigoHttp, array $payload): void
+    {
+        http_response_code($codigoHttp);
+        header('Content-Type: application/json; charset=UTF-8');
+        echo json_encode($payload, JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
     private function generarArchivoQr(int $idBien): array
     {
         $codigoQr = url('index.php?modulo=bienes&accion=ver&id=' . $idBien);
@@ -1192,6 +1235,65 @@ class BienesController extends Controller
             'ruta_qr' => $rutaQr,
             'ruta_absoluta' => $rutaAbsoluta,
         ];
+    }
+
+    private function guardarDocumentoRespaldo(?array $archivo): ?string
+    {
+        if ($archivo === null || ($archivo['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {
+            return null;
+        }
+
+        if ($archivo['error'] !== UPLOAD_ERR_OK) {
+            throw new RuntimeException('No se pudo cargar el documento de respaldo.');
+        }
+
+        $tamano = (int) ($archivo['size'] ?? 0);
+
+        if ($tamano <= 0) {
+            throw new RuntimeException('El documento de respaldo está vacío.');
+        }
+
+        if ($tamano > 5 * 1024 * 1024) {
+            throw new RuntimeException('El documento de respaldo no puede superar los 5 MB.');
+        }
+
+        $tmpName = $archivo['tmp_name'] ?? '';
+
+        if ($tmpName === '' || !is_uploaded_file($tmpName)) {
+            throw new RuntimeException('No se pudo cargar el documento de respaldo.');
+        }
+
+        $finfo = new finfo(FILEINFO_MIME_TYPE);
+        $mimeReal = $finfo->file($tmpName);
+
+        $extensionesPorMime = [
+            'application/pdf' => 'pdf',
+            'image/jpeg' => 'jpg',
+            'image/png' => 'png',
+        ];
+
+        if ($mimeReal === false || !isset($extensionesPorMime[$mimeReal])) {
+            throw new RuntimeException('El documento de respaldo debe ser un archivo PDF, JPG o PNG.');
+        }
+
+        $extension = $extensionesPorMime[$mimeReal];
+        $nombreFisico = 'documento_' . bin2hex(random_bytes(16)) . '.' . $extension;
+
+        $rutaRelativa = 'storage/documentos/' . $nombreFisico;
+        $rutaAbsoluta = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR
+            . str_replace('/', DIRECTORY_SEPARATOR, $rutaRelativa);
+
+        $directorioDestino = dirname($rutaAbsoluta);
+
+        if (!is_dir($directorioDestino) || !is_writable($directorioDestino)) {
+            throw new RuntimeException('No se pudo guardar el documento de respaldo.');
+        }
+
+        if (!move_uploaded_file($tmpName, $rutaAbsoluta)) {
+            throw new RuntimeException('No se pudo guardar el documento de respaldo.');
+        }
+
+        return $rutaRelativa;
     }
 
     private function esFechaValida(string $fecha): bool
