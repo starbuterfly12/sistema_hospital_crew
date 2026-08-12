@@ -1073,6 +1073,33 @@ class BienesController extends Controller
         }
     }
 
+    public function imprimirQr(): void
+    {
+        if (!isset($_SESSION['id_usuario'])) {
+            header('Location: index.php');
+            exit;
+        }
+
+        $idBien = (int) ($_GET['id'] ?? 0);
+
+        if ($idBien <= 0) {
+            echo 'Bien no válido.';
+            return;
+        }
+
+        $bienModel = $this->model('Bien');
+        $bien = $bienModel->findById($idBien);
+
+        if ($bien === false) {
+            echo 'Bien no encontrado.';
+            return;
+        }
+
+        $this->view('bienes/imprimir_qr', [
+            'bien' => $bien,
+        ]);
+    }
+
     public function crearCategoria(): void
     {
         if (!isset($_SESSION['id_usuario'])) {

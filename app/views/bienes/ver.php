@@ -202,7 +202,7 @@
         <?php endif; ?>
 
         <p>
-            <a href="<?= htmlspecialchars($bien['ruta_qr'], ENT_QUOTES, 'UTF-8') ?>" target="_blank" rel="noopener noreferrer">
+            <a href="index.php?modulo=bienes&accion=imprimir_qr&id=<?= (int) $bien['id_bien'] ?>">
                 Ver QR para imprimir
             </a>
         </p>

@@ -230,7 +230,10 @@ class AsignacionesController extends Controller
 
         $bienesDisponibles = [];
 
-        if ($asignacion['estado_asignacion'] === 'Pendiente' && tieneRol(['Administrador', 'Operativo'])) {
+        if (
+            in_array($asignacion['estado_asignacion'], ['Pendiente', 'Asignada'], true)
+            && tieneRol(['Administrador', 'Operativo'])
+        ) {
             $bienModel = $this->model('Bien');
             $bienesDisponibles = $bienModel->getDisponiblesParaAsignacion();
         }
@@ -577,6 +580,8 @@ class AsignacionesController extends Controller
 
         $asignacionModel = $this->model('Asignacion');
         $bienModel = $this->model('Bien');
+        $responsableModel = $this->model('Responsable');
+        $ubicacionModel = $this->model('Ubicacion');
         $bitacoraModel = $this->model('Bitacora');
 
         try {
@@ -590,10 +595,40 @@ class AsignacionesController extends Controller
                 return;
             }
 
-            if ($asignacion['estado_asignacion'] !== 'Pendiente') {
+            if (!in_array($asignacion['estado_asignacion'], ['Pendiente', 'Asignada'], true)) {
                 $asignacionModel->rollBack();
-                echo 'Solo se pueden agregar bienes mientras la asignación esté Pendiente.';
+                echo 'Solo se pueden agregar bienes a asignaciones Pendientes o Asignadas.';
                 return;
+            }
+
+            $esAsignada = $asignacion['estado_asignacion'] === 'Asignada';
+            $idResponsableAsignacion = (int) $asignacion['id_responsable'];
+            $idUbicacion = (int) $asignacion['id_ubicacion'];
+
+            if ($esAsignada) {
+                $responsableActivo = $responsableModel->findActivoByIdForUpdate($idResponsableAsignacion);
+
+                if ($responsableActivo === false) {
+                    $asignacionModel->rollBack();
+                    echo 'No se puede agregar el bien porque el responsable de la asignación está inactivo.';
+                    return;
+                }
+
+                if ($idUbicacion !== (int) $responsableActivo['id_ubicacion']) {
+                    $asignacionModel->rollBack();
+                    echo 'La ubicación de la asignación no coincide con la ubicación actual del responsable.';
+                    return;
+                }
+
+                $idUbicacion = (int) $responsableActivo['id_ubicacion'];
+
+                $ubicacionActiva = $ubicacionModel->findActivaByIdForUpdate($idUbicacion);
+
+                if ($ubicacionActiva === false) {
+                    $asignacionModel->rollBack();
+                    echo 'No se puede agregar el bien porque la ubicación de la asignación está inactiva.';
+                    return;
+                }
             }
 
             if ($asignacionModel->existeBienEnAsignacion($idAsignacion, $idBien)) {
@@ -617,14 +652,27 @@ class AsignacionesController extends Controller
                 $observacionesDetalle !== '' ? $observacionesDetalle : null
             );
 
+            if ($esAsignada) {
+                $bienModel->asignarActual(
+                    $idBien,
+                    $idAsignacion,
+                    $idResponsableAsignacion,
+                    $idUbicacion
+                );
+            }
+
             $identificadorBien = $bienDisponible['codigo_interno'] ?? ('#' . $idBien);
+
+            $descripcionBitacora = $esAsignada
+                ? 'Se incorporó el bien ' . $identificadorBien . ' a la asignación ' . $asignacion['numero_asignacion'] . ' (estado Asignada).'
+                : 'Se agregó el bien ' . $identificadorBien . ' a la asignación ' . $asignacion['numero_asignacion'] . '.';
 
             $bitacoraModel->registrar(
                 idUsuario: (int) $_SESSION['id_usuario'],
                 accion: 'AGREGAR_BIEN_ASIGNACION',
                 modulo: 'Asignaciones',
                 resultado: 'exitoso',
-                descripcion: 'Se agregó el bien ' . $identificadorBien . ' a la asignación ' . $asignacion['numero_asignacion'] . '.',
+                descripcion: $descripcionBitacora,
                 tablaAfectada: 'detalle_asignacion',
                 idRegistroAfectado: $idDetalle,
                 ipOrigen: $_SERVER['REMOTE_ADDR'] ?? null,

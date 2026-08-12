@@ -53,6 +53,8 @@ switch ($modulo) {
             $bienesController->cambiarCondicion();
         } elseif ($accion === 'generar_qr') {
             $bienesController->generarQr();
+        } elseif ($accion === 'imprimir_qr') {
+            $bienesController->imprimirQr();
         } elseif ($accion === 'crear_categoria') {
             $bienesController->crearCategoria();
         } else {

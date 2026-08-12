@@ -117,7 +117,7 @@
         </table>
     <?php endif; ?>
 
-    <?php if (($asignacion['estado_asignacion'] ?? null) === 'Pendiente' && tieneRol(['Administrador', 'Operativo'])): ?>
+    <?php if (in_array($asignacion['estado_asignacion'] ?? null, ['Pendiente', 'Asignada'], true) && tieneRol(['Administrador', 'Operativo'])): ?>
         <h2>Agregar bien</h2>
 
         <?php $bienesDisponibles = $bienesDisponibles ?? []; ?>
