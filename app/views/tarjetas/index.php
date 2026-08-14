@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es-GT">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -33,7 +33,7 @@
                 <?php foreach ($tarjetas as $tarjeta): ?>
                     <tr>
                         <td><?= htmlspecialchars($tarjeta['numero_tarjeta'] ?: '-', ENT_QUOTES, 'UTF-8') ?></td>
-                        <td><?= htmlspecialchars($tarjeta['fecha_emision'] ?: '-', ENT_QUOTES, 'UTF-8') ?></td>
+                        <td><?= htmlspecialchars(formatDate($tarjeta['fecha_emision'] ?? null) ?: '-', ENT_QUOTES, 'UTF-8') ?></td>
                         <td><?= htmlspecialchars($tarjeta['responsable_nombre'] ?: '-', ENT_QUOTES, 'UTF-8') ?></td>
                         <td><?= htmlspecialchars($tarjeta['ubicacion_nombre'] ?: '-', ENT_QUOTES, 'UTF-8') ?></td>
                         <td><?= htmlspecialchars($tarjeta['numero_asignacion'] ?: '-', ENT_QUOTES, 'UTF-8') ?></td>

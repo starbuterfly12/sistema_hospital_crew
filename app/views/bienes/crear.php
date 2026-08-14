@@ -1,10 +1,22 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es-GT">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Registrar bien</title>
+    <link rel="stylesheet" href="<?= url('public/vendor/flatpickr/flatpickr.min.css') ?>">
     <style>
+        .campo-fecha {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .btn-calendario {
+            cursor: pointer;
+            line-height: 1;
+        }
+
         .modal-overlay {
             display: none;
             position: fixed;
@@ -134,7 +146,17 @@
 
         <div>
             <label for="fecha_ingreso">Fecha de ingreso</label>
-            <input type="date" id="fecha_ingreso" name="fecha_ingreso" value="<?= htmlspecialchars($datos['fecha_ingreso'] ?? '', ENT_QUOTES, 'UTF-8') ?>" required>
+            <div class="campo-fecha">
+                <input
+                    type="text"
+                    id="fecha_ingreso"
+                    name="fecha_ingreso"
+                    value="<?= htmlspecialchars($datos['fecha_ingreso'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
+                    placeholder="DD/MM/AAAA"
+                    required
+                >
+                <button type="button" class="btn-calendario" data-flatpickr-target="fecha_ingreso" aria-label="Abrir calendario">📅</button>
+            </div>
         </div>
 
         <div id="grupo-costo">
@@ -172,17 +194,21 @@
 
             <div>
                 <label for="fecha_factura">Fecha de factura</label>
-                <input type="date" id="fecha_factura" name="fecha_factura" value="<?= htmlspecialchars($datos['fecha_factura'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
+                <div class="campo-fecha">
+                    <input
+                        type="text"
+                        id="fecha_factura"
+                        name="fecha_factura"
+                        value="<?= htmlspecialchars($datos['fecha_factura'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
+                        placeholder="DD/MM/AAAA"
+                    >
+                    <button type="button" class="btn-calendario" data-flatpickr-target="fecha_factura" aria-label="Abrir calendario">📅</button>
+                </div>
             </div>
 
             <div>
                 <label for="numero_liquidacion">Número de liquidación</label>
                 <input type="text" id="numero_liquidacion" name="numero_liquidacion" value="<?= htmlspecialchars($datos['numero_liquidacion'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
-            </div>
-
-            <div>
-                <label for="forma_compra">Forma de compra</label>
-                <input type="text" id="forma_compra" name="forma_compra" value="<?= htmlspecialchars($datos['forma_compra'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
             </div>
 
             <div>
@@ -225,7 +251,16 @@
 
             <div>
                 <label for="fecha_acta_donacion">Fecha de acta</label>
-                <input type="date" id="fecha_acta_donacion" name="fecha_acta" value="<?= htmlspecialchars($datos['fecha_acta'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
+                <div class="campo-fecha">
+                    <input
+                        type="text"
+                        id="fecha_acta_donacion"
+                        name="fecha_acta"
+                        value="<?= htmlspecialchars($datos['fecha_acta'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
+                        placeholder="DD/MM/AAAA"
+                    >
+                    <button type="button" class="btn-calendario" data-flatpickr-target="fecha_acta_donacion" aria-label="Abrir calendario">📅</button>
+                </div>
             </div>
 
             <div>
@@ -259,7 +294,16 @@
 
             <div>
                 <label for="fecha_acta_traslado">Fecha de acta</label>
-                <input type="date" id="fecha_acta_traslado" name="fecha_acta" value="<?= htmlspecialchars($datos['fecha_acta'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
+                <div class="campo-fecha">
+                    <input
+                        type="text"
+                        id="fecha_acta_traslado"
+                        name="fecha_acta"
+                        value="<?= htmlspecialchars($datos['fecha_acta'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
+                        placeholder="DD/MM/AAAA"
+                    >
+                    <button type="button" class="btn-calendario" data-flatpickr-target="fecha_acta_traslado" aria-label="Abrir calendario">📅</button>
+                </div>
             </div>
 
             <div>
@@ -496,6 +540,15 @@
             btnCancelar.addEventListener('click', cerrarModal);
             btnGuardar.addEventListener('click', guardarCategoria);
         })();
+    </script>
+
+    <script src="<?= url('public/vendor/flatpickr/flatpickr.min.js') ?>"></script>
+    <script src="<?= url('public/vendor/flatpickr/l10n/es.js') ?>"></script>
+    <script src="<?= url('public/js/fecha-picker.js') ?>"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            inicializarSelectoresFecha(['fecha_ingreso', 'fecha_factura', 'fecha_acta_donacion', 'fecha_acta_traslado']);
+        });
     </script>
 </body>
 </html>

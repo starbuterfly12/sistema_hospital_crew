@@ -15,7 +15,7 @@ storage/documentos/*
 !storage/documentos/.gitkeep
 
 # Dependencias (si en el futuro se agrega Composer/Node)
-vendor/
+/vendor/
 node_modules/
 
 # Configuracion local con credenciales reales

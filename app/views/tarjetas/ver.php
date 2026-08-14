@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es-GT">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -26,7 +26,7 @@
         <dd><?= $mostrar($tarjeta['numero_tarjeta'] ?? null) ?></dd>
 
         <dt>Fecha de emisión</dt>
-        <dd><?= $mostrar($tarjeta['fecha_emision'] ?? null) ?></dd>
+        <dd><?= $mostrar(formatDate($tarjeta['fecha_emision'] ?? null)) ?></dd>
 
         <dt>Estado</dt>
         <dd><?= $mostrar($tarjeta['estado_tarjeta'] ?? null) ?></dd>
@@ -81,7 +81,7 @@
                     ?>
                     <tr>
                         <td><?= (int) $operacion['orden_linea'] ?></td>
-                        <td><?= $mostrar($operacion['fecha_operacion'] ?? null) ?></td>
+                        <td><?= $mostrar(formatDate($operacion['fecha_operacion'] ?? null)) ?></td>
                         <td><?= $mostrar($operacion['tipo_operacion'] ?? null) ?></td>
                         <td><?= $codigoTexto ?></td>
                         <td><?= (int) $operacion['cantidad'] ?></td>

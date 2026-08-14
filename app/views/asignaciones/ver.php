@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es-GT">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -40,7 +40,7 @@
         <dd><?= $mostrar($ubicacionTexto) ?></dd>
 
         <dt>Fecha de asignación</dt>
-        <dd><?= $mostrar($asignacion['fecha_asignacion'] ?? null) ?></dd>
+        <dd><?= $mostrar(formatDate($asignacion['fecha_asignacion'] ?? null)) ?></dd>
 
         <dt>Estado</dt>
         <dd><?= $mostrar($asignacion['estado_asignacion'] ?? null) ?></dd>
@@ -52,10 +52,10 @@
         <dd><?= $mostrar($asignacion['observaciones'] ?? null) ?></dd>
 
         <dt>Fecha de registro</dt>
-        <dd><?= $mostrar($asignacion['created_at'] ?? null) ?></dd>
+        <dd><?= $mostrar(formatDateTime($asignacion['created_at'] ?? null)) ?></dd>
 
         <dt>Última actualización</dt>
-        <dd><?= $mostrar($asignacion['updated_at'] ?? null) ?></dd>
+        <dd><?= $mostrar(formatDateTime($asignacion['updated_at'] ?? null)) ?></dd>
     </dl>
 
     <?php if (($asignacion['estado_asignacion'] ?? null) === 'Pendiente' && tieneRol(['Administrador', 'Operativo'])): ?>
@@ -96,8 +96,8 @@
                         <td><?= $mostrar($detalle['modelo'] ?? null) ?></td>
                         <td><?= $mostrar($detalle['serie'] ?? null) ?></td>
                         <td><?= $mostrar($detalle['condicion_bien'] ?? null) ?></td>
-                        <td><?= $mostrar($detalle['fecha_agregado'] ?? null) ?></td>
-                        <td><?= $mostrar($detalle['fecha_retirado'] ?? null) ?></td>
+                        <td><?= $mostrar(formatDate($detalle['fecha_agregado'] ?? null)) ?></td>
+                        <td><?= $mostrar(formatDate($detalle['fecha_retirado'] ?? null)) ?></td>
                         <td><?= $mostrar($detalle['estado_detalle'] ?? null) ?></td>
                         <td><?= $mostrar($detalle['observaciones_detalle'] ?? null) ?></td>
                         <td>

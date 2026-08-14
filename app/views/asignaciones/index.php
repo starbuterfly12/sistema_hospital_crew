@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es-GT">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -54,7 +54,7 @@
                         <td><?= htmlspecialchars($asignacion['numero_asignacion'] ?: '-', ENT_QUOTES, 'UTF-8') ?></td>
                         <td><?= htmlspecialchars($asignacion['responsable_nombre'] ?: '-', ENT_QUOTES, 'UTF-8') ?></td>
                         <td><?= htmlspecialchars($ubicacionTexto ?: '-', ENT_QUOTES, 'UTF-8') ?></td>
-                        <td><?= htmlspecialchars($asignacion['fecha_asignacion'] ?: '-', ENT_QUOTES, 'UTF-8') ?></td>
+                        <td><?= htmlspecialchars(formatDate($asignacion['fecha_asignacion'] ?? null) ?: '-', ENT_QUOTES, 'UTF-8') ?></td>
                         <td><?= htmlspecialchars($asignacion['estado_asignacion'] ?: '-', ENT_QUOTES, 'UTF-8') ?></td>
                         <td><?= htmlspecialchars($asignacion['usuario_registra_nombre'] ?: '-', ENT_QUOTES, 'UTF-8') ?></td>
                         <td>

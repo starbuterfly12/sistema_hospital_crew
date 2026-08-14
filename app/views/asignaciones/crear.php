@@ -1,9 +1,22 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es-GT">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Registrar asignación</title>
+    <link rel="stylesheet" href="<?= url('public/vendor/flatpickr/flatpickr.min.css') ?>">
+    <style>
+        .campo-fecha {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .btn-calendario {
+            cursor: pointer;
+            line-height: 1;
+        }
+    </style>
 </head>
 <body>
     <?php
@@ -47,13 +60,17 @@
 
         <div>
             <label for="fecha_asignacion">Fecha de asignación *</label>
-            <input
-                type="date"
-                id="fecha_asignacion"
-                name="fecha_asignacion"
-                value="<?= htmlspecialchars($datosFormulario['fecha_asignacion'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
-                required
-            >
+            <div class="campo-fecha">
+                <input
+                    type="text"
+                    id="fecha_asignacion"
+                    name="fecha_asignacion"
+                    value="<?= htmlspecialchars($datosFormulario['fecha_asignacion'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
+                    placeholder="DD/MM/AAAA"
+                    required
+                >
+                <button type="button" class="btn-calendario" data-flatpickr-target="fecha_asignacion" aria-label="Abrir calendario">📅</button>
+            </div>
         </div>
 
         <div>
@@ -96,6 +113,15 @@
             selectResponsable.addEventListener('change', actualizarUbicacion);
             actualizarUbicacion();
         })();
+    </script>
+
+    <script src="<?= url('public/vendor/flatpickr/flatpickr.min.js') ?>"></script>
+    <script src="<?= url('public/vendor/flatpickr/l10n/es.js') ?>"></script>
+    <script src="<?= url('public/js/fecha-picker.js') ?>"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            inicializarSelectoresFecha(['fecha_asignacion']);
+        });
     </script>
 </body>
 </html>

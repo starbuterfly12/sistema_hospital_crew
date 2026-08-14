@@ -88,13 +88,10 @@ class AsignacionesController extends Controller
         if ($error === null) {
             if ($fechaAsignacion === '') {
                 $error = 'La fecha de asignación es obligatoria.';
+            } elseif (!isValidIsoDate($fechaAsignacion)) {
+                $error = 'La fecha de asignación no es válida.';
             } else {
                 $fechaValida = DateTime::createFromFormat('!Y-m-d', $fechaAsignacion);
-
-                if ($fechaValida === false || $fechaValida->format('Y-m-d') !== $fechaAsignacion) {
-                    $error = 'La fecha de asignación no es válida.';
-                    $fechaValida = null;
-                }
             }
         }
 
@@ -386,12 +383,8 @@ class AsignacionesController extends Controller
         if ($error === null) {
             if ($fechaAsignacion === '') {
                 $error = 'La fecha de asignación es obligatoria.';
-            } else {
-                $fechaValida = DateTime::createFromFormat('!Y-m-d', $fechaAsignacion);
-
-                if ($fechaValida === false || $fechaValida->format('Y-m-d') !== $fechaAsignacion) {
-                    $error = 'La fecha de asignación no es válida.';
-                }
+            } elseif (!isValidIsoDate($fechaAsignacion)) {
+                $error = 'La fecha de asignación no es válida.';
             }
         }
 

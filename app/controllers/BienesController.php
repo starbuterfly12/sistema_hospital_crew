@@ -72,7 +72,6 @@ class BienesController extends Controller
         $serieFactura = trim($_POST['serie_factura'] ?? '');
         $fechaFactura = trim($_POST['fecha_factura'] ?? '');
         $numeroLiquidacion = trim($_POST['numero_liquidacion'] ?? '');
-        $formaCompra = trim($_POST['forma_compra'] ?? '');
         $tieneGarantia = isset($_POST['tiene_garantia'])
             ? ((int) ($_POST['tiene_garantia'] === '1' || $_POST['tiene_garantia'] === 'on' ? 1 : 0))
             : 0;
@@ -110,7 +109,6 @@ class BienesController extends Controller
             'serie_factura' => $serieFactura !== '' ? $serieFactura : null,
             'fecha_factura' => $fechaFactura !== '' ? $fechaFactura : null,
             'numero_liquidacion' => $numeroLiquidacion !== '' ? $numeroLiquidacion : null,
-            'forma_compra' => $formaCompra !== '' ? $formaCompra : null,
             'tiene_garantia' => $tieneGarantia,
             'tiempo_garantia' => $tieneGarantia === 1 && $tiempoGarantia !== '' ? $tiempoGarantia : null,
             'documento_respaldo' => null,
@@ -157,7 +155,7 @@ class BienesController extends Controller
             $error = 'La forma de ingreso es obligatoria.';
         } elseif ($fechaIngreso === '') {
             $error = 'La fecha de ingreso es obligatoria.';
-        } elseif (!$this->esFechaValida($fechaIngreso)) {
+        } elseif (!isValidIsoDate($fechaIngreso)) {
             $error = 'La fecha de ingreso no es válida.';
         } else {
             $formaSeleccionada = null;
@@ -236,7 +234,7 @@ class BienesController extends Controller
                             $error = 'El número de factura es obligatorio para la compra.';
                         } elseif ($fechaFactura === '') {
                             $error = 'La fecha de factura es obligatoria para la compra.';
-                        } elseif (!$this->esFechaValida($fechaFactura)) {
+                        } elseif (!isValidIsoDate($fechaFactura)) {
                             $error = 'La fecha de factura no es válida.';
                         } elseif ($datos['costo'] === null) {
                             $error = 'El costo es obligatorio para compra.';
@@ -250,7 +248,7 @@ class BienesController extends Controller
                             $error = 'La entidad donante es obligatoria para la donación.';
                         } elseif ($numeroActa === '') {
                             $error = 'El número de acta es obligatorio para la donación.';
-                        } elseif ($fechaActa !== '' && !$this->esFechaValida($fechaActa)) {
+                        } elseif ($fechaActa !== '' && !isValidIsoDate($fechaActa)) {
                             $error = 'La fecha de acta no es válida.';
                         } elseif ($datos['valor_estimado'] === null) {
                             $error = 'El valor estimado es obligatorio para donación.';
@@ -264,7 +262,7 @@ class BienesController extends Controller
                             $error = 'El código de la unidad de origen es obligatorio para el traslado.';
                         } elseif ($numeroActa === '') {
                             $error = 'El número de acta es obligatorio para el traslado.';
-                        } elseif ($fechaActa !== '' && !$this->esFechaValida($fechaActa)) {
+                        } elseif ($fechaActa !== '' && !isValidIsoDate($fechaActa)) {
                             $error = 'La fecha de acta no es válida.';
                         } elseif ($datos['costo'] === null) {
                             $error = 'El costo es obligatorio para traslado.';
@@ -291,7 +289,6 @@ class BienesController extends Controller
                     'serie_factura' => $serieFactura,
                     'fecha_factura' => $fechaFactura,
                     'numero_liquidacion' => $numeroLiquidacion,
-                    'forma_compra' => $formaCompra,
                     'tiene_garantia' => $tieneGarantia,
                     'tiempo_garantia' => $tiempoGarantia,
                     'procedencia' => $procedencia,
@@ -419,7 +416,6 @@ class BienesController extends Controller
                     'serie_factura' => $serieFactura,
                     'fecha_factura' => $fechaFactura,
                     'numero_liquidacion' => $numeroLiquidacion,
-                    'forma_compra' => $formaCompra,
                     'tiene_garantia' => $tieneGarantia,
                     'tiempo_garantia' => $tiempoGarantia,
                     'procedencia' => $procedencia,
@@ -615,7 +611,6 @@ class BienesController extends Controller
         $serieFactura = trim($_POST['serie_factura'] ?? '');
         $fechaFactura = trim($_POST['fecha_factura'] ?? '');
         $numeroLiquidacion = trim($_POST['numero_liquidacion'] ?? '');
-        $formaCompra = trim($_POST['forma_compra'] ?? '');
         $tieneGarantia = isset($_POST['tiene_garantia'])
             ? ((int) ($_POST['tiene_garantia'] === '1' || $_POST['tiene_garantia'] === 'on' ? 1 : 0))
             : 0;
@@ -656,7 +651,6 @@ class BienesController extends Controller
             'serie_factura' => $serieFactura !== '' ? $serieFactura : null,
             'fecha_factura' => $fechaFactura !== '' ? $fechaFactura : null,
             'numero_liquidacion' => $numeroLiquidacion !== '' ? $numeroLiquidacion : null,
-            'forma_compra' => $formaCompra !== '' ? $formaCompra : null,
             'tiene_garantia' => $tieneGarantia,
             'tiempo_garantia' => $tieneGarantia === 1 && $tiempoGarantia !== '' ? $tiempoGarantia : null,
             'documento_respaldo' => null,
@@ -700,7 +694,7 @@ class BienesController extends Controller
             $error = 'No se puede eliminar un código SICOIN ya registrado.';
         } elseif ($fechaIngreso === '') {
             $error = 'La fecha de ingreso es obligatoria.';
-        } elseif (!$this->esFechaValida($fechaIngreso)) {
+        } elseif (!isValidIsoDate($fechaIngreso)) {
             $error = 'La fecha de ingreso no es válida.';
         } else {
             $categoriaValida = false;
@@ -757,7 +751,7 @@ class BienesController extends Controller
                         $error = 'El número de factura es obligatorio para la compra.';
                     } elseif ($fechaFactura === '') {
                         $error = 'La fecha de factura es obligatoria para la compra.';
-                    } elseif (!$this->esFechaValida($fechaFactura)) {
+                    } elseif (!isValidIsoDate($fechaFactura)) {
                         $error = 'La fecha de factura no es válida.';
                     } elseif ($datos['costo'] === null) {
                         $error = 'El costo es obligatorio para compra.';
@@ -771,7 +765,7 @@ class BienesController extends Controller
                         $error = 'La entidad donante es obligatoria para la donación.';
                     } elseif ($numeroActa === '') {
                         $error = 'El número de acta es obligatorio para la donación.';
-                    } elseif ($fechaActa !== '' && !$this->esFechaValida($fechaActa)) {
+                    } elseif ($fechaActa !== '' && !isValidIsoDate($fechaActa)) {
                         $error = 'La fecha de acta no es válida.';
                     } elseif ($datos['valor_estimado'] === null) {
                         $error = 'El valor estimado es obligatorio para donación.';
@@ -785,7 +779,7 @@ class BienesController extends Controller
                         $error = 'El código de la unidad de origen es obligatorio para el traslado.';
                     } elseif ($numeroActa === '') {
                         $error = 'El número de acta es obligatorio para el traslado.';
-                    } elseif ($fechaActa !== '' && !$this->esFechaValida($fechaActa)) {
+                    } elseif ($fechaActa !== '' && !isValidIsoDate($fechaActa)) {
                         $error = 'La fecha de acta no es válida.';
                     } elseif ($datos['costo'] === null) {
                         $error = 'El costo es obligatorio para traslado.';
@@ -815,7 +809,6 @@ class BienesController extends Controller
                     'serie_factura' => $serieFactura,
                     'fecha_factura' => $fechaFactura,
                     'numero_liquidacion' => $numeroLiquidacion,
-                    'forma_compra' => $formaCompra,
                     'tiene_garantia' => $tieneGarantia,
                     'tiempo_garantia' => $tiempoGarantia,
                     'procedencia' => $procedencia,
@@ -924,7 +917,6 @@ class BienesController extends Controller
                     'serie_factura' => $serieFactura,
                     'fecha_factura' => $fechaFactura,
                     'numero_liquidacion' => $numeroLiquidacion,
-                    'forma_compra' => $formaCompra,
                     'tiene_garantia' => $tieneGarantia,
                     'tiempo_garantia' => $tiempoGarantia,
                     'procedencia' => $procedencia,
@@ -1353,13 +1345,6 @@ class BienesController extends Controller
         }
 
         return $rutaRelativa;
-    }
-
-    private function esFechaValida(string $fecha): bool
-    {
-        $fechaObjeto = DateTime::createFromFormat('!Y-m-d', $fecha);
-
-        return $fechaObjeto !== false && $fechaObjeto->format('Y-m-d') === $fecha;
     }
 
     private function mensajeErrorDuplicado(Throwable $e): ?string

@@ -20,6 +20,7 @@ Proyecto de graduación aplicado al área de inventario del **Hospital General d
 - Composer
 - [endroid/qr-code](https://github.com/endroid/qr-code) (generación de códigos QR)
 - [phpoffice/phpspreadsheet](https://github.com/PHPOffice/PhpSpreadsheet) 5.9.0 (generación de las Tarjetas de Responsabilidad en formato XLSX)
+- [Flatpickr](https://flatpickr.js.org/) 4.6.13 (selector de fechas en formularios, con presentación `DD/MM/AAAA` y almacenamiento interno `YYYY-MM-DD`; assets servidos localmente desde `public/vendor/flatpickr/`, sin CDN)
 - Git y GitHub
 - XAMPP (entorno de desarrollo local)
 

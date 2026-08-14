@@ -58,6 +58,8 @@ En instalaciones de XAMPP esta extensión puede venir deshabilitada por defecto.
 8. Configurar el acceso vía Apache (VirtualHost, o directamente la carpeta del proyecto dentro de `htdocs/` en XAMPP).
 9. Verificar las extensiones PHP de la sección 2, en particular `zip`.
 
+**Nota sobre Flatpickr:** los assets del selector de fechas (`public/vendor/flatpickr/`) ya vienen incluidos y versionados en el repositorio como copia local oficial (JS, CSS y localización en español). No requieren `npm`, Node ni conexión a Internet para funcionar — se sirven directamente desde `public/` igual que el resto de assets estáticos del proyecto.
+
 ## 4. Estado real de la base de datos
 
 ⚠️ El repositorio **todavía no contiene** un script SQL consolidado y actualizado dentro de `database/` que reproduzca el esquema completo actual. Hoy `database/` solo contiene un `.gitkeep`, sin ningún `.sql` versionado.

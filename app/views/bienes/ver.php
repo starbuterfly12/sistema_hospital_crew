@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es-GT">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -66,7 +66,7 @@
         <dd><?= $mostrar($bien['nombre_forma'] ?? null) ?></dd>
 
         <dt>Fecha de ingreso</dt>
-        <dd><?= $mostrar($bien['fecha_ingreso'] ?? null) ?></dd>
+        <dd><?= $mostrar(formatDate($bien['fecha_ingreso'] ?? null)) ?></dd>
 
         <dt>Costo</dt>
         <dd><?= $mostrar($bien['costo'] ?? null) ?></dd>
@@ -87,10 +87,10 @@
         <dd><?= $mostrar($bien['observaciones'] ?? null) ?></dd>
 
         <dt>Fecha de registro</dt>
-        <dd><?= $mostrar($bien['created_at'] ?? null) ?></dd>
+        <dd><?= $mostrar(formatDateTime($bien['created_at'] ?? null)) ?></dd>
 
         <dt>Fecha de actualización</dt>
-        <dd><?= $mostrar($bien['updated_at'] ?? null) ?></dd>
+        <dd><?= $mostrar(formatDateTime($bien['updated_at'] ?? null)) ?></dd>
     </dl>
 
     <?php if ($formaNombre === 'compra'): ?>
@@ -107,13 +107,10 @@
             <dd><?= $mostrar($datosIngreso['serie_factura'] ?? null) ?></dd>
 
             <dt>Fecha de factura</dt>
-            <dd><?= $mostrar($datosIngreso['fecha_factura'] ?? null) ?></dd>
+            <dd><?= $mostrar(formatDate($datosIngreso['fecha_factura'] ?? null)) ?></dd>
 
             <dt>Número de liquidación</dt>
             <dd><?= $mostrar($datosIngreso['numero_liquidacion'] ?? null) ?></dd>
-
-            <dt>Forma de compra</dt>
-            <dd><?= $mostrar($datosIngreso['forma_compra'] ?? null) ?></dd>
 
             <dt>¿Tiene garantía?</dt>
             <dd><?= ((int) ($datosIngreso['tiene_garantia'] ?? 0) === 1) ? 'Sí' : 'No' ?></dd>
@@ -144,7 +141,7 @@
             <dd><?= $mostrar($datosIngreso['numero_acta'] ?? null) ?></dd>
 
             <dt>Fecha de acta</dt>
-            <dd><?= $mostrar($datosIngreso['fecha_acta'] ?? null) ?></dd>
+            <dd><?= $mostrar(formatDate($datosIngreso['fecha_acta'] ?? null)) ?></dd>
 
             <dt>Documento de respaldo</dt>
             <dd>
@@ -172,7 +169,7 @@
             <dd><?= $mostrar($datosIngreso['numero_acta'] ?? null) ?></dd>
 
             <dt>Fecha de acta</dt>
-            <dd><?= $mostrar($datosIngreso['fecha_acta'] ?? null) ?></dd>
+            <dd><?= $mostrar(formatDate($datosIngreso['fecha_acta'] ?? null)) ?></dd>
 
             <dt>Documento de respaldo</dt>
             <dd>
