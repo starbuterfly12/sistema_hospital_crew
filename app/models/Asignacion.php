@@ -358,6 +358,49 @@ class Asignacion extends Model
         return true;
     }
 
+    public function getAsignadas(): array
+    {
+        $sql = "
+            SELECT
+                a.id_asignacion,
+                a.numero_asignacion,
+                r.nombre_completo AS responsable_nombre,
+                u.nombre_ubicacion,
+                u.tipo_ubicacion
+            FROM asignaciones a
+            LEFT JOIN responsables r ON a.id_responsable = r.id_responsable
+            LEFT JOIN ubicaciones u ON a.id_ubicacion = u.id_ubicacion
+            WHERE a.estado_asignacion = 'Asignada'
+            ORDER BY a.numero_asignacion ASC
+        ";
+
+        return $this->fetchAll($sql);
+    }
+
+    // Debe ejecutarse dentro de una transacción activa para que el bloqueo FOR UPDATE tenga efecto.
+    public function getDetallesActivosParaTarjeta(int $idAsignacion): array
+    {
+        $sql = "
+            SELECT
+                da.id_detalle_asignacion,
+                da.id_bien,
+                da.fecha_agregado,
+                b.codigo_interno,
+                b.codigo_sicoin,
+                b.descripcion,
+                b.costo,
+                b.valor_estimado
+            FROM detalle_asignacion da
+            INNER JOIN bienes b ON da.id_bien = b.id_bien
+            WHERE da.id_asignacion = :id_asignacion
+              AND da.estado_detalle = 'activo'
+            ORDER BY da.fecha_agregado ASC, da.id_detalle_asignacion ASC
+            FOR UPDATE
+        ";
+
+        return $this->fetchAll($sql, [':id_asignacion' => $idAsignacion]);
+    }
+
     public function existeAsignacionVigentePorResponsable(
         int $idResponsable,
         ?int $excluirIdAsignacion = null

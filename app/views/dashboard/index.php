@@ -11,6 +11,7 @@
     <p>Hola, <?php echo htmlspecialchars($nombre_completo ?? '', ENT_QUOTES, 'UTF-8'); ?></p>
     <p>Rol: <?php echo htmlspecialchars($nombre_rol ?? '', ENT_QUOTES, 'UTF-8'); ?></p>
     <p>Usuario: <?php echo htmlspecialchars($usuario ?? '', ENT_QUOTES, 'UTF-8'); ?></p>
+    <p><a href="index.php?modulo=auth&accion=logout">Cerrar sesión</a></p>
 
     <h2>Módulos</h2>
     <ul>
@@ -18,7 +19,7 @@
         <li><a href="index.php?modulo=responsables">Responsables</a></li>
         <li><a href="index.php?modulo=ubicaciones">Áreas y ubicaciones</a></li>
         <li><a href="index.php?modulo=asignaciones">Asignaciones</a></li>
-        <li>Tarjetas de responsabilidad</li>
+        <li><a href="index.php?modulo=tarjetas">Tarjetas de responsabilidad</a></li>
         <li>Movimientos</li>
         <li>Préstamos</li>
         <li>Devoluciones</li>

@@ -238,6 +238,8 @@ class Responsable extends Model
             SELECT
                 id_responsable,
                 nombre_completo,
+                cargo,
+                nit,
                 id_ubicacion,
                 estado_responsable
             FROM responsables

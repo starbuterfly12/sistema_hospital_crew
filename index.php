@@ -20,7 +20,12 @@ switch ($modulo) {
     case 'auth':
         require_once __DIR__ . '/app/controllers/AuthController.php';
         $authController = new AuthController();
-        $authController->login();
+
+        if ($accion === 'logout') {
+            $authController->logout();
+        } else {
+            $authController->login();
+        }
         break;
 
     case 'dashboard':
@@ -129,6 +134,26 @@ switch ($modulo) {
             $asignacionesController->confirmar();
         } else {
             $asignacionesController->index();
+        }
+        break;
+
+    case 'tarjetas':
+        if (!isset($_SESSION['id_usuario'])) {
+            header('Location: index.php');
+            exit;
+        }
+
+        require_once __DIR__ . '/app/controllers/TarjetasController.php';
+        $tarjetasController = new TarjetasController();
+
+        if ($accion === 'generar') {
+            $tarjetasController->generar();
+        } elseif ($accion === 'ver') {
+            $tarjetasController->ver();
+        } elseif ($accion === 'descargar_excel') {
+            $tarjetasController->descargarExcel();
+        } else {
+            $tarjetasController->index();
         }
         break;
 

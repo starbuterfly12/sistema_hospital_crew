@@ -515,6 +515,7 @@ class BienesController extends Controller
         $ingresoDonacionModel = $this->model('IngresoDonacion');
         $ingresoTrasladoModel = $this->model('IngresoTraslado');
         $bitacoraModel = $this->model('Bitacora');
+        $historialSicoinModel = $this->model('HistorialSicoin');
         $formaIngresoModel = $this->model('FormaIngreso');
         $categoriaBienModel = $this->model('CategoriaBien');
         $estadoBienModel = $this->model('EstadoBien');
@@ -643,6 +644,12 @@ class BienesController extends Controller
             'observaciones' => $observaciones !== '' ? $observaciones : null,
         ];
 
+        // Normalización únicamente para comparar el SICOIN anterior contra el nuevo (historial_sicoin).
+        $sicoinAnteriorNormalizado = trim((string) ($bien['codigo_sicoin'] ?? ''));
+        $sicoinAnteriorNormalizado = $sicoinAnteriorNormalizado !== '' ? $sicoinAnteriorNormalizado : null;
+        $sicoinNuevoNormalizado = $datos['codigo_sicoin'];
+        $huboCambioSicoin = $sicoinAnteriorNormalizado !== $sicoinNuevoNormalizado;
+
         $datosIngresoCompra = [
             'proveedor' => $proveedor !== '' ? $proveedor : null,
             'numero_factura' => $numeroFactura !== '' ? $numeroFactura : null,
@@ -689,6 +696,8 @@ class BienesController extends Controller
             $error = 'La condición del bien es obligatoria.';
         } elseif (!in_array($condicionBien, ['Bueno', 'Regular', 'Malo'], true)) {
             $error = 'La condición seleccionada no es válida.';
+        } elseif ($sicoinAnteriorNormalizado !== null && $sicoinNuevoNormalizado === null) {
+            $error = 'No se puede eliminar un código SICOIN ya registrado.';
         } elseif ($fechaIngreso === '') {
             $error = 'La fecha de ingreso es obligatoria.';
         } elseif (!$this->esFechaValida($fechaIngreso)) {
@@ -847,6 +856,29 @@ class BienesController extends Controller
                 $ingresoDonacionModel->actualizarPorBienId($idBien, $datosIngresoDonacion);
             } elseif ($formaNombre === 'traslado') {
                 $ingresoTrasladoModel->actualizarPorBienId($idBien, $datosIngresoTraslado);
+            }
+
+            if ($huboCambioSicoin) {
+                $historialSicoinModel->registrar([
+                    'id_bien' => $idBien,
+                    'sicoin_anterior' => $sicoinAnteriorNormalizado,
+                    'sicoin_nuevo' => $sicoinNuevoNormalizado,
+                    'fecha_cambio' => date('Y-m-d H:i:s'),
+                    'id_usuario' => (int) $_SESSION['id_usuario'],
+                ]);
+
+                $bitacoraModel->registrar(
+                    idUsuario: (int) $_SESSION['id_usuario'],
+                    accion: 'CAMBIAR_SICOIN_BIEN',
+                    modulo: 'Bienes',
+                    resultado: 'exitoso',
+                    descripcion: 'Se actualizó el código SICOIN del bien con código interno ' . $datos['codigo_interno']
+                        . ': ' . ($sicoinAnteriorNormalizado ?? 'Sin SICOIN') . ' → ' . $sicoinNuevoNormalizado . '.',
+                    tablaAfectada: 'bienes',
+                    idRegistroAfectado: $idBien,
+                    ipOrigen: $_SERVER['REMOTE_ADDR'] ?? null,
+                    usuarioIntentado: null
+                );
             }
 
             $bitacoraModel->registrar(
