@@ -66,6 +66,7 @@ class TarjetasController extends Controller
         $tarjetaModel = $this->model('TarjetaResponsabilidad');
         $detalleTarjetaModel = $this->model('DetalleTarjetaResponsabilidad');
         $historialSicoinModel = $this->model('HistorialSicoin');
+        $detalleMovimientoModel = $this->model('DetalleMovimiento');
         $bitacoraModel = $this->model('Bitacora');
 
         try {
@@ -120,14 +121,14 @@ class TarjetasController extends Controller
                 return;
             }
 
-            $detalles = $asignacionModel->getDetallesActivosParaTarjeta($idAsignacion);
+            $detalles = $asignacionModel->getDetallesParaTarjeta($idAsignacion);
 
             if (empty($detalles)) {
                 $tarjetaModel->rollBack();
 
                 $this->view('tarjetas/generar', [
                     'asignaciones' => $asignacionModel->getAsignadas(),
-                    'error' => 'La asignación no tiene bienes activos para generar una tarjeta de responsabilidad.',
+                    'error' => 'La asignación no tiene bienes ni historial para generar una tarjeta de responsabilidad.',
                 ]);
                 return;
             }
@@ -153,9 +154,13 @@ class TarjetasController extends Controller
             $eventos = [];
 
             foreach ($detalles as $detalle) {
-                $historialBien = $historialSicoinModel->getPorBien((int) $detalle['id_bien']);
+                $idDetalleAsignacion = (int) $detalle['id_detalle_asignacion'];
 
-                array_push($eventos, ...$this->construirEventosBien($detalle, $historialBien));
+                $historialBien = $historialSicoinModel->getPorBien((int) $detalle['id_bien']);
+                $entrada = $detalleMovimientoModel->findEntradaPorDetalleDestino($idDetalleAsignacion);
+                $salida = $detalleMovimientoModel->findSalidaPorDetalleOrigen($idDetalleAsignacion);
+
+                array_push($eventos, ...$this->construirEventosDetalle($detalle, $historialBien, $entrada, $salida));
             }
 
             usort($eventos, function (array $a, array $b): int {
@@ -185,7 +190,7 @@ class TarjetasController extends Controller
                     'saldo_resultante' => $saldo,
                     'orden_linea' => $orden,
                     'observaciones' => $evento['observaciones'],
-                    'id_movimiento' => $evento['id_movimiento'],
+                    'id_detalle_movimiento' => $evento['id_detalle_movimiento'],
                     'id_detalle_asignacion' => $evento['id_detalle_asignacion'],
                 ]);
 
@@ -430,15 +435,21 @@ class TarjetasController extends Controller
     }
 
     /**
-     * Construye los eventos históricos (ALTA + regularizaciones SICOIN) de un bien
-     * dentro de una emisión. No inserta nada: solo devuelve la colección en memoria,
-     * cada evento con sus propias claves de orden global (ver generar()).
+     * Construye los eventos históricos de UN detalle de asignación dentro de una emisión:
+     * evento inicial (ALTA o TRASLADO_ENTRADA, mutuamente excluyentes), regularizaciones SICOIN
+     * acotadas a la vigencia de este detalle, y evento final TRASLADO_SALIDA si aplica.
+     * No inserta nada: solo devuelve la colección en memoria, cada evento con sus propias
+     * claves de orden global (ver generar()).
+     *
+     * $entrada / $salida: filas de detalle_movimiento (o false) ya resueltas por el llamador
+     * vía DetalleMovimiento::findEntradaPorDetalleDestino()/findSalidaPorDetalleOrigen().
      */
-    private function construirEventosBien(array $detalle, array $historialBien): array
+    private function construirEventosDetalle(array $detalle, array $historialBien, array|false $entrada, array|false $salida): array
     {
         $idBien = (int) $detalle['id_bien'];
         $idDetalleAsignacion = (int) $detalle['id_detalle_asignacion'];
         $fechaAgregado = (string) $detalle['fecha_agregado'];
+        $fechaRetirado = $detalle['fecha_retirado'] !== null ? (string) $detalle['fecha_retirado'] : null;
         $descripcionMostrada = $detalle['descripcion'];
         $codigoInterno = (string) $detalle['codigo_interno'];
 
@@ -452,58 +463,100 @@ class TarjetasController extends Controller
 
         $valorBien = round((float) $valorBien, 2);
 
-        // Determinar el SICOIN que el bien realmente tenía al momento de fecha_agregado:
-        // el primer cambio de historial con fecha >= fecha_agregado indica cuál era el
-        // código ANTES de ese cambio. Si no hay ningún cambio posterior a fecha_agregado,
-        // se usa el codigo_sicoin actual como mejor evidencia disponible.
-        $codigoMostradoAlta = $detalle['codigo_sicoin'];
-
-        foreach ($historialBien as $evento) {
-            if (substr((string) $evento['fecha_cambio'], 0, 10) >= $fechaAgregado) {
-                $codigoMostradoAlta = $evento['sicoin_anterior'];
-                break;
-            }
-        }
-
-        // Regla definitiva: la columna de código nunca queda vacía. Si históricamente
-        // el bien todavía no tenía SICOIN en fecha_agregado, se muestra el código interno.
-        if ($codigoMostradoAlta === null || $codigoMostradoAlta === '') {
-            $codigoMostradoAlta = $codigoInterno;
-        }
+        $entroPorTraslado = $entrada !== false;
+        $salioPorTraslado = $salida !== false;
 
         $eventos = [];
 
-        $eventos[] = [
-            'id_bien' => $idBien,
-            'id_detalle_asignacion' => $idDetalleAsignacion,
-            'id_movimiento' => null,
-            'tipo_operacion' => 'ALTA',
-            'fecha_operacion' => $fechaAgregado,
-            'codigo_mostrado' => $codigoMostradoAlta,
-            'descripcion_mostrada' => $descripcionMostrada,
-            'cantidad' => 1,
-            'costo_unitario' => $valorBien,
-            'debe' => $valorBien,
-            'haber' => 0.00,
-            'observaciones' => null,
-            'clave_fecha' => $fechaAgregado,
-            'clave_grupo' => 0,
-            'clave_agrupador' => $idDetalleAsignacion,
-            'clave_suborden' => 0,
-        ];
+        if ($entroPorTraslado) {
+            // Detalle DESTINO de un Traslado: NO se genera ALTA. El código y el valor son
+            // exclusivamente el snapshot congelado en detalle_movimiento (puntos 10-11).
+            $fechaEntradaCompleta = (string) $entrada['fecha_movimiento'];
+            $fechaEntradaFecha = substr($fechaEntradaCompleta, 0, 10);
+            $valorEntrada = round((float) $entrada['valor_movimiento'], 2);
 
-        // Regularizaciones: solo eventos NULL/vacío → SICOIN real, ocurridos en o después
-        // de fecha_agregado. Cambios valor→valor distinto quedan fuera de alcance de T3C-B.
+            $eventos[] = [
+                'id_bien' => $idBien,
+                'id_detalle_asignacion' => $idDetalleAsignacion,
+                'id_detalle_movimiento' => (int) $entrada['id_detalle_movimiento'],
+                'tipo_operacion' => 'TRASLADO_ENTRADA',
+                'fecha_operacion' => $fechaEntradaFecha,
+                'codigo_mostrado' => $entrada['codigo_mostrado'],
+                'descripcion_mostrada' => $descripcionMostrada,
+                'cantidad' => 1,
+                'costo_unitario' => $valorEntrada,
+                'debe' => $valorEntrada,
+                'haber' => 0.00,
+                'observaciones' => null,
+                'clave_fecha' => $fechaEntradaCompleta,
+                'clave_grupo' => 0,
+                'clave_agrupador' => $idDetalleAsignacion,
+                'clave_suborden' => 0,
+            ];
+        } else {
+            // ALTA normal: detalle que entró por asignación directa (sin cambios respecto
+            // al generador anterior).
+            $codigoMostradoAlta = $detalle['codigo_sicoin'];
+
+            foreach ($historialBien as $evento) {
+                if (substr((string) $evento['fecha_cambio'], 0, 10) >= $fechaAgregado) {
+                    $codigoMostradoAlta = $evento['sicoin_anterior'];
+                    break;
+                }
+            }
+
+            if ($codigoMostradoAlta === null || $codigoMostradoAlta === '') {
+                $codigoMostradoAlta = $codigoInterno;
+            }
+
+            $eventos[] = [
+                'id_bien' => $idBien,
+                'id_detalle_asignacion' => $idDetalleAsignacion,
+                'id_detalle_movimiento' => null,
+                'tipo_operacion' => 'ALTA',
+                'fecha_operacion' => $fechaAgregado,
+                'codigo_mostrado' => $codigoMostradoAlta,
+                'descripcion_mostrada' => $descripcionMostrada,
+                'cantidad' => 1,
+                'costo_unitario' => $valorBien,
+                'debe' => $valorBien,
+                'haber' => 0.00,
+                'observaciones' => null,
+                'clave_fecha' => $fechaAgregado,
+                'clave_grupo' => 0,
+                'clave_agrupador' => $idDetalleAsignacion,
+                'clave_suborden' => 0,
+            ];
+        }
+
+        // Regularizaciones SICOIN acotadas a la vigencia de ESTE detalle (evita duplicar un
+        // mismo cambio de SICOIN entre dos responsables cuando hubo Traslado de por medio).
+        // Límite inferior EXCLUSIVO cuando el detalle entró por Traslado: el día de
+        // TRASLADO_ENTRADA ya "pertenece" a esta etapa desde ese evento, pero un cambio de
+        // SICOIN fechado ese mismo día se considera ocurrido antes de la entrada y se atribuye
+        // a la etapa anterior (cuyo límite superior es inclusivo — ver abajo). Así, un mismo día
+        // de transición nunca queda cubierto por ambas etapas a la vez.
         foreach ($historialBien as $evento) {
             $sicoinAnterior = $evento['sicoin_anterior'];
             $sicoinNuevo = $evento['sicoin_nuevo'];
-            $fechaCambioFecha = substr((string) $evento['fecha_cambio'], 0, 10);
+            $fechaCambioCompleta = (string) $evento['fecha_cambio'];
+            $fechaCambioFecha = substr($fechaCambioCompleta, 0, 10);
 
             $esRegularizacionSicoin = ($sicoinAnterior === null || $sicoinAnterior === '')
                 && $sicoinNuevo !== null
                 && $sicoinNuevo !== '';
 
-            if (!$esRegularizacionSicoin || $fechaCambioFecha < $fechaAgregado) {
+            if (!$esRegularizacionSicoin) {
+                continue;
+            }
+
+            $dentroLimiteInferior = $entroPorTraslado
+                ? ($fechaCambioFecha > $fechaAgregado)
+                : ($fechaCambioFecha >= $fechaAgregado);
+
+            $dentroLimiteSuperior = $fechaRetirado === null || $fechaCambioFecha <= $fechaRetirado;
+
+            if (!$dentroLimiteInferior || !$dentroLimiteSuperior) {
                 continue;
             }
 
@@ -512,7 +565,7 @@ class TarjetasController extends Controller
             $eventos[] = [
                 'id_bien' => $idBien,
                 'id_detalle_asignacion' => $idDetalleAsignacion,
-                'id_movimiento' => null,
+                'id_detalle_movimiento' => null,
                 'tipo_operacion' => 'REGULARIZACION_SALIDA',
                 'fecha_operacion' => $fechaCambioFecha,
                 'codigo_mostrado' => $codigoInterno,
@@ -522,7 +575,7 @@ class TarjetasController extends Controller
                 'debe' => 0.00,
                 'haber' => $valorBien,
                 'observaciones' => null,
-                'clave_fecha' => $fechaCambioFecha,
+                'clave_fecha' => $fechaCambioCompleta,
                 'clave_grupo' => 1,
                 'clave_agrupador' => $idHistorialSicoin,
                 'clave_suborden' => 0,
@@ -531,7 +584,7 @@ class TarjetasController extends Controller
             $eventos[] = [
                 'id_bien' => $idBien,
                 'id_detalle_asignacion' => $idDetalleAsignacion,
-                'id_movimiento' => null,
+                'id_detalle_movimiento' => null,
                 'tipo_operacion' => 'REGULARIZACION_ENTRADA',
                 'fecha_operacion' => $fechaCambioFecha,
                 'codigo_mostrado' => $sicoinNuevo,
@@ -541,10 +594,37 @@ class TarjetasController extends Controller
                 'debe' => $valorBien,
                 'haber' => 0.00,
                 'observaciones' => null,
-                'clave_fecha' => $fechaCambioFecha,
+                'clave_fecha' => $fechaCambioCompleta,
                 'clave_grupo' => 1,
                 'clave_agrupador' => $idHistorialSicoin,
                 'clave_suborden' => 1,
+            ];
+        }
+
+        if ($salioPorTraslado) {
+            // Detalle que salió por Traslado: evento final, siempre después de cualquier
+            // evento previo del mismo día (clave_grupo = 2, la más alta de este detalle).
+            $fechaSalidaCompleta = (string) $salida['fecha_movimiento'];
+            $fechaSalidaFecha = substr($fechaSalidaCompleta, 0, 10);
+            $valorSalida = round((float) $salida['valor_movimiento'], 2);
+
+            $eventos[] = [
+                'id_bien' => $idBien,
+                'id_detalle_asignacion' => $idDetalleAsignacion,
+                'id_detalle_movimiento' => (int) $salida['id_detalle_movimiento'],
+                'tipo_operacion' => 'TRASLADO_SALIDA',
+                'fecha_operacion' => $fechaSalidaFecha,
+                'codigo_mostrado' => $salida['codigo_mostrado'],
+                'descripcion_mostrada' => $descripcionMostrada,
+                'cantidad' => 1,
+                'costo_unitario' => $valorSalida,
+                'debe' => 0.00,
+                'haber' => $valorSalida,
+                'observaciones' => null,
+                'clave_fecha' => $fechaSalidaCompleta,
+                'clave_grupo' => 2,
+                'clave_agrupador' => $idDetalleAsignacion,
+                'clave_suborden' => 0,
             ];
         }
 

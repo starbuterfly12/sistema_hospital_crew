@@ -364,6 +364,8 @@ class Asignacion extends Model
             SELECT
                 a.id_asignacion,
                 a.numero_asignacion,
+                a.id_responsable,
+                a.id_ubicacion,
                 r.nombre_completo AS responsable_nombre,
                 u.nombre_ubicacion,
                 u.tipo_ubicacion
@@ -378,13 +380,61 @@ class Asignacion extends Model
     }
 
     // Debe ejecutarse dentro de una transacción activa para que el bloqueo FOR UPDATE tenga efecto.
-    public function getDetallesActivosParaTarjeta(int $idAsignacion): array
+    // Localiza el detalle activo exacto de un bien dentro de una asignación específica, sin asumir
+    // cuál es esa asignación de antemano (se recalcula server-side a partir de b.id_asignacion_actual).
+    public function findDetalleActivoPorBienForUpdate(int $idAsignacion, int $idBien): array|false
+    {
+        $sql = "
+            SELECT
+                id_detalle_asignacion,
+                id_asignacion,
+                id_bien,
+                estado_detalle
+            FROM detalle_asignacion
+            WHERE id_asignacion = :id_asignacion
+              AND id_bien = :id_bien
+              AND estado_detalle = 'activo'
+            LIMIT 1
+            FOR UPDATE
+        ";
+
+        return $this->fetchOne($sql, [
+            ':id_asignacion' => $idAsignacion,
+            ':id_bien' => $idBien,
+        ]);
+    }
+
+    // Debe ejecutarse dentro de una transacción activa para que el bloqueo FOR UPDATE tenga efecto.
+    public function findVigentePorResponsableForUpdate(int $idResponsable): array|false
+    {
+        $sql = "
+            SELECT
+                id_asignacion,
+                numero_asignacion,
+                id_ubicacion,
+                estado_asignacion
+            FROM asignaciones
+            WHERE id_responsable = :id_responsable
+              AND estado_asignacion IN ('Pendiente', 'Asignada')
+            LIMIT 1
+            FOR UPDATE
+        ";
+
+        return $this->fetchOne($sql, [':id_responsable' => $idResponsable]);
+    }
+
+    // Debe ejecutarse dentro de una transacción activa para que el bloqueo FOR UPDATE tenga efecto.
+    // Incluye detalles activos Y retirados: una emisión histórica de Tarjeta debe poder reconstruir
+    // también los bienes que ya salieron de la asignación (p. ej. por Traslado), no solo los actuales.
+    public function getDetallesParaTarjeta(int $idAsignacion): array
     {
         $sql = "
             SELECT
                 da.id_detalle_asignacion,
                 da.id_bien,
                 da.fecha_agregado,
+                da.fecha_retirado,
+                da.estado_detalle,
                 b.codigo_interno,
                 b.codigo_sicoin,
                 b.descripcion,
@@ -393,7 +443,6 @@ class Asignacion extends Model
             FROM detalle_asignacion da
             INNER JOIN bienes b ON da.id_bien = b.id_bien
             WHERE da.id_asignacion = :id_asignacion
-              AND da.estado_detalle = 'activo'
             ORDER BY da.fecha_agregado ASC, da.id_detalle_asignacion ASC
             FOR UPDATE
         ";

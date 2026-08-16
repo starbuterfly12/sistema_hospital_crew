@@ -14,6 +14,12 @@ storage/respaldos/*
 storage/documentos/*
 !storage/documentos/.gitkeep
 
+# Archivo de prueba visual de constancia de traslado (M5) - no es plantilla, no se versiona
+storage/prueba_constancia_traslado.xlsx
+
+# Imagen de prueba visual de la etiqueta de codigo bajo el QR - no se versiona
+storage/prueba_qr_bien4.png
+
 # Dependencias (si en el futuro se agrega Composer/Node)
 /vendor/
 node_modules/

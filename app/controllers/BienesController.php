@@ -4,6 +4,7 @@ require_once __DIR__ . '/../core/Controller.php';
 
 use Endroid\QrCode\Builder\Builder;
 use Endroid\QrCode\Writer\PngWriter;
+use Endroid\QrCode\Writer\Result\GdResult;
 
 class BienesController extends Controller
 {
@@ -273,7 +274,7 @@ class BienesController extends Controller
 
             if ($error === null) {
                 try {
-                    $rutaDocumentoRespaldo = $this->guardarDocumentoRespaldo($_FILES['documento_respaldo'] ?? null);
+                    $rutaDocumentoRespaldo = guardarDocumentoRespaldo($_FILES['documento_respaldo'] ?? null);
                 } catch (RuntimeException $errorArchivo) {
                     $error = $errorArchivo->getMessage();
                 }
@@ -361,7 +362,7 @@ class BienesController extends Controller
             $bienModel->commit();
 
             try {
-                $qr = $this->generarArchivoQr($idBien);
+                $qr = $this->generarArchivoQr($idBien, $datos['codigo_sicoin'], $datos['codigo_interno']);
 
                 $bienModel->actualizarQr($idBien, $qr['codigo_qr'], $qr['ruta_qr']);
 
@@ -792,7 +793,7 @@ class BienesController extends Controller
 
         if ($error === null) {
             try {
-                $rutaDocumentoNuevo = $this->guardarDocumentoRespaldo($_FILES['documento_respaldo'] ?? null);
+                $rutaDocumentoNuevo = guardarDocumentoRespaldo($_FILES['documento_respaldo'] ?? null);
             } catch (RuntimeException $errorArchivo) {
                 $error = $errorArchivo->getMessage();
             }
@@ -1067,7 +1068,7 @@ class BienesController extends Controller
         }
 
         try {
-            $qr = $this->generarArchivoQr($idBien);
+            $qr = $this->generarArchivoQr($idBien, $bien['codigo_sicoin'], $bien['codigo_interno']);
 
             $bienModel->actualizarQr($idBien, $qr['codigo_qr'], $qr['ruta_qr']);
 
@@ -1248,7 +1249,7 @@ class BienesController extends Controller
         exit;
     }
 
-    private function generarArchivoQr(int $idBien): array
+    private function generarArchivoQr(int $idBien, ?string $codigoSicoin, string $codigoInterno): array
     {
         $codigoQr = url('index.php?modulo=bienes&accion=ver&id=' . $idBien);
 
@@ -1256,6 +1257,8 @@ class BienesController extends Controller
         $rutaAbsoluta = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR
             . str_replace('/', DIRECTORY_SEPARATOR, $rutaQr);
 
+        // El contenido codificado en el QR es siempre la URL estable del bien — nunca el
+        // código visible. La etiqueta bajo el QR es puramente visual (ver guardarQrConEtiqueta).
         $resultado = (new Builder())->build(
             writer: new PngWriter(),
             data: $codigoQr,
@@ -1263,7 +1266,17 @@ class BienesController extends Controller
             margin: 10
         );
 
-        $resultado->saveToFile($rutaAbsoluta);
+        $codigoSicoinLimpio = trim((string) ($codigoSicoin ?? ''));
+        $codigoMostrado = $codigoSicoinLimpio !== '' ? $codigoSicoinLimpio : $codigoInterno;
+
+        // Builder::build() está tipado para devolver ResultInterface (que no declara getImage());
+        // PngWriter en concreto siempre produce un GdResult/PngResult, pero se verifica en vez de
+        // asumirlo para que sea seguro tanto en tiempo de ejecución como para el análisis estático.
+        if (!$resultado instanceof GdResult) {
+            throw new RuntimeException('El resultado del generador de QR no expone una imagen GD.');
+        }
+
+        $this->guardarQrConEtiqueta($resultado->getImage(), $codigoMostrado, $rutaAbsoluta);
 
         if (!file_exists($rutaAbsoluta) || filesize($rutaAbsoluta) <= 0) {
             if (file_exists($rutaAbsoluta)) {
@@ -1288,63 +1301,59 @@ class BienesController extends Controller
         ];
     }
 
-    private function guardarDocumentoRespaldo(?array $archivo): ?string
+    /**
+     * Compone el PNG final: copia el QR generado por endroid/qr-code TAL CUAL (misma escala,
+     * sin recorte ni redimensionado, preservando su quiet zone) sobre un lienzo más alto, y
+     * agrega debajo la etiqueta "Código: XXXXX" — únicamente visual, no altera el contenido
+     * codificado ni la ruta del archivo. Usa la fuente bitmap integrada de GD (sin TTF) para
+     * no depender de una fuente externa que pueda no existir en otra instalación.
+     */
+    private function guardarQrConEtiqueta(\GdImage $imagenQr, string $codigoMostrado, string $rutaAbsoluta): void
     {
-        if ($archivo === null || ($archivo['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {
-            return null;
-        }
+        $anchoQr = imagesx($imagenQr);
+        $altoQr = imagesy($imagenQr);
 
-        if ($archivo['error'] !== UPLOAD_ERR_OK) {
-            throw new RuntimeException('No se pudo cargar el documento de respaldo.');
-        }
+        $fuente = 5;
+        $anchoCaracter = imagefontwidth($fuente);
+        $altoCaracter = imagefontheight($fuente);
 
-        $tamano = (int) ($archivo['size'] ?? 0);
+        // Sanitiza el código antes de dibujarlo (quita caracteres de control) y lo convierte a
+        // Latin-1 porque las fuentes bitmap integradas de GD no interpretan UTF-8 multibyte.
+        $codigoSanitizado = preg_replace('/[\x00-\x1F\x7F]/', '', $codigoMostrado) ?? '';
+        $texto = mb_convert_encoding('Código: ' . $codigoSanitizado, 'ISO-8859-1', 'UTF-8');
+        // +1 por el desplazamiento horizontal de la negrita simulada (ver más abajo), para que
+        // el centrado y el ancho del lienzo contemplen el trazo completo.
+        $anchoTexto = $anchoCaracter * strlen($texto) + 1;
 
-        if ($tamano <= 0) {
-            throw new RuntimeException('El documento de respaldo está vacío.');
-        }
+        $margenSeparacion = 10;
+        $margenInferior = 10;
+        $paddingLateral = 20;
 
-        if ($tamano > 5 * 1024 * 1024) {
-            throw new RuntimeException('El documento de respaldo no puede superar los 5 MB.');
-        }
+        $anchoLienzo = max($anchoQr, $anchoTexto + $paddingLateral);
+        $altoLienzo = $altoQr + $margenSeparacion + $altoCaracter + $margenInferior;
 
-        $tmpName = $archivo['tmp_name'] ?? '';
+        $lienzo = imagecreatetruecolor($anchoLienzo, $altoLienzo);
+        $blanco = imagecolorallocate($lienzo, 255, 255, 255);
+        $negro = imagecolorallocate($lienzo, 0, 0, 0);
+        imagefill($lienzo, 0, 0, $blanco);
 
-        if ($tmpName === '' || !is_uploaded_file($tmpName)) {
-            throw new RuntimeException('No se pudo cargar el documento de respaldo.');
-        }
+        // El QR se copia a escala 1:1 (imagecopy, no imagecopyresampled) — nunca se deforma
+        // ni se reduce, y su quiet zone (margen de 10px ya incluido por el builder) queda intacta.
+        $offsetXQr = (int) round(($anchoLienzo - $anchoQr) / 2);
+        imagecopy($lienzo, $imagenQr, $offsetXQr, 0, 0, 0, $anchoQr, $altoQr);
 
-        $finfo = new finfo(FILEINFO_MIME_TYPE);
-        $mimeReal = $finfo->file($tmpName);
+        $offsetXTexto = (int) round(($anchoLienzo - $anchoTexto) / 2);
+        $offsetYTexto = $altoQr + $margenSeparacion;
 
-        $extensionesPorMime = [
-            'application/pdf' => 'pdf',
-            'image/jpeg' => 'jpg',
-            'image/png' => 'png',
-        ];
+        // Negrita simulada: imagestring() no soporta peso de fuente real. Se dibuja el mismo
+        // texto dos veces con 1px de desplazamiento horizontal para engrosar el trazo sin
+        // perder legibilidad ni introducir una fuente TTF externa.
+        imagestring($lienzo, $fuente, $offsetXTexto, $offsetYTexto, $texto, $negro);
+        imagestring($lienzo, $fuente, $offsetXTexto + 1, $offsetYTexto, $texto, $negro);
 
-        if ($mimeReal === false || !isset($extensionesPorMime[$mimeReal])) {
-            throw new RuntimeException('El documento de respaldo debe ser un archivo PDF, JPG o PNG.');
-        }
-
-        $extension = $extensionesPorMime[$mimeReal];
-        $nombreFisico = 'documento_' . bin2hex(random_bytes(16)) . '.' . $extension;
-
-        $rutaRelativa = 'storage/documentos/' . $nombreFisico;
-        $rutaAbsoluta = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR
-            . str_replace('/', DIRECTORY_SEPARATOR, $rutaRelativa);
-
-        $directorioDestino = dirname($rutaAbsoluta);
-
-        if (!is_dir($directorioDestino) || !is_writable($directorioDestino)) {
-            throw new RuntimeException('No se pudo guardar el documento de respaldo.');
-        }
-
-        if (!move_uploaded_file($tmpName, $rutaAbsoluta)) {
-            throw new RuntimeException('No se pudo guardar el documento de respaldo.');
-        }
-
-        return $rutaRelativa;
+        imagepng($lienzo, $rutaAbsoluta);
+        imagedestroy($lienzo);
+        imagedestroy($imagenQr);
     }
 
     private function mensajeErrorDuplicado(Throwable $e): ?string

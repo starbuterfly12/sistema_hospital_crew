@@ -20,11 +20,7 @@
         <li><a href="index.php?modulo=ubicaciones">Áreas y ubicaciones</a></li>
         <li><a href="index.php?modulo=asignaciones">Asignaciones</a></li>
         <li><a href="index.php?modulo=tarjetas">Tarjetas de responsabilidad</a></li>
-        <li>Movimientos</li>
-        <li>Préstamos</li>
-        <li>Devoluciones</li>
-        <li>Bajas</li>
-        <li>Verificaciones físicas</li>
+        <li><a href="index.php?modulo=movimientos">Movimientos</a></li>
         <li>Reportes</li>
         <li>Usuarios</li>
         <li>Bitácora</li>

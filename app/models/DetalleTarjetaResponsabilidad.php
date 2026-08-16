@@ -23,7 +23,7 @@ class DetalleTarjetaResponsabilidad extends Model
                 saldo_resultante,
                 orden_linea,
                 observaciones,
-                id_movimiento,
+                id_detalle_movimiento,
                 id_detalle_asignacion
             ) VALUES (
                 :id_tarjeta_responsabilidad,
@@ -39,7 +39,7 @@ class DetalleTarjetaResponsabilidad extends Model
                 :saldo_resultante,
                 :orden_linea,
                 :observaciones,
-                :id_movimiento,
+                :id_detalle_movimiento,
                 :id_detalle_asignacion
             )
         ";
@@ -58,7 +58,7 @@ class DetalleTarjetaResponsabilidad extends Model
             ':saldo_resultante' => $datos['saldo_resultante'],
             ':orden_linea' => $datos['orden_linea'],
             ':observaciones' => $datos['observaciones'] ?? null,
-            ':id_movimiento' => $datos['id_movimiento'] ?? null,
+            ':id_detalle_movimiento' => $datos['id_detalle_movimiento'] ?? null,
             ':id_detalle_asignacion' => $datos['id_detalle_asignacion'] ?? null,
         ];
 
@@ -85,7 +85,7 @@ class DetalleTarjetaResponsabilidad extends Model
                 saldo_resultante,
                 orden_linea,
                 observaciones,
-                id_movimiento,
+                id_detalle_movimiento,
                 id_detalle_asignacion
             FROM detalle_tarjeta_responsabilidad
             WHERE id_tarjeta_responsabilidad = :id_tarjeta_responsabilidad

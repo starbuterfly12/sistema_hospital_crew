@@ -352,4 +352,108 @@ class Bien extends Model
 
         return true;
     }
+
+    // Bienes actuales de un responsable, independientemente de la asignación administrativa
+    // (histórica) de la que provengan. Solo incluye bienes con estado Activo y con un detalle de
+    // asignación activo resolvible (INNER JOIN): si no puede identificarse su detalle vigente,
+    // el bien queda excluido y no aparece como trasladable.
+    public function getActualesPorResponsable(int $idResponsable): array
+    {
+        $sql = "
+            SELECT
+                b.id_bien,
+                b.codigo_interno,
+                b.codigo_sicoin,
+                b.descripcion,
+                b.marca,
+                b.modelo,
+                b.serie,
+                b.condicion_bien,
+                b.costo,
+                b.valor_estimado,
+                b.id_estado_bien,
+                b.id_asignacion_actual,
+                a.numero_asignacion,
+                b.id_ubicacion_actual,
+                u.nombre_ubicacion
+            FROM bienes b
+            INNER JOIN estados_bien eb ON b.id_estado_bien = eb.id_estado_bien
+            INNER JOIN asignaciones a ON b.id_asignacion_actual = a.id_asignacion
+            INNER JOIN detalle_asignacion da
+                ON da.id_asignacion = b.id_asignacion_actual
+               AND da.id_bien = b.id_bien
+               AND da.estado_detalle = 'activo'
+            LEFT JOIN ubicaciones u ON b.id_ubicacion_actual = u.id_ubicacion
+            WHERE b.id_responsable_actual = :id_responsable
+              AND eb.nombre_estado = 'Activo'
+            ORDER BY a.numero_asignacion ASC, b.codigo_interno ASC
+        ";
+
+        return $this->fetchAll($sql, [':id_responsable' => $idResponsable]);
+    }
+
+    // Debe ejecutarse dentro de una transacción activa para que el bloqueo FOR UPDATE tenga efecto.
+    // No asume una asignación origen fija: el bien puede provenir de cualquier asignación siempre
+    // que su responsable actual coincida con el responsable origen seleccionado.
+    public function findActualParaTrasladoForUpdate(int $idBien, int $idResponsableOrigen): array|false
+    {
+        $sql = "
+            SELECT
+                b.id_bien,
+                b.codigo_interno,
+                b.codigo_sicoin,
+                b.descripcion,
+                b.condicion_bien,
+                b.costo,
+                b.valor_estimado,
+                b.id_estado_bien,
+                b.id_asignacion_actual,
+                b.id_responsable_actual,
+                b.id_ubicacion_actual
+            FROM bienes b
+            LEFT JOIN estados_bien eb ON b.id_estado_bien = eb.id_estado_bien
+            WHERE b.id_bien = :id_bien
+              AND b.id_responsable_actual = :id_responsable_origen
+              AND b.id_asignacion_actual IS NOT NULL
+              AND eb.nombre_estado = 'Activo'
+            LIMIT 1
+            FOR UPDATE
+        ";
+
+        return $this->fetchOne($sql, [
+            ':id_bien' => $idBien,
+            ':id_responsable_origen' => $idResponsableOrigen,
+        ]);
+    }
+
+    // Actualiza el espejo del bien en un Traslado: a diferencia de asignarActual() (primera asignación,
+    // exige id_asignacion_actual IS NULL), aquí el bien YA tiene asignación y se exige que coincida
+    // exactamente con el origen esperado para detectar concurrencia (0 filas afectadas = ya cambió).
+    public function actualizarAsignacionActual(
+        int $idBien,
+        int $idAsignacionOrigenEsperada,
+        int $idAsignacionNueva,
+        int $idResponsableNuevo,
+        int $idUbicacionNueva
+    ): bool {
+        $sql = "
+            UPDATE bienes
+            SET
+                id_asignacion_actual = :id_asignacion_nueva,
+                id_responsable_actual = :id_responsable_nuevo,
+                id_ubicacion_actual = :id_ubicacion_nueva
+            WHERE id_bien = :id_bien
+              AND id_asignacion_actual = :id_asignacion_origen_esperada
+        ";
+
+        $statement = $this->query($sql, [
+            ':id_asignacion_nueva' => $idAsignacionNueva,
+            ':id_responsable_nuevo' => $idResponsableNuevo,
+            ':id_ubicacion_nueva' => $idUbicacionNueva,
+            ':id_bien' => $idBien,
+            ':id_asignacion_origen_esperada' => $idAsignacionOrigenEsperada,
+        ]);
+
+        return $statement->rowCount() === 1;
+    }
 }

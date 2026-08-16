@@ -13,6 +13,7 @@ require_once __DIR__ . '/app/helpers/url.php';
 require_once __DIR__ . '/app/helpers/auth.php';
 require_once __DIR__ . '/app/helpers/csrf.php';
 require_once __DIR__ . '/app/helpers/fecha.php';
+require_once __DIR__ . '/app/helpers/archivos.php';
 
 $modulo = $_GET['modulo'] ?? 'auth';
 $accion = $_GET['accion'] ?? 'index';
@@ -155,6 +156,37 @@ switch ($modulo) {
             $tarjetasController->descargarExcel();
         } else {
             $tarjetasController->index();
+        }
+        break;
+
+    case 'movimientos':
+        if (!isset($_SESSION['id_usuario'])) {
+            header('Location: index.php');
+            exit;
+        }
+
+        require_once __DIR__ . '/app/controllers/MovimientosController.php';
+        $movimientosController = new MovimientosController();
+        $movimientosController->index();
+        break;
+
+    case 'traslados':
+        if (!isset($_SESSION['id_usuario'])) {
+            header('Location: index.php');
+            exit;
+        }
+
+        require_once __DIR__ . '/app/controllers/TrasladosController.php';
+        $trasladosController = new TrasladosController();
+
+        if ($accion === 'crear') {
+            $trasladosController->crear();
+        } elseif ($accion === 'ver') {
+            $trasladosController->ver();
+        } elseif ($accion === 'descargar_constancia') {
+            $trasladosController->descargarConstancia();
+        } else {
+            $trasladosController->index();
         }
         break;
 

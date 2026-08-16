@@ -54,7 +54,7 @@ En instalaciones de XAMPP esta extensión puede venir deshabilitada por defecto.
 4. Crear `config/app.php` a partir de `config/app.example.php` y definir `base_url` según la URL local.
 5. Preparar la base de datos — ver advertencia importante en la sección 4, todavía no hay un script SQL consolidado en el repositorio.
 6. Confirmar que existan y sean escribibles por PHP: `storage/qr/`, `storage/documentos/`, `storage/fotos_baja/`, `storage/respaldos/` (ver [storage/README.md](storage/README.md) para el detalle de cada una).
-7. Confirmar que exista `storage/templates/tarjetas_responsabilidad.xlsx` — es la plantilla institucional necesaria para que la descarga de Tarjetas de Responsabilidad funcione. Debe ser **legible** por PHP (no es una carpeta de salida). Viene incluida y versionada en el repositorio; si falta, la exportación de Tarjetas fallará. No debe sustituirse por una plantilla vacía o de prueba — tiene que ser la plantilla institucional real.
+7. Confirmar que existan `storage/templates/tarjetas_responsabilidad.xlsx` y `storage/templates/constancia_traslado.xlsx` — son las plantillas institucionales necesarias para que la descarga de Tarjetas de Responsabilidad y de la Constancia de Traslado funcionen, respectivamente. Ambas deben ser **legibles** por PHP (no son carpetas de salida). Vienen incluidas y versionadas en el repositorio; si falta alguna, la exportación correspondiente fallará. Ninguna debe sustituirse por una plantilla vacía o de prueba — tienen que ser las plantillas institucionales reales.
 8. Configurar el acceso vía Apache (VirtualHost, o directamente la carpeta del proyecto dentro de `htdocs/` en XAMPP).
 9. Verificar las extensiones PHP de la sección 2, en particular `zip`.
 

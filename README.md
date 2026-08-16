@@ -44,7 +44,7 @@ Proyecto de graduación aplicado al área de inventario del **Hospital General d
 - Registro de bienes institucionales por Compra, Donación o Traslado (cada forma de ingreso con sus propios datos y validaciones).
 - Edición y consulta de bienes, con categorías propias.
 - Documentos de respaldo adjuntos al ingreso del bien.
-- Generación y regeneración de código QR por bien, con vista de impresión/descarga.
+- Generación y regeneración de código QR por bien, con etiqueta visual `Código: XXXXX` (SICOIN si existe, si no código interno) impresa dentro del propio PNG debajo del QR, y vista de impresión/descarga ajustada a un tamaño físico fijo.
 - Trazabilidad de cambios de código SICOIN (`historial_sicoin`): cada vez que el SICOIN de un bien cambia, queda registrado con valor anterior, valor nuevo, fecha y usuario; no se permite dejar vacío un SICOIN ya asignado.
 
 ### Responsables
@@ -75,21 +75,39 @@ Registro y consulta de áreas/ubicaciones del Hospital.
 - Configuración de impresión en papel Legal/Oficio, orientación horizontal.
 - La descarga del XLSX está disponible también para el rol **Visualizador** (es una acción de consulta).
 
-## Plantilla de Tarjetas de Responsabilidad
+### Movimientos
 
-`storage/templates/tarjetas_responsabilidad.xlsx` es la plantilla maestra institucional usada para generar las Tarjetas de Responsabilidad. A diferencia del resto de `storage/`, este archivo **forma parte funcional del proyecto y sí está versionado en Git** — no debe eliminarse.
+Panel único (`Movimientos`, con una sola entrada en el Dashboard) que agrupa los procesos administrativos que movilizan bienes. Por ahora solo **Traslado** tiene implementación real; Préstamo, Devolución, Baja, Verificación física y Solicitudes de baja aparecen listados como pendientes dentro del mismo panel, sin funcionalidad todavía.
 
-Cada descarga carga esta plantilla, trabaja sobre una copia en memoria y genera el archivo de salida sin modificar el archivo maestro.
+**Traslado multi-bien:**
+
+- Flujo: se elige un **responsable origen**, se listan todos sus bienes actuales (sin importar de qué asignación histórica provienen), se seleccionan uno o varios, se elige un **responsable destino** distinto (la ubicación destino se deriva automáticamente de ese responsable).
+- Resolución de la asignación destino: reutiliza una asignación `Asignada` existente, rechaza el traslado si el destino tiene una asignación `Pendiente` (debe confirmarse primero), o crea una nueva asignación `Asignada` automáticamente si el responsable no tiene ninguna vigente.
+- Un traslado es una sola operación (`movimientos`) con un detalle por bien (`detalle_movimiento`), cada uno con su propia asignación/detalle de origen y destino, snapshot de código (SICOIN o interno) y snapshot de valor histórico — todo dentro de una única transacción con bloqueos (`FOR UPDATE`), actualización de los espejos del bien, y una sola entrada de bitácora por traslado (no una por bien).
+- **Constancia de Traslado**: descarga en XLSX generada en memoria a partir de la plantilla institucional (ver más abajo), con fecha en español, origen/destino, responsables, todos los bienes trasladados, usuario de Inventarios, y el número de traslado (`TRA-YYYY-NNNNNN`) únicamente como referencia discreta en el pie de página.
+- **Integración con Tarjetas de Responsabilidad**: una nueva emisión de tarjeta reconstruye automáticamente el historial de bienes trasladados como `TRASLADO_SALIDA` (en la tarjeta del responsable de origen) y `TRASLADO_ENTRADA` (en la del responsable de destino), sin duplicar el alta original ni el saldo. Las tarjetas ya emitidas antes de un traslado no se modifican.
+
+## Plantillas XLSX
+
+Ambas plantillas **forman parte funcional del proyecto y sí están versionadas en Git** (a diferencia del resto de `storage/`, que son archivos generados/subidos) — no deben eliminarse:
+
+- `storage/templates/tarjetas_responsabilidad.xlsx` — plantilla maestra de las Tarjetas de Responsabilidad.
+- `storage/templates/constancia_traslado.xlsx` — plantilla maestra de la Constancia de Traslado.
+
+Cada descarga carga la plantilla correspondiente, trabaja sobre una copia en memoria y genera el archivo de salida sin modificar el archivo maestro.
 
 ## Módulos pendientes
 
-Tienen su estructura base creada (controlador/modelo/vista) pero **continúan en desarrollo** y aún no tienen funcionalidad real:
+Dentro del panel Movimientos, listados pero **sin funcionalidad real todavía**:
 
-- Movimientos
 - Préstamos
 - Devoluciones
 - Bajas
 - Verificación física
+- Solicitudes de baja
+
+Fuera de Movimientos, con su estructura base creada (controlador/modelo/vista) pero **aún en desarrollo**:
+
 - Reportes
 - Usuarios (administración complementaria más allá del login)
 - Bitácora (vista de consulta; los registros ya se generan internamente pero no hay una pantalla para navegarlos)

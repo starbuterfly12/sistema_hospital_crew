@@ -24,6 +24,29 @@ class Responsable extends Model
         return $this->fetchAll($sql);
     }
 
+    public function getActivosConBienesAsignados(): array
+    {
+        $sql = "
+            SELECT
+                r.id_responsable,
+                r.nombre_completo,
+                r.id_ubicacion,
+                u.nombre_ubicacion,
+                u.tipo_ubicacion
+            FROM responsables r
+            JOIN ubicaciones u ON r.id_ubicacion = u.id_ubicacion
+            WHERE r.estado_responsable = 'activo'
+              AND EXISTS (
+                    SELECT 1
+                    FROM bienes b
+                    WHERE b.id_responsable_actual = r.id_responsable
+              )
+            ORDER BY r.nombre_completo ASC
+        ";
+
+        return $this->fetchAll($sql);
+    }
+
     public function getAll(): array
     {
         $sql = "
