@@ -15,7 +15,7 @@
         </li>
 
         <li>
-            <span>Préstamo</span> — <em>Pendiente</em>
+            <a href="index.php?modulo=prestamos">Préstamo</a>
             <p>Entrega temporal de uno o varios bienes sin modificar su asignación original.</p>
         </li>
 

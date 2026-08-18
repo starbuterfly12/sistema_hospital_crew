@@ -190,6 +190,26 @@ switch ($modulo) {
         }
         break;
 
+    case 'prestamos':
+        if (!isset($_SESSION['id_usuario'])) {
+            header('Location: index.php');
+            exit;
+        }
+
+        require_once __DIR__ . '/app/controllers/PrestamosController.php';
+        $prestamosController = new PrestamosController();
+
+        if ($accion === 'crear') {
+            $prestamosController->crear();
+        } elseif ($accion === 'ver') {
+            $prestamosController->ver();
+        } elseif ($accion === 'descargar_constancia') {
+            $prestamosController->descargarConstancia();
+        } else {
+            $prestamosController->index();
+        }
+        break;
+
     default:
         echo 'Módulo no encontrado';
         break;

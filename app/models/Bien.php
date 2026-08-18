@@ -456,4 +456,86 @@ class Bien extends Model
 
         return $statement->rowCount() === 1;
     }
+
+    // Bienes actuales de un responsable que además no tienen ningún préstamo activo pendiente de
+    // devolución. Lectura informativa (sin lock) para precargar el formulario de Préstamo; la
+    // validación real y definitiva ocurre dentro de la transacción vía findPrestableForUpdate() +
+    // DetallePrestamo::existePrestamoActivoPorBienForUpdate().
+    public function getPrestablesPorResponsable(int $idResponsable): array
+    {
+        $sql = "
+            SELECT
+                b.id_bien,
+                b.codigo_interno,
+                b.codigo_sicoin,
+                b.descripcion,
+                b.marca,
+                b.modelo,
+                b.serie,
+                b.condicion_bien,
+                b.costo,
+                b.valor_estimado,
+                b.id_estado_bien,
+                b.id_asignacion_actual,
+                a.numero_asignacion,
+                b.id_ubicacion_actual,
+                u.nombre_ubicacion
+            FROM bienes b
+            INNER JOIN estados_bien eb ON b.id_estado_bien = eb.id_estado_bien
+            INNER JOIN asignaciones a ON b.id_asignacion_actual = a.id_asignacion
+            INNER JOIN detalle_asignacion da
+                ON da.id_asignacion = b.id_asignacion_actual
+               AND da.id_bien = b.id_bien
+               AND da.estado_detalle = 'activo'
+            LEFT JOIN ubicaciones u ON b.id_ubicacion_actual = u.id_ubicacion
+            WHERE b.id_responsable_actual = :id_responsable
+              AND eb.nombre_estado = 'Activo'
+              AND NOT EXISTS (
+                    SELECT 1
+                    FROM detalle_prestamo dp
+                    WHERE dp.id_bien = b.id_bien
+                      AND dp.estado_detalle = 'prestado'
+              )
+            ORDER BY a.numero_asignacion ASC, b.codigo_interno ASC
+        ";
+
+        return $this->fetchAll($sql, [':id_responsable' => $idResponsable]);
+    }
+
+    // Debe ejecutarse dentro de una transacción activa para que el bloqueo FOR UPDATE tenga efecto.
+    // Método propio de Préstamo (no reutiliza findActualParaTrasladoForUpdate) para mantener
+    // independencia semántica entre ambos procesos, aunque hoy la condición base sea la misma: no
+    // valida "sin préstamo activo" aquí a propósito, eso se resuelve aparte con
+    // DetallePrestamo::existePrestamoActivoPorBienForUpdate() para no mezclar una consulta gigantesca.
+    public function findPrestableForUpdate(int $idBien, int $idResponsableOrigen): array|false
+    {
+        $sql = "
+            SELECT
+                b.id_bien,
+                b.codigo_interno,
+                b.codigo_sicoin,
+                b.descripcion,
+                b.serie,
+                b.condicion_bien,
+                b.costo,
+                b.valor_estimado,
+                b.id_estado_bien,
+                b.id_asignacion_actual,
+                b.id_responsable_actual,
+                b.id_ubicacion_actual
+            FROM bienes b
+            LEFT JOIN estados_bien eb ON b.id_estado_bien = eb.id_estado_bien
+            WHERE b.id_bien = :id_bien
+              AND b.id_responsable_actual = :id_responsable_origen
+              AND b.id_asignacion_actual IS NOT NULL
+              AND eb.nombre_estado = 'Activo'
+            LIMIT 1
+            FOR UPDATE
+        ";
+
+        return $this->fetchOne($sql, [
+            ':id_bien' => $idBien,
+            ':id_responsable_origen' => $idResponsableOrigen,
+        ]);
+    }
 }
