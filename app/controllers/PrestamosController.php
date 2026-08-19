@@ -18,12 +18,17 @@ class PrestamosController extends Controller
         'desde_inventarios' => 'Desde Inventarios',
     ];
 
-    // Responsable institucional fijo para préstamos "Desde Inventarios": id_responsable=3 (Cristina
-    // Vargas, cargo "Encargada", ubicación "Área de Inventario") — identificado por SELECT directo,
-    // no existe ninguna relación técnica (FK ni coincidencia de nombre) entre esta responsable y algún
-    // usuario con rol Administrador, por lo que NO puede derivarse desde `usuarios`/`roles`.
-    // PENDIENTE: sustituir por configuración institucional si en el futuro cambia la encargada.
-    private const RESPONSABLE_INVENTARIOS_ID = 3;
+    // "Desde Inventarios" requiere un responsable institucional fijo (Bodega de Almacén /
+    // Inventarios) que hoy NO existe: `responsables` quedó vacía tras el reset de datos de
+    // desarrollo, y el id=3 que se usaba antes (documentado erróneamente como "Cristina Vargas";
+    // el registro real era "Evelyn Samira Castañeda de Tejada") ya no representa a nadie. Se
+    // eliminó la constante fija a propósito, para que no quede ningún id "listo para usarse" que
+    // alguien reactive sin darse cuenta cuando se cree un responsable con ese mismo id por otro
+    // motivo. La opción se bloquea de forma incondicional en crear() ($inventariosDisponible).
+    // PENDIENTE (bloqueante para reactivar "Desde Inventarios"): cuando se cree el responsable
+    // real de Bodega de Almacén, reintroducir aquí la constante con su id definitivo y la lógica
+    // que la resuelve contra `responsables` (ver historial de este archivo antes del 2026-08-18
+    // para la versión previa de esa lógica).
 
     // Única plantilla de constancia: ambos tipos generan exactamente el mismo documento, diferenciado
     // solo por el texto de "Justificación del préstamo". Coordenadas confirmadas por inspección real.
@@ -231,11 +236,27 @@ class PrestamosController extends Controller
 
         $fila = $filaInicio;
 
+        // Ancho combinado real de la plantilla (B+C+D, el merge de descripción) y altura base de la
+        // última fila de ejemplo — mismo criterio que RequisicionesController::generarWorkbookConstancia().
+        $anchoDescripcionCombinado = (float) $hoja->getColumnDimension('B')->getWidth()
+            + (float) $hoja->getColumnDimension('C')->getWidth()
+            + (float) $hoja->getColumnDimension('D')->getWidth();
+        $alturaFilaBase = (float) $hoja->getRowDimension($filaFinBase)->getRowHeight();
+
         foreach ($detalles as $detalle) {
             $codigoSicoin = trim((string) ($detalle['codigo_sicoin_mostrado'] ?? ''));
+            $descripcionCompleta = $this->construirDescripcionCompleta($detalle);
 
             $hoja->setCellValue('A' . $fila, 1);
-            $hoja->setCellValueExplicit('B' . $fila, (string) $detalle['descripcion_mostrada'], DataType::TYPE_STRING);
+            $hoja->setCellValueExplicit('B' . $fila, $descripcionCompleta, DataType::TYPE_STRING);
+
+            // wrapText en vez de truncar/reducir fuente/ensanchar columnas: Excel decide el corte
+            // visual, la fila crece para mostrar el texto completo.
+            $hoja->getStyle('B' . $fila . ':D' . $fila)->getAlignment()->setWrapText(true);
+            $hoja->getRowDimension($fila)->setRowHeight(
+                $this->calcularAlturaFilaDescripcion($descripcionCompleta, $anchoDescripcionCombinado, $alturaFilaBase)
+            );
+
             $hoja->setCellValueExplicit('E' . $fila, (string) $detalle['codigo_interno_mostrado'], DataType::TYPE_STRING);
 
             if ($codigoSicoin !== '') {
@@ -269,6 +290,51 @@ class PrestamosController extends Controller
         $hoja->setCellValue('G' . $filaTotal, $totalCalculado);
 
         return $spreadsheet;
+    }
+
+    /**
+     * Compone "Descripción, modelo: X, serie: Y" para la columna B:D de la constancia, igual regla
+     * que RequisicionesController::construirDescripcionCompleta(). detalle_prestamo ya tiene columna
+     * modelo_mostrado (agregada junto con el resto de snapshots de este bloque — ver
+     * database/2026_08_19_requisiciones_y_snapshots.sql), además de descripcion_mostrada y
+     * serie_mostrada ya existentes. Nunca usa bienes.modelo/serie actuales, solo snapshots
+     * congelados en el momento del préstamo.
+     */
+    private function construirDescripcionCompleta(array $detalle): string
+    {
+        $partes = [trim((string) $detalle['descripcion_mostrada'])];
+
+        $modelo = trim((string) ($detalle['modelo_mostrado'] ?? ''));
+
+        if ($modelo !== '') {
+            $partes[] = 'modelo: ' . $modelo;
+        }
+
+        $serie = trim((string) ($detalle['serie_mostrada'] ?? ''));
+
+        if ($serie !== '') {
+            $partes[] = 'serie: ' . $serie;
+        }
+
+        return implode(', ', $partes);
+    }
+
+    /**
+     * Misma heurística que RequisicionesController::calcularAlturaFilaDescripcion(): estima líneas
+     * necesarias con wrapText activo (1 unidad de ancho de columna ≈ 1 carácter) y nunca baja de la
+     * altura original de la plantilla.
+     */
+    private function calcularAlturaFilaDescripcion(string $texto, float $anchoColumnasCombinado, float $alturaMinima): float
+    {
+        $anchoColumnasCombinado = max($anchoColumnasCombinado, 1.0);
+        $caracteresPorLinea = max(1, (int) floor($anchoColumnasCombinado));
+        $longitudTexto = mb_strlen($texto, 'UTF-8');
+        $lineasEstimadas = max(1, (int) ceil($longitudTexto / $caracteresPorLinea));
+
+        $alturaPorLinea = 14.4;
+        $alturaCalculada = $lineasEstimadas * $alturaPorLinea;
+
+        return max($alturaMinima, $alturaCalculada);
     }
 
     /**
@@ -313,26 +379,10 @@ class PrestamosController extends Controller
         $responsablesOrigen = $responsableModel->getActivosConBienesAsignados();
         $responsablesDestino = $responsableModel->getActivos();
 
-        // La encargada de Inventarios debe poder seleccionarse (y bloquearse) como origen fijo de
-        // "Desde Inventarios" aunque actualmente no tenga bienes asignados y por eso no aparezca en
-        // getActivosConBienesAsignados() — se agrega explícitamente si falta, sin asumir su presencia.
-        $idResponsableInventarios = self::RESPONSABLE_INVENTARIOS_ID;
-        $tieneResponsableInventarios = false;
-
-        foreach ($responsablesOrigen as $responsable) {
-            if ((int) $responsable['id_responsable'] === $idResponsableInventarios) {
-                $tieneResponsableInventarios = true;
-                break;
-            }
-        }
-
-        if (!$tieneResponsableInventarios) {
-            $responsableInventarios = $responsableModel->findById($idResponsableInventarios);
-
-            if ($responsableInventarios !== false && $responsableInventarios['estado_responsable'] === 'activo') {
-                $responsablesOrigen[] = $responsableInventarios;
-            }
-        }
+        // "Desde Inventarios" no tiene todavía un responsable institucional fijo que resolver
+        // (ver comentario junto a la clase): se bloquea de forma incondicional, sin comprobar
+        // ningún id contra `responsables`, hasta que exista una decisión institucional real.
+        $inventariosDisponible = false;
 
         $bienesPorResponsable = [];
 
@@ -368,7 +418,7 @@ class PrestamosController extends Controller
                 'responsablesOrigen' => $responsablesOrigen,
                 'responsablesDestino' => $responsablesDestino,
                 'bienesPorResponsable' => $bienesPorResponsable,
-                'idResponsableInventarios' => $idResponsableInventarios,
+                'inventariosDisponible' => $inventariosDisponible,
                 'error' => null,
                 'datosFormulario' => [],
             ]);
@@ -380,13 +430,9 @@ class PrestamosController extends Controller
         $tipoPrestamo = (string) ($_POST['tipo_prestamo'] ?? '');
         $idResponsableOrigen = (int) ($_POST['id_responsable_origen'] ?? 0);
 
-        // "Desde Inventarios": el origen NUNCA se toma del POST — se impone el responsable
-        // institucional fijo en servidor, sin importar qué haya enviado el formulario o un cliente
-        // manipulado. Todas las validaciones normales (activo, bienes, asignación, etc.) se aplican
-        // igual después, ahora sobre este id forzado.
-        if ($tipoPrestamo === 'desde_inventarios') {
-            $idResponsableOrigen = $idResponsableInventarios;
-        }
+        // "Desde Inventarios" no tiene responsable fijo que imponer (ver comentario junto a la
+        // clase): cualquier envío con este tipo se rechaza más abajo por $inventariosDisponible
+        // antes de llegar a usar $idResponsableOrigen, así que aquí ya no se fuerza ningún id.
 
         $idsBienes = array_values(array_unique(array_map('intval', $_POST['bienes'] ?? [])));
         $condicionesEntregaPost = is_array($_POST['condicion_entrega'] ?? null) ? $_POST['condicion_entrega'] : [];
@@ -414,6 +460,8 @@ class PrestamosController extends Controller
 
         if (!in_array($tipoPrestamo, self::TIPOS_VALIDOS, true)) {
             $error = 'Debe seleccionar un tipo de préstamo válido.';
+        } elseif ($tipoPrestamo === 'desde_inventarios' && !$inventariosDisponible) {
+            $error = 'La opción "Desde Inventarios" no está disponible temporalmente: el responsable de Inventarios aún no ha sido reconstruido.';
         } elseif ($idResponsableOrigen <= 0) {
             $error = 'Debe seleccionar el responsable origen.';
         } elseif (empty($idsBienes)) {
@@ -441,7 +489,7 @@ class PrestamosController extends Controller
                 'responsablesOrigen' => $responsablesOrigen,
                 'responsablesDestino' => $responsablesDestino,
                 'bienesPorResponsable' => $bienesPorResponsable,
-                'idResponsableInventarios' => $idResponsableInventarios,
+                'inventariosDisponible' => $inventariosDisponible,
                 'error' => $error,
                 'datosFormulario' => $datosFormulario,
             ]);
@@ -597,6 +645,7 @@ class PrestamosController extends Controller
                     'codigo_sicoin_mostrado' => $info['codigo_sicoin'],
                     'descripcion_mostrada' => $bien['descripcion'],
                     'serie_mostrada' => $bien['serie'],
+                    'modelo_mostrado' => $bien['modelo'],
                     'valor_prestamo' => $info['valor'],
                     'condicion_entrega' => $info['condicion_entrega'],
                     'observaciones' => null,
@@ -649,7 +698,7 @@ class PrestamosController extends Controller
                 'responsablesOrigen' => $responsablesOrigen,
                 'responsablesDestino' => $responsablesDestino,
                 'bienesPorResponsable' => $bienesPorResponsable,
-                'idResponsableInventarios' => $idResponsableInventarios,
+                'inventariosDisponible' => $inventariosDisponible,
                 'error' => $error,
                 'datosFormulario' => $datosFormulario,
             ]);

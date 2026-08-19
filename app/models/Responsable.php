@@ -273,4 +273,26 @@ class Responsable extends Model
 
         return $this->fetchOne($sql, [':id_responsable' => $idResponsable]);
     }
+
+    // Resuelve el responsable activo de una ubicación por la relación real responsables.id_ubicacion
+    // (no por nombre textual). Devuelve false tanto si no hay ninguno como si hay más de uno —
+    // ambigüedad real que no debe resolverse adivinando cuál usar.
+    public function findActivoPorUbicacion(int $idUbicacion): array|false
+    {
+        $sql = "
+            SELECT
+                id_responsable,
+                nombre_completo,
+                cargo,
+                id_ubicacion,
+                estado_responsable
+            FROM responsables
+            WHERE id_ubicacion = :id_ubicacion
+              AND estado_responsable = 'activo'
+        ";
+
+        $resultados = $this->fetchAll($sql, [':id_ubicacion' => $idUbicacion]);
+
+        return count($resultados) === 1 ? $resultados[0] : false;
+    }
 }

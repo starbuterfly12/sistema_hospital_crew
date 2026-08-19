@@ -17,6 +17,26 @@
 
         $tarjeta = $tarjeta ?? [];
         $operaciones = $operaciones ?? [];
+
+        // Misma regla de composición que RequisicionesController/PrestamosController::
+        // construirDescripcionCompleta(). detalle_tarjeta_responsabilidad no tiene todavía
+        // modelo_mostrado/serie_mostrada, así que hoy equivale a mostrar solo la descripción — queda
+        // listo para cuando esas columnas existan.
+        $descripcionCompleta = static function (array $operacion): string {
+            $partes = [trim((string) ($operacion['descripcion_mostrada'] ?? ''))];
+
+            $modelo = trim((string) ($operacion['modelo_mostrado'] ?? ''));
+            if ($modelo !== '') {
+                $partes[] = 'modelo: ' . $modelo;
+            }
+
+            $serie = trim((string) ($operacion['serie_mostrada'] ?? ''));
+            if ($serie !== '') {
+                $partes[] = 'serie: ' . $serie;
+            }
+
+            return implode(', ', $partes);
+        };
     ?>
 
     <h1>Detalle de tarjeta de responsabilidad</h1>
@@ -62,7 +82,6 @@
                 <tr>
                     <th>Orden</th>
                     <th>Fecha</th>
-                    <th>Tipo</th>
                     <th>SICOIN</th>
                     <th>Cantidad</th>
                     <th>Descripción</th>
@@ -82,10 +101,9 @@
                     <tr>
                         <td><?= (int) $operacion['orden_linea'] ?></td>
                         <td><?= $mostrar(formatDate($operacion['fecha_operacion'] ?? null)) ?></td>
-                        <td><?= $mostrar($operacion['tipo_operacion'] ?? null) ?></td>
                         <td><?= $codigoTexto ?></td>
                         <td><?= (int) $operacion['cantidad'] ?></td>
-                        <td><?= $mostrar($operacion['descripcion_mostrada'] ?? null) ?></td>
+                        <td><?= $mostrar($descripcionCompleta($operacion)) ?></td>
                         <td><?= $mostrar($operacion['debe'] ?? null) ?></td>
                         <td><?= $mostrar($operacion['haber'] ?? null) ?></td>
                         <td><?= $mostrar($operacion['saldo_resultante'] ?? null) ?></td>

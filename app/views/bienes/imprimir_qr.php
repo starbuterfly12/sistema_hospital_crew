@@ -38,6 +38,13 @@
     <?php
         $bien = $bien ?? [];
         $rutaQr = $bien['ruta_qr'] ?? null;
+
+        // Mismo cache busting que en bienes/ver.php: evita que impresión/descarga usen un PNG
+        // desactualizado en el navegador tras regenerar el QR.
+        if (!empty($rutaQr)) {
+            $versionQr = !empty($bien['updated_at']) ? strtotime((string) $bien['updated_at']) : time();
+            $rutaQr .= '?v=' . $versionQr;
+        }
     ?>
 
     <div class="no-imprimir">

@@ -194,4 +194,68 @@ class Ubicacion extends Model
 
         return $this->fetchOne($sql, [':id_ubicacion' => $idUbicacion]);
     }
+
+    // Id de la ubicación institucional de "Bodega de Almacén" — no "cualquier/la única ubicación
+    // tipo Bodega" (en el futuro puede haber varias Bodegas legítimas sin que eso deba impedir
+    // registrar bienes). No existe todavía infraestructura de configuración institucional
+    // (tabla de parámetros); mientras no exista, se centraliza AQUÍ, en un único punto con nombre
+    // explícito, en vez de dispersar el id por controladores/modelos.
+    //
+    // Se usa el id (no el nombre) porque el id es el dato realmente estable: el nombre de esta
+    // misma ubicación ya cambió una vez ("Almacen" -> "Almacen Institucional") sin que el id
+    // cambiara, confirmando en la práctica que resolver por nombre textual sería frágil.
+    //
+    // Confirmado institucionalmente el 2026-08-18: id_ubicacion=2, tipo_ubicacion='Bodega'.
+    // PENDIENTE: mover a una configuración institucional real si el sistema llega a incorporarla.
+    public const ID_UBICACION_ALMACEN_INSTITUCIONAL = 2;
+
+    // Resuelve específicamente la Bodega de Almacén institucional (ID_UBICACION_ALMACEN_INSTITUCIONAL),
+    // no "la única ubicación de tipo Bodega que exista". Devuelve false si esa ubicación no existe,
+    // no está activa, o dejó de ser de tipo 'Bodega' (protección ante un cambio de tipo que
+    // invalidaría la configuración) — el llamador debe tratarlo como "Almacén no configurado
+    // correctamente" y no debe adivinar ni sustituir por otra ubicación.
+    public function findAlmacenInstitucional(): array|false
+    {
+        $sql = "
+            SELECT
+                id_ubicacion,
+                nombre_ubicacion,
+                tipo_ubicacion,
+                estado_ubicacion
+            FROM ubicaciones
+            WHERE id_ubicacion = :id_ubicacion
+              AND tipo_ubicacion = 'Bodega'
+              AND estado_ubicacion = 'activa'
+            LIMIT 1
+        ";
+
+        return $this->fetchOne($sql, [':id_ubicacion' => self::ID_UBICACION_ALMACEN_INSTITUCIONAL]);
+    }
+
+    // Id de la ubicación institucional de "Inventario" — de aquí se resuelve el nombre de la
+    // Encargada que firma "Autoriza" en la constancia de Requisición (Responsable::findActivoPorUbicacion()
+    // sobre este id). Mismo criterio que ID_UBICACION_ALMACEN_INSTITUCIONAL: se fija por id, no por
+    // nombre textual, porque el id es el dato estable.
+    //
+    // Confirmado institucionalmente el 2026-08-18: id_ubicacion=1, tipo_ubicacion='Departamento',
+    // responsable activo único en esa ubicación = Evelyn Castañeda de Tejada (Encargada), consistente
+    // con el nombre que la usuaria ya dejó como ejemplo real en la plantilla de Requisición.
+    public const ID_UBICACION_INVENTARIOS_INSTITUCIONAL = 1;
+
+    public function findInventariosInstitucional(): array|false
+    {
+        $sql = "
+            SELECT
+                id_ubicacion,
+                nombre_ubicacion,
+                tipo_ubicacion,
+                estado_ubicacion
+            FROM ubicaciones
+            WHERE id_ubicacion = :id_ubicacion
+              AND estado_ubicacion = 'activa'
+            LIMIT 1
+        ";
+
+        return $this->fetchOne($sql, [':id_ubicacion' => self::ID_UBICACION_INVENTARIOS_INSTITUCIONAL]);
+    }
 }

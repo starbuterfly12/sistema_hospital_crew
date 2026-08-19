@@ -720,8 +720,6 @@ class AsignacionesController extends Controller
         }
 
         $asignacionModel = $this->model('Asignacion');
-        $bienModel = $this->model('Bien');
-        $bitacoraModel = $this->model('Bitacora');
 
         try {
             $asignacionModel->beginTransaction();
@@ -760,24 +758,10 @@ class AsignacionesController extends Controller
                 return;
             }
 
-            $asignacionModel->retirarBien($idDetalleAsignacion, date('Y-m-d'));
-
-            $bien = $bienModel->findById((int) $detalle['id_bien']);
-            $identificadorBien = ($bien !== false && !empty($bien['codigo_interno']))
-                ? $bien['codigo_interno']
-                : ('#' . $detalle['id_bien']);
-
-            $bitacoraModel->registrar(
-                idUsuario: (int) $_SESSION['id_usuario'],
-                accion: 'RETIRAR_BIEN_ASIGNACION',
-                modulo: 'Asignaciones',
-                resultado: 'exitoso',
-                descripcion: 'Se retiró el bien ' . $identificadorBien . ' de la asignación ' . $asignacion['numero_asignacion'] . '.',
-                tablaAfectada: 'detalle_asignacion',
-                idRegistroAfectado: $idDetalleAsignacion,
-                ipOrigen: $_SERVER['REMOTE_ADDR'] ?? null,
-                usuarioIntentado: null
-            );
+            // La cabecera ya fue verificada como 'Pendiente' arriba: el bien nunca llegó a estar
+            // realmente asignado, así que se elimina el detalle en vez de marcarlo 'retirado' y no
+            // se genera bitácora de retiro (no hubo ningún retiro real que auditar).
+            $asignacionModel->eliminarDetallePendiente($idDetalleAsignacion);
 
             $asignacionModel->commit();
 

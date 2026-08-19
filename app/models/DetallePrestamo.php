@@ -17,6 +17,7 @@ class DetallePrestamo extends Model
                 codigo_sicoin_mostrado,
                 descripcion_mostrada,
                 serie_mostrada,
+                modelo_mostrado,
                 valor_prestamo,
                 condicion_entrega,
                 observaciones
@@ -28,6 +29,7 @@ class DetallePrestamo extends Model
                 :codigo_sicoin_mostrado,
                 :descripcion_mostrada,
                 :serie_mostrada,
+                :modelo_mostrado,
                 :valor_prestamo,
                 :condicion_entrega,
                 :observaciones
@@ -42,6 +44,7 @@ class DetallePrestamo extends Model
             ':codigo_sicoin_mostrado' => $datos['codigo_sicoin_mostrado'] ?? null,
             ':descripcion_mostrada' => $datos['descripcion_mostrada'],
             ':serie_mostrada' => $datos['serie_mostrada'] ?? null,
+            ':modelo_mostrado' => $datos['modelo_mostrado'] ?? null,
             ':valor_prestamo' => $datos['valor_prestamo'],
             ':condicion_entrega' => $datos['condicion_entrega'],
             ':observaciones' => $datos['observaciones'] ?? null,
@@ -64,6 +67,7 @@ class DetallePrestamo extends Model
                 dp.codigo_sicoin_mostrado,
                 dp.descripcion_mostrada,
                 dp.serie_mostrada,
+                dp.modelo_mostrado,
                 dp.valor_prestamo,
                 dp.condicion_entrega,
                 dp.estado_detalle,

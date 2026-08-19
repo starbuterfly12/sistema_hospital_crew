@@ -19,6 +19,7 @@
         <li><a href="index.php?modulo=responsables">Responsables</a></li>
         <li><a href="index.php?modulo=ubicaciones">Áreas y ubicaciones</a></li>
         <li><a href="index.php?modulo=asignaciones">Asignaciones</a></li>
+        <li><a href="index.php?modulo=requisiciones">Requisiciones</a></li>
         <li><a href="index.php?modulo=tarjetas">Tarjetas de responsabilidad</a></li>
         <li><a href="index.php?modulo=movimientos">Movimientos</a></li>
         <li>Reportes</li>

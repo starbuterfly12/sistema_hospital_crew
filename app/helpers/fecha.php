@@ -30,6 +30,44 @@ if (!function_exists('isValidIsoDate')) {
     }
 }
 
+if (!function_exists('calcularFinGarantia')) {
+    // fecha_factura + meses_garantia, calculado siempre en backend (no solo en JS) para que el
+    // resultado mostrado en la interfaz no dependa de que el cliente lo calcule correctamente.
+    //
+    // Aritmética de calendario manual (año/mes/día), NO DateTime::modify('+N months'): ese método
+    // se sale del mes cuando el día de origen no existe en el mes destino (ej. 31 ene + 1 mes da
+    // 3 mar, porque suma 31 días naturales en vez de "un mes calendario"). Regla exigida: conservar
+    // el mismo día si existe en el mes destino; si no, usar el último día válido de ese mes.
+    function calcularFinGarantia(?string $fechaFactura, ?int $mesesGarantia): ?string
+    {
+        if (!isValidIsoDate($fechaFactura) || $mesesGarantia === null || $mesesGarantia < 1 || $mesesGarantia > 12) {
+            return null;
+        }
+
+        $fechaObjeto = DateTime::createFromFormat('!Y-m-d', $fechaFactura);
+
+        if ($fechaObjeto === false) {
+            return null;
+        }
+
+        $anio = (int) $fechaObjeto->format('Y');
+        $mes = (int) $fechaObjeto->format('n');
+        $dia = (int) $fechaObjeto->format('j');
+
+        $totalMeses = ($mes - 1) + $mesesGarantia;
+        $anioDestino = $anio + intdiv($totalMeses, 12);
+        $mesDestino = ($totalMeses % 12) + 1;
+
+        $primerDiaMesDestino = new DateTime();
+        $primerDiaMesDestino->setDate($anioDestino, $mesDestino, 1);
+        $ultimoDiaMesDestino = (int) $primerDiaMesDestino->format('t');
+
+        $diaDestino = min($dia, $ultimoDiaMesDestino);
+
+        return sprintf('%04d-%02d-%02d', $anioDestino, $mesDestino, $diaDestino);
+    }
+}
+
 if (!function_exists('formatDateTime')) {
     function formatDateTime(?string $fechaHora): string
     {

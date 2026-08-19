@@ -20,10 +20,6 @@
         .campo-condicion {
             width: 10em;
         }
-
-        .nota-aclaracion {
-            font-style: italic;
-        }
     </style>
 </head>
 <body>
@@ -44,7 +40,7 @@
         $fechaPrestamoValor = $datosFormulario['fecha_prestamo'] ?? '';
         $fechaDevolucionValor = $datosFormulario['fecha_devolucion_estimada'] ?? '';
         $condicionesEntregaValor = $datosFormulario['condicion_entrega'] ?? [];
-        $idResponsableInventarios = (int) ($idResponsableInventarios ?? 0);
+        $inventariosDisponible = (bool) ($inventariosDisponible ?? false);
     ?>
 
     <?php if (!empty($error)): ?>
@@ -63,12 +59,8 @@
             <select id="tipo_prestamo" name="tipo_prestamo" required>
                 <option value="">Seleccione</option>
                 <option value="entre_servicios" <?= $tipoPrestamoSeleccionado === 'entre_servicios' ? ' selected' : '' ?>>Entre servicios</option>
-                <option value="desde_inventarios" <?= $tipoPrestamoSeleccionado === 'desde_inventarios' ? ' selected' : '' ?>>Desde Inventarios</option>
+                <option value="desde_inventarios"<?= $inventariosDisponible ? '' : ' disabled' ?> <?= $tipoPrestamoSeleccionado === 'desde_inventarios' ? ' selected' : '' ?>>Desde Inventarios<?= $inventariosDisponible ? '' : ' (no disponible)' ?></option>
             </select>
-            <p class="nota-aclaracion">
-                Al elegir "Desde Inventarios", el responsable origen se fija automáticamente en la
-                Encargada de Inventarios y no podrá cambiarse.
-            </p>
         </div>
 
         <div>
@@ -167,7 +159,6 @@
         <div>
             <label for="motivo">Justificación del préstamo *</label>
             <textarea id="motivo" name="motivo" required><?= htmlspecialchars($justificacionValor, ENT_QUOTES, 'UTF-8') ?></textarea>
-            <p class="nota-aclaracion">Ejemplos: vacaciones del responsable, necesidad temporal del servicio, sustitución provisional, actividad institucional, emergencia.</p>
         </div>
 
         <h2>Observaciones</h2>
@@ -190,7 +181,6 @@
         var bienesPorResponsable = <?= json_encode($bienesPorResponsable, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE) ?>;
         var bienesSeleccionadosPrevios = <?= json_encode($bienesSeleccionados, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
         var condicionesEntregaPrevias = <?= json_encode($condicionesEntregaValor, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE) ?>;
-        var idResponsableInventarios = <?= (int) $idResponsableInventarios ?>;
 
         (function () {
             var selectTipo = document.getElementById('tipo_prestamo');
@@ -250,20 +240,15 @@
             }
 
             function actualizarBloqueoOrigenPorTipo() {
+                // "Desde Inventarios" está deshabilitada como <option> (ver más abajo) mientras no
+                // exista un responsable fijo de Inventarios, así que este valor no debería poder
+                // seleccionarse desde la interfaz normal. Si de todas formas llegara a estar
+                // seleccionado, se bloquean todos los orígenes en vez de asumir un id concreto.
                 var esDesdeInventarios = selectTipo.value === 'desde_inventarios';
 
                 Array.prototype.forEach.call(selectOrigen.options, function (opcion) {
-                    if (!opcion.value) {
-                        opcion.disabled = esDesdeInventarios;
-                        return;
-                    }
-
-                    opcion.disabled = esDesdeInventarios && opcion.value !== String(idResponsableInventarios);
+                    opcion.disabled = esDesdeInventarios;
                 });
-
-                if (esDesdeInventarios) {
-                    selectOrigen.value = String(idResponsableInventarios);
-                }
             }
 
             function actualizarOpcionesDestino() {

@@ -515,6 +515,7 @@ class Bien extends Model
                 b.codigo_interno,
                 b.codigo_sicoin,
                 b.descripcion,
+                b.modelo,
                 b.serie,
                 b.condicion_bien,
                 b.costo,
@@ -536,6 +537,91 @@ class Bien extends Model
         return $this->fetchOne($sql, [
             ':id_bien' => $idBien,
             ':id_responsable_origen' => $idResponsableOrigen,
+        ]);
+    }
+
+    // Bienes actualmente bajo el responsable/ubicación de Bodega de Almacén, con detalle_asignacion
+    // activo resolvible, que no estén reservados por otra Requisición ya Autorizada (fila en
+    // detalle_requisicion con estado_detalle='reservado'). Una Requisición Pendiente NO reserva
+    // (estado_detalle='pendiente'), por eso no se filtra ese estado aquí — puede aparecer en varias
+    // requisiciones Pendientes a la vez, tal como fue definido explícitamente para este módulo.
+    public function getDisponiblesEnAlmacenParaRequisicion(int $idResponsableAlmacen, int $idUbicacionAlmacen): array
+    {
+        $sql = "
+            SELECT
+                b.id_bien,
+                b.codigo_interno,
+                b.codigo_sicoin,
+                b.descripcion,
+                b.marca,
+                b.modelo,
+                b.serie,
+                b.condicion_bien,
+                b.costo,
+                b.valor_estimado,
+                b.id_asignacion_actual,
+                a.numero_asignacion
+            FROM bienes b
+            INNER JOIN estados_bien eb ON b.id_estado_bien = eb.id_estado_bien
+            INNER JOIN asignaciones a ON b.id_asignacion_actual = a.id_asignacion
+            INNER JOIN detalle_asignacion da
+                ON da.id_asignacion = b.id_asignacion_actual
+               AND da.id_bien = b.id_bien
+               AND da.estado_detalle = 'activo'
+            WHERE b.id_responsable_actual = :id_responsable_almacen
+              AND b.id_ubicacion_actual = :id_ubicacion_almacen
+              AND eb.nombre_estado = 'Activo'
+              AND NOT EXISTS (
+                    SELECT 1
+                    FROM detalle_requisicion dr
+                    WHERE dr.id_bien = b.id_bien
+                      AND dr.estado_detalle = 'reservado'
+              )
+            ORDER BY b.codigo_interno ASC
+        ";
+
+        return $this->fetchAll($sql, [
+            ':id_responsable_almacen' => $idResponsableAlmacen,
+            ':id_ubicacion_almacen' => $idUbicacionAlmacen,
+        ]);
+    }
+
+    // Debe ejecutarse dentro de una transacción activa para que el bloqueo FOR UPDATE tenga efecto.
+    // Usado por Requisiciones (registrar/editar/autorizar/confirmar entrega) para reconfirmar, en el
+    // instante exacto de cada operación, que el bien sigue Activo y sigue bajo el responsable/
+    // ubicación de Bodega de Almacén — no se confía en el estado leído al mostrar el formulario.
+    public function findActualParaRequisicionForUpdate(int $idBien, int $idResponsableAlmacen, int $idUbicacionAlmacen): array|false
+    {
+        $sql = "
+            SELECT
+                b.id_bien,
+                b.codigo_interno,
+                b.codigo_sicoin,
+                b.descripcion,
+                b.modelo,
+                b.serie,
+                b.condicion_bien,
+                b.costo,
+                b.valor_estimado,
+                b.id_estado_bien,
+                b.id_asignacion_actual,
+                b.id_responsable_actual,
+                b.id_ubicacion_actual
+            FROM bienes b
+            LEFT JOIN estados_bien eb ON b.id_estado_bien = eb.id_estado_bien
+            WHERE b.id_bien = :id_bien
+              AND b.id_responsable_actual = :id_responsable_almacen
+              AND b.id_ubicacion_actual = :id_ubicacion_almacen
+              AND b.id_asignacion_actual IS NOT NULL
+              AND eb.nombre_estado = 'Activo'
+            LIMIT 1
+            FOR UPDATE
+        ";
+
+        return $this->fetchOne($sql, [
+            ':id_bien' => $idBien,
+            ':id_responsable_almacen' => $idResponsableAlmacen,
+            ':id_ubicacion_almacen' => $idUbicacionAlmacen,
         ]);
     }
 }

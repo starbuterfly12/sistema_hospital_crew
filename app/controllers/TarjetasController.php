@@ -67,6 +67,7 @@ class TarjetasController extends Controller
         $detalleTarjetaModel = $this->model('DetalleTarjetaResponsabilidad');
         $historialSicoinModel = $this->model('HistorialSicoin');
         $detalleMovimientoModel = $this->model('DetalleMovimiento');
+        $detalleRequisicionModel = $this->model('DetalleRequisicion');
         $bitacoraModel = $this->model('Bitacora');
 
         try {
@@ -157,8 +158,8 @@ class TarjetasController extends Controller
                 $idDetalleAsignacion = (int) $detalle['id_detalle_asignacion'];
 
                 $historialBien = $historialSicoinModel->getPorBien((int) $detalle['id_bien']);
-                $entrada = $detalleMovimientoModel->findEntradaPorDetalleDestino($idDetalleAsignacion);
-                $salida = $detalleMovimientoModel->findSalidaPorDetalleOrigen($idDetalleAsignacion);
+                $entrada = $this->resolverEntradaDetalle($idDetalleAsignacion, $detalleMovimientoModel, $detalleRequisicionModel);
+                $salida = $this->resolverSalidaDetalle($idDetalleAsignacion, $detalleMovimientoModel, $detalleRequisicionModel);
 
                 array_push($eventos, ...$this->construirEventosDetalle($detalle, $historialBien, $entrada, $salida));
             }
@@ -183,6 +184,8 @@ class TarjetasController extends Controller
                     'fecha_operacion' => $evento['fecha_operacion'],
                     'codigo_mostrado' => $evento['codigo_mostrado'],
                     'descripcion_mostrada' => $evento['descripcion_mostrada'],
+                    'modelo_mostrado' => $evento['modelo_mostrado'],
+                    'serie_mostrada' => $evento['serie_mostrada'],
                     'cantidad' => $evento['cantidad'],
                     'costo_unitario' => $evento['costo_unitario'],
                     'debe' => $evento['debe'],
@@ -370,7 +373,18 @@ class TarjetasController extends Controller
 
             $fila = self::FILA_PRIMERA_OPERACION;
 
+            // IMPORTANTE — Tarjeta de Responsabilidad es un formato de REIMPRESIÓN institucional:
+            // anchos de columna, ALTURAS DE FILA, wrapText, merges (C4:E4/F4:G4/C6:E6/F6:G6),
+            // posiciones, márgenes, escala, orientación, tamaño de papel y área de impresión
+            // (A1:H36) son los de la plantilla y NUNCA se tocan por código — ni con setWidth() ni
+            // con setRowHeight() ni con setWrapText(). La plantilla real ya trae wrapText=true y
+            // una altura fija (14.85) en las filas de operación (confirmado leyendo el archivo
+            // real); solo se escriben VALORES de celda aquí, nunca estilo/tamaño. Si una
+            // descripción larga necesita más espacio del que la fila ya tiene, es el usuario quien
+            // ajusta la fila manualmente en Excel — no este generador.
             foreach ($operacionesHoja as $operacion) {
+                $descripcionCompleta = $this->construirDescripcionCompleta($operacion);
+
                 $hoja->setCellValue(
                     'A' . $fila,
                     ExcelDate::PHPToExcel(new DateTime((string) $operacion['fecha_operacion']))
@@ -381,7 +395,7 @@ class TarjetasController extends Controller
                 }
 
                 $hoja->setCellValue('C' . $fila, (int) $operacion['cantidad']);
-                $hoja->setCellValueExplicit('D' . $fila, (string) $operacion['descripcion_mostrada'], DataType::TYPE_STRING);
+                $hoja->setCellValueExplicit('D' . $fila, $descripcionCompleta, DataType::TYPE_STRING);
                 $hoja->setCellValue('E' . $fila, (float) $operacion['debe']);
                 $hoja->setCellValue('F' . $fila, (float) $operacion['haber']);
                 $hoja->setCellValue('G' . $fila, (float) $operacion['saldo_resultante']);
@@ -403,7 +417,62 @@ class TarjetasController extends Controller
             }
         }
 
+        // Blindaje final — Tarjeta de Responsabilidad es un formato de REIMPRESIÓN institucional:
+        // los anchos de columna JAMÁS deben variar respecto a la plantilla. Se restauran de forma
+        // explícita A:H en cada hoja generada (primera y continuaciones) tomando como única fuente
+        // $plantillaPrimera (la hoja base recién cargada, todavía en memoria aunque ya fue removida
+        // del workbook final). Esto es necesario porque se comprobó empíricamente que un simple
+        // load()+save() de la plantilla ORIGINAL, sin ningún cambio de este generador, ya hace que
+        // PhpSpreadsheet omita el atributo customWidth de las columnas G/H al escribir el XLSX (su
+        // valor numérico de ancho no cambia porque coincide con el ancho por defecto de la hoja, así
+        // que no se veía visualmente, pero no debe dejarse a la suerte). Solo se tocan width/autoSize/
+        // visible/outlineLevel/collapsed — nunca se recalcula por contenido (autoSize siempre queda
+        // en el valor original, false).
+        foreach ($hojasGeneradas as $hoja) {
+            foreach (['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'] as $columna) {
+                $dimensionOriginal = $plantillaPrimera->getColumnDimension($columna);
+                $dimensionGenerada = $hoja->getColumnDimension($columna);
+
+                $dimensionGenerada->setWidth($dimensionOriginal->getWidth());
+                $dimensionGenerada->setAutoSize($dimensionOriginal->getAutoSize());
+                $dimensionGenerada->setVisible($dimensionOriginal->getVisible());
+                $dimensionGenerada->setOutlineLevel($dimensionOriginal->getOutlineLevel());
+                $dimensionGenerada->setCollapsed($dimensionOriginal->getCollapsed());
+            }
+        }
+
         return $spreadsheet;
+    }
+
+    /**
+     * Compone "Descripción, modelo: X, serie: Y" para la columna D de la tarjeta, como texto
+     * CORRIDO en una sola cadena — SIN saltos de línea manuales y sin tocar altura/wrap de fila
+     * (la plantilla real ya trae wrapText=true y una altura fija en las filas de operación; este
+     * método NUNCA toca tamaño ni estilo, solo arma el valor de texto). Mismo formato de texto
+     * corrido que RequisicionesController::construirDescripcionCompleta() y
+     * PrestamosController::construirDescripcionCompleta() (métodos independientes, no se tocan
+     * aquí). Si falta modelo y/o serie, esa parte simplemente se omite — nunca se muestran campos
+     * vacíos, NULL ni guiones artificiales. NUNCA muestra tipo_operacion (ALTA,
+     * TRASLADO_ENTRADA/SALIDA, REQUISICION_ENTRADA/SALIDA) como descripción — esos siguen siendo
+     * solo para Debe/Haber y trazabilidad.
+     */
+    private function construirDescripcionCompleta(array $operacion): string
+    {
+        $partes = [trim((string) $operacion['descripcion_mostrada'])];
+
+        $modelo = trim((string) ($operacion['modelo_mostrado'] ?? ''));
+
+        if ($modelo !== '') {
+            $partes[] = 'modelo: ' . $modelo;
+        }
+
+        $serie = trim((string) ($operacion['serie_mostrada'] ?? ''));
+
+        if ($serie !== '') {
+            $partes[] = 'serie: ' . $serie;
+        }
+
+        return implode(', ', $partes);
     }
 
     /**
@@ -435,14 +504,102 @@ class TarjetasController extends Controller
     }
 
     /**
+     * Resuelve el evento de ENTRADA de un detalle_asignacion específico, buscando primero en
+     * Traslados (detalle_movimiento) y luego en Requisiciones (detalle_requisicion) — un mismo
+     * detalle_asignacion solo pudo entrar por uno de los dos mecanismos, nunca ambos, porque cada
+     * uno crea su propia fila de detalle_asignacion al incorporar el bien (Asignacion::agregarBien()
+     * es compartido, pero cada flujo registra su propio detalle "causante" en su propia tabla).
+     * Devuelve un array con la misma forma que una fila de detalle_movimiento (fecha_movimiento,
+     * codigo_mostrado, valor_movimiento, id_detalle_movimiento) más 'tipo_operacion', o false si el
+     * detalle no entró por ninguno de los dos (ALTA directa, ej. ingreso inicial a Bodega).
+     */
+    private function resolverEntradaDetalle(int $idDetalleAsignacion, DetalleMovimiento $detalleMovimientoModel, DetalleRequisicion $detalleRequisicionModel): array|false
+    {
+        $entradaTraslado = $detalleMovimientoModel->findEntradaPorDetalleDestino($idDetalleAsignacion);
+
+        if ($entradaTraslado !== false) {
+            return [
+                'tipo_operacion' => 'TRASLADO_ENTRADA',
+                'fecha_movimiento' => $entradaTraslado['fecha_movimiento'],
+                'codigo_mostrado' => $entradaTraslado['codigo_mostrado'],
+                'valor_movimiento' => $entradaTraslado['valor_movimiento'],
+                'id_detalle_movimiento' => (int) $entradaTraslado['id_detalle_movimiento'],
+                // detalle_movimiento nunca tuvo estas columnas: null indica "sin dato congelado
+                // específico", construirEventosDetalle() cae al valor por defecto (bien actual).
+                'descripcion_mostrada' => null,
+                'modelo_mostrado' => null,
+                'serie_mostrada' => null,
+            ];
+        }
+
+        $entradaRequisicion = $detalleRequisicionModel->findEntradaPorDetalleDestino($idDetalleAsignacion);
+
+        if ($entradaRequisicion !== false) {
+            return [
+                'tipo_operacion' => 'REQUISICION_ENTRADA',
+                'fecha_movimiento' => $entradaRequisicion['fecha_entrega'],
+                'codigo_mostrado' => $entradaRequisicion['codigo_mostrado'],
+                'valor_movimiento' => $entradaRequisicion['valor_mostrado'],
+                'id_detalle_movimiento' => null,
+                'descripcion_mostrada' => $entradaRequisicion['descripcion_mostrada'],
+                'modelo_mostrado' => $entradaRequisicion['modelo_mostrado'],
+                'serie_mostrada' => $entradaRequisicion['serie_mostrada'],
+            ];
+        }
+
+        return false;
+    }
+
+    /**
+     * Simétrico a resolverEntradaDetalle() pero para el evento de SALIDA (HABER) de un
+     * detalle_asignacion específico — hoy Bodega es el único origen práctico, pero cualquier
+     * detalle retirado por Requisición queda cubierto igual que uno retirado por Traslado.
+     */
+    private function resolverSalidaDetalle(int $idDetalleAsignacion, DetalleMovimiento $detalleMovimientoModel, DetalleRequisicion $detalleRequisicionModel): array|false
+    {
+        $salidaTraslado = $detalleMovimientoModel->findSalidaPorDetalleOrigen($idDetalleAsignacion);
+
+        if ($salidaTraslado !== false) {
+            return [
+                'tipo_operacion' => 'TRASLADO_SALIDA',
+                'fecha_movimiento' => $salidaTraslado['fecha_movimiento'],
+                'codigo_mostrado' => $salidaTraslado['codigo_mostrado'],
+                'valor_movimiento' => $salidaTraslado['valor_movimiento'],
+                'id_detalle_movimiento' => (int) $salidaTraslado['id_detalle_movimiento'],
+                'descripcion_mostrada' => null,
+                'modelo_mostrado' => null,
+                'serie_mostrada' => null,
+            ];
+        }
+
+        $salidaRequisicion = $detalleRequisicionModel->findSalidaPorDetalleOrigen($idDetalleAsignacion);
+
+        if ($salidaRequisicion !== false) {
+            return [
+                'tipo_operacion' => 'REQUISICION_SALIDA',
+                'fecha_movimiento' => $salidaRequisicion['fecha_entrega'],
+                'codigo_mostrado' => $salidaRequisicion['codigo_mostrado'],
+                'valor_movimiento' => $salidaRequisicion['valor_mostrado'],
+                'id_detalle_movimiento' => null,
+                'descripcion_mostrada' => $salidaRequisicion['descripcion_mostrada'],
+                'modelo_mostrado' => $salidaRequisicion['modelo_mostrado'],
+                'serie_mostrada' => $salidaRequisicion['serie_mostrada'],
+            ];
+        }
+
+        return false;
+    }
+
+    /**
      * Construye los eventos históricos de UN detalle de asignación dentro de una emisión:
-     * evento inicial (ALTA o TRASLADO_ENTRADA, mutuamente excluyentes), regularizaciones SICOIN
-     * acotadas a la vigencia de este detalle, y evento final TRASLADO_SALIDA si aplica.
+     * evento inicial (ALTA, o *_ENTRADA si el detalle entró por Traslado/Requisición —
+     * mutuamente excluyentes), regularizaciones SICOIN acotadas a la vigencia de este detalle, y
+     * evento final *_SALIDA si el detalle fue retirado por Traslado/Requisición.
      * No inserta nada: solo devuelve la colección en memoria, cada evento con sus propias
      * claves de orden global (ver generar()).
      *
-     * $entrada / $salida: filas de detalle_movimiento (o false) ya resueltas por el llamador
-     * vía DetalleMovimiento::findEntradaPorDetalleDestino()/findSalidaPorDetalleOrigen().
+     * $entrada / $salida: ya resueltos por el llamador vía resolverEntradaDetalle()/
+     * resolverSalidaDetalle() (fuente Traslado o Requisición, normalizados a la misma forma).
      */
     private function construirEventosDetalle(array $detalle, array $historialBien, array|false $entrada, array|false $salida): array
     {
@@ -450,7 +607,12 @@ class TarjetasController extends Controller
         $idDetalleAsignacion = (int) $detalle['id_detalle_asignacion'];
         $fechaAgregado = (string) $detalle['fecha_agregado'];
         $fechaRetirado = $detalle['fecha_retirado'] !== null ? (string) $detalle['fecha_retirado'] : null;
+        // Valores por defecto: bien actual al momento de generar la tarjeta — mismo criterio que ya
+        // usaba descripcion_mostrada (nunca hubo snapshot congelado para ALTA/TRASLADO_*, así que la
+        // "fuente histórica" de esos eventos siempre fue leer el bien en el instante de la emisión).
         $descripcionMostrada = $detalle['descripcion'];
+        $modeloMostrado = $detalle['modelo'] ?? null;
+        $serieMostrada = $detalle['serie'] ?? null;
         $codigoInterno = (string) $detalle['codigo_interno'];
 
         $valorBien = $detalle['costo'] ?? $detalle['valor_estimado'] ?? null;
@@ -463,26 +625,35 @@ class TarjetasController extends Controller
 
         $valorBien = round((float) $valorBien, 2);
 
-        $entroPorTraslado = $entrada !== false;
-        $salioPorTraslado = $salida !== false;
+        $entroPorMovimiento = $entrada !== false;
+        $salioPorMovimiento = $salida !== false;
 
         $eventos = [];
 
-        if ($entroPorTraslado) {
-            // Detalle DESTINO de un Traslado: NO se genera ALTA. El código y el valor son
-            // exclusivamente el snapshot congelado en detalle_movimiento (puntos 10-11).
+        if ($entroPorMovimiento) {
+            // Detalle DESTINO de un Traslado o de una entrega por Requisición: NO se genera ALTA.
+            // El código y el valor son exclusivamente el snapshot congelado en detalle_movimiento o
+            // detalle_requisicion según corresponda (puntos 10-11 / resolverEntradaDetalle()).
             $fechaEntradaCompleta = (string) $entrada['fecha_movimiento'];
             $fechaEntradaFecha = substr($fechaEntradaCompleta, 0, 10);
             $valorEntrada = round((float) $entrada['valor_movimiento'], 2);
 
+            // Si el evento trae su propio dato congelado (Requisición), se usa ese; si no
+            // (Traslado, que nunca tuvo estas columnas en detalle_movimiento), se cae al bien actual.
+            $descripcionEntrada = $entrada['descripcion_mostrada'] ?? $descripcionMostrada;
+            $modeloEntrada = $entrada['modelo_mostrado'] ?? $modeloMostrado;
+            $serieEntrada = $entrada['serie_mostrada'] ?? $serieMostrada;
+
             $eventos[] = [
                 'id_bien' => $idBien,
                 'id_detalle_asignacion' => $idDetalleAsignacion,
-                'id_detalle_movimiento' => (int) $entrada['id_detalle_movimiento'],
-                'tipo_operacion' => 'TRASLADO_ENTRADA',
+                'id_detalle_movimiento' => $entrada['id_detalle_movimiento'],
+                'tipo_operacion' => $entrada['tipo_operacion'],
                 'fecha_operacion' => $fechaEntradaFecha,
                 'codigo_mostrado' => $entrada['codigo_mostrado'],
-                'descripcion_mostrada' => $descripcionMostrada,
+                'descripcion_mostrada' => $descripcionEntrada,
+                'modelo_mostrado' => $modeloEntrada,
+                'serie_mostrada' => $serieEntrada,
                 'cantidad' => 1,
                 'costo_unitario' => $valorEntrada,
                 'debe' => $valorEntrada,
@@ -517,6 +688,8 @@ class TarjetasController extends Controller
                 'fecha_operacion' => $fechaAgregado,
                 'codigo_mostrado' => $codigoMostradoAlta,
                 'descripcion_mostrada' => $descripcionMostrada,
+                'modelo_mostrado' => $modeloMostrado,
+                'serie_mostrada' => $serieMostrada,
                 'cantidad' => 1,
                 'costo_unitario' => $valorBien,
                 'debe' => $valorBien,
@@ -530,12 +703,12 @@ class TarjetasController extends Controller
         }
 
         // Regularizaciones SICOIN acotadas a la vigencia de ESTE detalle (evita duplicar un
-        // mismo cambio de SICOIN entre dos responsables cuando hubo Traslado de por medio).
-        // Límite inferior EXCLUSIVO cuando el detalle entró por Traslado: el día de
-        // TRASLADO_ENTRADA ya "pertenece" a esta etapa desde ese evento, pero un cambio de
-        // SICOIN fechado ese mismo día se considera ocurrido antes de la entrada y se atribuye
-        // a la etapa anterior (cuyo límite superior es inclusivo — ver abajo). Así, un mismo día
-        // de transición nunca queda cubierto por ambas etapas a la vez.
+        // mismo cambio de SICOIN entre dos responsables cuando hubo Traslado o Requisición de por
+        // medio). Límite inferior EXCLUSIVO cuando el detalle entró por movimiento (Traslado o
+        // Requisición, indistintamente): el día de *_ENTRADA ya "pertenece" a esta etapa desde ese
+        // evento, pero un cambio de SICOIN fechado ese mismo día se considera ocurrido antes de la
+        // entrada y se atribuye a la etapa anterior (cuyo límite superior es inclusivo — ver abajo).
+        // Así, un mismo día de transición nunca queda cubierto por ambas etapas a la vez.
         foreach ($historialBien as $evento) {
             $sicoinAnterior = $evento['sicoin_anterior'];
             $sicoinNuevo = $evento['sicoin_nuevo'];
@@ -550,7 +723,7 @@ class TarjetasController extends Controller
                 continue;
             }
 
-            $dentroLimiteInferior = $entroPorTraslado
+            $dentroLimiteInferior = $entroPorMovimiento
                 ? ($fechaCambioFecha > $fechaAgregado)
                 : ($fechaCambioFecha >= $fechaAgregado);
 
@@ -570,6 +743,8 @@ class TarjetasController extends Controller
                 'fecha_operacion' => $fechaCambioFecha,
                 'codigo_mostrado' => $codigoInterno,
                 'descripcion_mostrada' => $descripcionMostrada,
+                'modelo_mostrado' => $modeloMostrado,
+                'serie_mostrada' => $serieMostrada,
                 'cantidad' => 1,
                 'costo_unitario' => $valorBien,
                 'debe' => 0.00,
@@ -589,6 +764,8 @@ class TarjetasController extends Controller
                 'fecha_operacion' => $fechaCambioFecha,
                 'codigo_mostrado' => $sicoinNuevo,
                 'descripcion_mostrada' => $descripcionMostrada,
+                'modelo_mostrado' => $modeloMostrado,
+                'serie_mostrada' => $serieMostrada,
                 'cantidad' => 1,
                 'costo_unitario' => $valorBien,
                 'debe' => $valorBien,
@@ -601,21 +778,29 @@ class TarjetasController extends Controller
             ];
         }
 
-        if ($salioPorTraslado) {
-            // Detalle que salió por Traslado: evento final, siempre después de cualquier
-            // evento previo del mismo día (clave_grupo = 2, la más alta de este detalle).
+        if ($salioPorMovimiento) {
+            // Detalle que salió por Traslado o por entrega de Requisición: evento final, siempre
+            // después de cualquier evento previo del mismo día (clave_grupo = 2, la más alta de
+            // este detalle). Este es el descargo que antes NO se generaba para Requisición porque
+            // solo se consultaba detalle_movimiento — corregido vía resolverSalidaDetalle().
             $fechaSalidaCompleta = (string) $salida['fecha_movimiento'];
             $fechaSalidaFecha = substr($fechaSalidaCompleta, 0, 10);
             $valorSalida = round((float) $salida['valor_movimiento'], 2);
 
+            $descripcionSalida = $salida['descripcion_mostrada'] ?? $descripcionMostrada;
+            $modeloSalida = $salida['modelo_mostrado'] ?? $modeloMostrado;
+            $serieSalida = $salida['serie_mostrada'] ?? $serieMostrada;
+
             $eventos[] = [
                 'id_bien' => $idBien,
                 'id_detalle_asignacion' => $idDetalleAsignacion,
-                'id_detalle_movimiento' => (int) $salida['id_detalle_movimiento'],
-                'tipo_operacion' => 'TRASLADO_SALIDA',
+                'id_detalle_movimiento' => $salida['id_detalle_movimiento'],
+                'tipo_operacion' => $salida['tipo_operacion'],
                 'fecha_operacion' => $fechaSalidaFecha,
                 'codigo_mostrado' => $salida['codigo_mostrado'],
-                'descripcion_mostrada' => $descripcionMostrada,
+                'descripcion_mostrada' => $descripcionSalida,
+                'modelo_mostrado' => $modeloSalida,
+                'serie_mostrada' => $serieSalida,
                 'cantidad' => 1,
                 'costo_unitario' => $valorSalida,
                 'debe' => 0.00,

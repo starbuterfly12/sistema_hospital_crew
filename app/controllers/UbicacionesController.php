@@ -4,6 +4,11 @@ require_once __DIR__ . '/../core/Controller.php';
 
 class UbicacionesController extends Controller
 {
+    // tipo_ubicacion ya no se escribe libremente: solo se acepta uno de estos tres valores,
+    // seleccionados desde un <select> cerrado. Como `ubicaciones` quedó vacía tras el reset de
+    // datos de desarrollo, no hace falta migrar valores anteriores.
+    public const TIPOS_UBICACION_VALIDOS = ['Área', 'Bodega', 'Departamento'];
+
     public function index(): void
     {
         if (!isset($_SESSION['id_usuario'])) {
@@ -94,8 +99,8 @@ class UbicacionesController extends Controller
             $error = 'El nombre de la ubicación no puede superar los 150 caracteres.';
         } elseif ($tipoUbicacion === '') {
             $error = 'El tipo de ubicación es obligatorio.';
-        } elseif (strlen($tipoUbicacion) > 50) {
-            $error = 'El tipo de ubicación no puede superar los 50 caracteres.';
+        } elseif (!in_array($tipoUbicacion, self::TIPOS_UBICACION_VALIDOS, true)) {
+            $error = 'El tipo de ubicación seleccionado no es válido.';
         } elseif ($ubicacionModel->existeNombre($nombreUbicacion)) {
             $error = 'Ya existe una ubicación con ese nombre.';
         }
@@ -209,8 +214,8 @@ class UbicacionesController extends Controller
             $error = 'El nombre de la ubicación no puede superar los 150 caracteres.';
         } elseif ($tipoUbicacion === '') {
             $error = 'El tipo de ubicación es obligatorio.';
-        } elseif (strlen($tipoUbicacion) > 50) {
-            $error = 'El tipo de ubicación no puede superar los 50 caracteres.';
+        } elseif (!in_array($tipoUbicacion, self::TIPOS_UBICACION_VALIDOS, true)) {
+            $error = 'El tipo de ubicación seleccionado no es válido.';
         } elseif ($ubicacionModel->existeNombre($nombreUbicacion, $idUbicacion)) {
             $error = 'Ya existe una ubicación con ese nombre.';
         }

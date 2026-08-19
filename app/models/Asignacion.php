@@ -242,6 +242,24 @@ class Asignacion extends Model
         return (int) $this->lastInsertId();
     }
 
+    // Usar únicamente mientras la asignación cabecera sigue en estado Pendiente: el bien nunca
+    // llegó a estar realmente asignado, así que se elimina el detalle en vez de marcarlo
+    // 'retirado' (ese estado se reserva para un bien que sí estuvo asignado y luego se retiró).
+    public function eliminarDetallePendiente(int $idDetalleAsignacion): bool
+    {
+        $sql = "
+            DELETE FROM detalle_asignacion
+            WHERE id_detalle_asignacion = :id_detalle_asignacion
+              AND estado_detalle = 'activo'
+        ";
+
+        $this->query($sql, [
+            ':id_detalle_asignacion' => $idDetalleAsignacion,
+        ]);
+
+        return true;
+    }
+
     public function retirarBien(int $idDetalleAsignacion, string $fechaRetirado): bool
     {
         $sql = "
@@ -438,6 +456,8 @@ class Asignacion extends Model
                 b.codigo_interno,
                 b.codigo_sicoin,
                 b.descripcion,
+                b.modelo,
+                b.serie,
                 b.costo,
                 b.valor_estimado
             FROM detalle_asignacion da

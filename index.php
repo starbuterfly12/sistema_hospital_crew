@@ -210,6 +210,34 @@ switch ($modulo) {
         }
         break;
 
+    case 'requisiciones':
+        if (!isset($_SESSION['id_usuario'])) {
+            header('Location: index.php');
+            exit;
+        }
+
+        require_once __DIR__ . '/app/controllers/RequisicionesController.php';
+        $requisicionesController = new RequisicionesController();
+
+        if ($accion === 'crear') {
+            $requisicionesController->crear();
+        } elseif ($accion === 'ver') {
+            $requisicionesController->ver();
+        } elseif ($accion === 'editar') {
+            $requisicionesController->editar();
+        } elseif ($accion === 'autorizar') {
+            $requisicionesController->autorizar();
+        } elseif ($accion === 'anular') {
+            $requisicionesController->anular();
+        } elseif ($accion === 'confirmar_entrega') {
+            $requisicionesController->confirmarEntrega();
+        } elseif ($accion === 'descargar_constancia') {
+            $requisicionesController->descargarConstancia();
+        } else {
+            $requisicionesController->index();
+        }
+        break;
+
     default:
         echo 'Módulo no encontrado';
         break;

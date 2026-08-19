@@ -52,10 +52,16 @@
         $formasIngreso = $formasIngreso ?? [];
         $categorias = $categorias ?? [];
         $estados = $estados ?? [];
+        $bodegaConfigurada = (bool) ($bodegaConfigurada ?? true);
     ?>
 
     <?php if (!empty($error)): ?>
         <p><?= htmlspecialchars($error, ENT_QUOTES, 'UTF-8') ?></p>
+    <?php endif; ?>
+
+    <?php if (!$bodegaConfigurada): ?>
+        <p><strong>No se puede registrar bienes todavía:</strong> debe configurarse primero la Bodega
+        de Almacén (una ubicación activa de tipo "Bodega") y su responsable activo asociado.</p>
     <?php endif; ?>
 
     <h1>Registrar bien</h1>
@@ -222,7 +228,18 @@
 
             <div id="grupo-tiempo-garantia">
                 <label for="tiempo_garantia">Tiempo de garantía</label>
-                <input type="text" id="tiempo_garantia" name="tiempo_garantia" value="<?= htmlspecialchars($datos['tiempo_garantia'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
+                <?php $tiempoGarantiaValor = (string) ($datos['tiempo_garantia'] ?? ''); ?>
+                <select id="tiempo_garantia" name="tiempo_garantia">
+                    <option value="">Seleccione</option>
+                    <?php for ($mes = 1; $mes <= 12; $mes++): ?>
+                        <option value="<?= $mes ?>"<?= $tiempoGarantiaValor === (string) $mes ? ' selected' : '' ?>><?= $mes ?> <?= $mes === 1 ? 'mes' : 'meses' ?></option>
+                    <?php endfor; ?>
+                </select>
+            </div>
+
+            <div id="grupo-fin-garantia">
+                <label for="fecha_fin_garantia">Fecha estimada de fin de garantía</label>
+                <input type="text" id="fecha_fin_garantia" readonly>
             </div>
 
             <div>
@@ -393,17 +410,60 @@
                 }
             }
 
+            function calcularFechaFinGarantia() {
+                var campoFactura = document.getElementById('fecha_factura');
+                var campoTiempo = document.getElementById('tiempo_garantia');
+                var campoFin = document.getElementById('fecha_fin_garantia');
+                var selectGarantia = document.getElementById('tiene_garantia');
+
+                if (selectGarantia.value !== '1' || !campoFactura.value || !campoTiempo.value) {
+                    campoFin.value = '';
+                    return;
+                }
+
+                var partes = campoFactura.value.split('-');
+
+                if (partes.length !== 3) {
+                    campoFin.value = '';
+                    return;
+                }
+
+                // Misma aritmética de calendario que calcularFinGarantia() en PHP (no
+                // setUTCMonth() directo sobre el día de origen: eso se desborda de mes cuando
+                // el día no existe en el mes destino, ej. 31 ene + 1 mes -> 3 mar en vez de 28 feb).
+                var anioOrigen = parseInt(partes[0], 10);
+                var mesOrigen = parseInt(partes[1], 10) - 1;
+                var diaOrigen = parseInt(partes[2], 10);
+                var meses = parseInt(campoTiempo.value, 10);
+
+                var totalMeses = mesOrigen + meses;
+                var anioDestino = anioOrigen + Math.floor(totalMeses / 12);
+                var mesDestinoIndex = ((totalMeses % 12) + 12) % 12;
+
+                var ultimoDiaMesDestino = new Date(Date.UTC(anioDestino, mesDestinoIndex + 1, 0)).getUTCDate();
+                var diaDestino = Math.min(diaOrigen, ultimoDiaMesDestino);
+
+                var dia = String(diaDestino).padStart(2, '0');
+                var mes = String(mesDestinoIndex + 1).padStart(2, '0');
+
+                campoFin.value = dia + '/' + mes + '/' + anioDestino;
+            }
+
             function actualizarGarantia(esCompra) {
                 var selectGarantia = document.getElementById('tiene_garantia');
                 var campoTiempo = document.getElementById('tiempo_garantia');
                 var grupoTiempo = document.getElementById('grupo-tiempo-garantia');
+                var grupoFin = document.getElementById('grupo-fin-garantia');
 
                 var tieneGarantiaActiva = esCompra && selectGarantia.value === '1';
 
                 grupoTiempo.style.display = tieneGarantiaActiva ? '' : 'none';
                 campoTiempo.disabled = !tieneGarantiaActiva;
+                grupoFin.style.display = tieneGarantiaActiva ? '' : 'none';
 
                 aplicarRequerido('tiempo_garantia', tieneGarantiaActiva);
+
+                calcularFechaFinGarantia();
             }
 
             function actualizarFormulario() {
@@ -444,6 +504,8 @@
 
             document.getElementById('id_forma_ingreso').addEventListener('change', actualizarFormulario);
             document.getElementById('tiene_garantia').addEventListener('change', actualizarFormulario);
+            document.getElementById('fecha_factura').addEventListener('change', calcularFechaFinGarantia);
+            document.getElementById('tiempo_garantia').addEventListener('change', calcularFechaFinGarantia);
             document.addEventListener('DOMContentLoaded', actualizarFormulario);
 
             actualizarFormulario();

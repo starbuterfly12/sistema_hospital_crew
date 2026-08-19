@@ -8,6 +8,132 @@ use Endroid\QrCode\Writer\Result\GdResult;
 
 class BienesController extends Controller
 {
+    // El tiempo de garantía ya no se escribe libremente: solo se acepta un número entero de
+    // meses entre 1 y 12, seleccionado desde un <select> cerrado en el formulario.
+    private const MESES_GARANTIA_VALIDOS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'];
+
+    // Regla institucional: todo bien que ingresa por Compra/Donación/Traslado queda inicialmente
+    // resguardado en la Bodega de Almacén (Ubicacion::ID_UBICACION_ALMACEN_INSTITUCIONAL, único
+    // punto centralizado de esa referencia — ver documentación junto a la constante). El
+    // responsable SÍ se deriva por relación real (Responsable::findActivoPorUbicacion()), no por
+    // un id de responsable fijo: si mañana cambia quién es el encargado de Almacén, no hay que
+    // tocar este archivo. Devuelve false si el Almacén institucional no está configurado
+    // correctamente o no tiene exactamente un responsable activo asociado (sin configurar o
+    // ambiguo); el llamador debe rechazar el registro del bien en ese caso (ver crear()).
+    private function resolverBodegaAlmacen(): array|false
+    {
+        $ubicacionModel = $this->model('Ubicacion');
+        $responsableModel = $this->model('Responsable');
+
+        $bodega = $ubicacionModel->findAlmacenInstitucional();
+
+        if ($bodega === false) {
+            return false;
+        }
+
+        $responsableBodega = $responsableModel->findActivoPorUbicacion((int) $bodega['id_ubicacion']);
+
+        if ($responsableBodega === false) {
+            return false;
+        }
+
+        return [
+            'id_ubicacion' => (int) $bodega['id_ubicacion'],
+            'nombre_ubicacion' => $bodega['nombre_ubicacion'],
+            'id_responsable' => (int) $responsableBodega['id_responsable'],
+            'nombre_responsable' => $responsableBodega['nombre_completo'],
+        ];
+    }
+
+    // Deja al bien recién creado bajo la Bodega de Almacén usando el MISMO mecanismo que ya usan
+    // Asignaciones/Traslados (Asignacion::crear()+agregarBien() + Bien::asignarActual()) — nunca
+    // escribe id_responsable_actual/id_ubicacion_actual sueltos, porque eso dejaría el bien sin
+    // id_asignacion_actual ni detalle_asignacion y lo excluiría de getActualesPorResponsable(),
+    // findActualParaTrasladoForUpdate() y findPrestableForUpdate() (todas exigen una asignación
+    // real). Reutiliza la asignación 'Asignada' vigente del responsable de Bodega si ya existe (para
+    // no crear una asignación nueva por cada bien); si no existe, la crea directamente en estado
+    // 'Asignada'. Debe ejecutarse dentro de la misma transacción del registro del bien.
+    private function asignarBienABodega(int $idBien, array $bodega): void
+    {
+        $asignacionModel = $this->model('Asignacion');
+        $bienModel = $this->model('Bien');
+        $bitacoraModel = $this->model('Bitacora');
+
+        $idResponsable = $bodega['id_responsable'];
+        $idUbicacion = $bodega['id_ubicacion'];
+        $fechaAsignacion = date('Y-m-d');
+
+        $asignacionVigente = $asignacionModel->findVigentePorResponsableForUpdate($idResponsable);
+
+        if ($asignacionVigente !== false && $asignacionVigente['estado_asignacion'] === 'Pendiente') {
+            throw new RuntimeException(
+                'El responsable de Bodega de Almacén tiene una asignación pendiente sin confirmar. '
+                . 'Debe confirmarse desde el módulo Asignaciones antes de poder registrar nuevos bienes.'
+            );
+        }
+
+        if ($asignacionVigente !== false) {
+            $idAsignacion = (int) $asignacionVigente['id_asignacion'];
+
+            if ((int) $asignacionVigente['id_ubicacion'] !== $idUbicacion) {
+                throw new RuntimeException(
+                    'La ubicación de la asignación vigente de Bodega de Almacén no coincide con la '
+                    . 'ubicación actual de su responsable. Revise la configuración antes de continuar.'
+                );
+            }
+        } else {
+            $anio = (int) substr($fechaAsignacion, 0, 4);
+            $numeroAsignacion = $asignacionModel->generarSiguienteNumero($anio);
+
+            $idAsignacion = $asignacionModel->crear([
+                'numero_asignacion' => $numeroAsignacion,
+                'id_responsable' => $idResponsable,
+                'id_ubicacion' => $idUbicacion,
+                'fecha_asignacion' => $fechaAsignacion,
+                'id_usuario_registra' => (int) $_SESSION['id_usuario'],
+                'estado_asignacion' => 'Asignada',
+                'observaciones' => 'Asignación creada automáticamente para el resguardo inicial de bienes en Bodega de Almacén.',
+            ]);
+
+            $bitacoraModel->registrar(
+                idUsuario: (int) $_SESSION['id_usuario'],
+                accion: 'REGISTRAR_ASIGNACION',
+                modulo: 'Asignaciones',
+                resultado: 'exitoso',
+                descripcion: 'Se creó automáticamente la asignación ' . $numeroAsignacion . ' a Bodega de Almacén para el resguardo inicial de bienes.',
+                tablaAfectada: 'asignaciones',
+                idRegistroAfectado: $idAsignacion,
+                ipOrigen: $_SERVER['REMOTE_ADDR'] ?? null,
+                usuarioIntentado: null
+            );
+        }
+
+        // Defensivo (no debería ocurrir con el único punto de llamada actual, justo tras crear el
+        // bien): mismo chequeo que ya hace AsignacionesController::agregarBien() antes de llamar a
+        // Asignacion::agregarBien(), que por sí sola no evita duplicados.
+        if ($asignacionModel->existeBienEnAsignacion($idAsignacion, $idBien)) {
+            throw new RuntimeException(
+                'El bien ya pertenece al detalle de la asignación de Bodega de Almacén.'
+            );
+        }
+
+        $idDetalle = $asignacionModel->agregarBien($idAsignacion, $idBien, $fechaAsignacion, null);
+
+        $bienModel->asignarActual($idBien, $idAsignacion, $idResponsable, $idUbicacion);
+
+        $bitacoraModel->registrar(
+            idUsuario: (int) $_SESSION['id_usuario'],
+            accion: 'AGREGAR_BIEN_ASIGNACION',
+            modulo: 'Asignaciones',
+            resultado: 'exitoso',
+            descripcion: 'Se incorporó automáticamente el bien recién registrado a la asignación de Bodega de Almacén.',
+            tablaAfectada: 'detalle_asignacion',
+            idRegistroAfectado: $idDetalle,
+            ipOrigen: $_SERVER['REMOTE_ADDR'] ?? null,
+            usuarioIntentado: null
+        );
+    }
+
     public function index(): void
     {
         if (!isset($_SESSION['id_usuario'])) {
@@ -47,6 +173,7 @@ class BienesController extends Controller
                 'estados' => $estados,
                 'datos' => [],
                 'error' => null,
+                'bodegaConfigurada' => $this->resolverBodegaAlmacen() !== false,
             ]);
             return;
         }
@@ -139,6 +266,7 @@ class BienesController extends Controller
 
         $error = null;
         $rutaDocumentoRespaldo = null;
+        $bodegaAlmacen = false;
 
         if ($codigoInterno === '') {
             $error = 'El código interno es obligatorio.';
@@ -159,6 +287,16 @@ class BienesController extends Controller
         } elseif (!isValidIsoDate($fechaIngreso)) {
             $error = 'La fecha de ingreso no es válida.';
         } else {
+            // Regla institucional: todo ingreso por Compra/Donación/Traslado debe poder quedar
+            // resguardado en Bodega de Almacén desde el registro. Si no está configurada, no se
+            // guarda el bien (evita bienes huérfanos sin responsable/ubicación).
+            $bodegaAlmacen = $this->resolverBodegaAlmacen();
+
+            if ($bodegaAlmacen === false) {
+                $error = 'No se puede registrar el bien: debe configurarse primero la Bodega de Almacén '
+                    . '(una ubicación activa de tipo "Bodega") y su responsable activo asociado.';
+            }
+
             $formaSeleccionada = null;
             foreach ($formasIngreso as $forma) {
                 if ((int) $forma['id_forma_ingreso'] === $idFormaIngreso) {
@@ -167,7 +305,7 @@ class BienesController extends Controller
                 }
             }
 
-            if ($formaSeleccionada === null) {
+            if ($error === null && $formaSeleccionada === null) {
                 $error = 'La forma de ingreso seleccionada no es válida.';
             }
 
@@ -241,6 +379,8 @@ class BienesController extends Controller
                             $error = 'El costo es obligatorio para compra.';
                         } elseif ($tieneGarantia === 1 && $tiempoGarantia === '') {
                             $error = 'El tiempo de garantía es obligatorio cuando la compra tiene garantía.';
+                        } elseif ($tieneGarantia === 1 && !in_array($tiempoGarantia, self::MESES_GARANTIA_VALIDOS, true)) {
+                            $error = 'El tiempo de garantía debe ser un número entero de 1 a 12 meses.';
                         }
                     } elseif ($nombreForma === 'donacion') {
                         if ($procedencia === '') {
@@ -307,6 +447,7 @@ class BienesController extends Controller
                 'formasIngreso' => $formasIngreso,
                 'categorias' => $categorias,
                 'estados' => $estados,
+                'bodegaConfigurada' => $bodegaAlmacen !== false,
             ]);
             return;
         }
@@ -359,6 +500,11 @@ class BienesController extends Controller
                 usuarioIntentado: null
             );
 
+            // Resguardo inicial en Bodega de Almacén, dentro de la misma transacción: si esto
+            // falla (p. ej. asignación de Bodega pendiente sin confirmar), todo el registro del
+            // bien se revierte — nunca queda un bien huérfano ni a medio resguardar.
+            $this->asignarBienABodega($idBien, $bodegaAlmacen);
+
             $bienModel->commit();
 
             try {
@@ -395,8 +541,6 @@ class BienesController extends Controller
                 $bienModel->rollBack();
             }
 
-            error_log('Error al registrar el bien: ' . $e->getMessage());
-
             if ($rutaDocumentoRespaldo !== null) {
                 $rutaAbsolutaLimpieza = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR
                     . str_replace('/', DIRECTORY_SEPARATOR, $rutaDocumentoRespaldo);
@@ -406,8 +550,17 @@ class BienesController extends Controller
                 }
             }
 
-            $error = $this->mensajeErrorDuplicado($e)
-                ?? 'No fue posible registrar el bien. Verifique los datos e intente nuevamente.';
+            if ($e instanceof RuntimeException) {
+                // Errores controlados propios (p. ej. asignarBienABodega() con la asignación de
+                // Bodega pendiente sin confirmar): se muestran tal cual, no se ocultan detrás del
+                // mensaje genérico.
+                $error = $e->getMessage();
+            } else {
+                error_log('Error al registrar el bien: ' . $e->getMessage());
+
+                $error = $this->mensajeErrorDuplicado($e)
+                    ?? 'No fue posible registrar el bien. Verifique los datos e intente nuevamente.';
+            }
 
             $datosFormulario = array_merge(
                 $datos,
@@ -434,6 +587,7 @@ class BienesController extends Controller
                 'formasIngreso' => $formasIngreso,
                 'categorias' => $categorias,
                 'estados' => $estados,
+                'bodegaConfigurada' => $bodegaAlmacen !== false,
             ]);
             return;
         }
@@ -758,6 +912,8 @@ class BienesController extends Controller
                         $error = 'El costo es obligatorio para compra.';
                     } elseif ($tieneGarantia === 1 && $tiempoGarantia === '') {
                         $error = 'El tiempo de garantía es obligatorio cuando la compra tiene garantía.';
+                    } elseif ($tieneGarantia === 1 && !in_array($tiempoGarantia, self::MESES_GARANTIA_VALIDOS, true)) {
+                        $error = 'El tiempo de garantía debe ser un número entero de 1 a 12 meses.';
                     }
                 } elseif ($formaNombre === 'donacion') {
                     if ($procedencia === '') {

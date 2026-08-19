@@ -115,8 +115,17 @@
             <dt>¿Tiene garantía?</dt>
             <dd><?= ((int) ($datosIngreso['tiene_garantia'] ?? 0) === 1) ? 'Sí' : 'No' ?></dd>
 
-            <dt>Tiempo de garantía</dt>
-            <dd><?= $mostrar($datosIngreso['tiempo_garantia'] ?? null) ?></dd>
+            <?php if ((int) ($datosIngreso['tiene_garantia'] ?? 0) === 1): ?>
+                <?php
+                    $mesesGarantia = (int) ($datosIngreso['tiempo_garantia'] ?? 0);
+                    $finGarantia = calcularFinGarantia($datosIngreso['fecha_factura'] ?? null, $mesesGarantia);
+                ?>
+                <dt>Tiempo de garantía</dt>
+                <dd><?= $mostrar($mesesGarantia > 0 ? $mesesGarantia . ($mesesGarantia === 1 ? ' mes' : ' meses') : null) ?></dd>
+
+                <dt>Fecha estimada de fin de garantía</dt>
+                <dd><?= $mostrar(formatDate($finGarantia)) ?></dd>
+            <?php endif; ?>
 
             <dt>Documento de respaldo</dt>
             <dd>
@@ -185,11 +194,18 @@
     <h2>Código QR</h2>
 
     <?php if (!empty($bien['ruta_qr'])): ?>
+        <?php
+            // Cache busting: el nombre de archivo es estable (bien_{id}.png), así que sin este
+            // parámetro el navegador puede seguir mostrando el PNG anterior tras regenerar el QR.
+            $versionQr = !empty($bien['updated_at']) ? strtotime((string) $bien['updated_at']) : time();
+            $rutaQrConVersion = $bien['ruta_qr'] . '?v=' . $versionQr;
+        ?>
         <p>
-            <img src="<?= htmlspecialchars($bien['ruta_qr'], ENT_QUOTES, 'UTF-8') ?>" alt="Código QR del bien">
+            <img src="<?= htmlspecialchars($rutaQrConVersion, ENT_QUOTES, 'UTF-8') ?>" alt="Código QR del bien">
         </p>
 
-        <p><?= htmlspecialchars($bien['codigo_qr'] ?? '', ENT_QUOTES, 'UTF-8') ?></p>
+        <?php // codigo_qr (la URL codificada dentro del QR) se conserva en BD y en el PNG, pero ya
+              // no se muestra como texto en pantalla — la usuaria no quiere ver rutas/URLs técnicas. ?>
 
         <?php if (tieneRol(['Administrador', 'Operativo'])): ?>
             <form method="POST" action="index.php?modulo=bienes&accion=generar_qr&id=<?= (int) $bien['id_bien'] ?>">
