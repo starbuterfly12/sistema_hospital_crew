@@ -17,6 +17,26 @@
 
         $movimiento = $movimiento ?? [];
         $detalles = $detalles ?? [];
+
+        // Misma regla que TrasladosController::construirDescripcionCompleta(): "Descripción, marca: X,
+        // modelo: Y". La serie NO se incluye aquí porque la tabla ya tiene su propia columna Serie.
+        $construirDescripcion = static function (array $detalle): string {
+            $partes = [trim((string) ($detalle['descripcion'] ?? ''))];
+
+            $marca = trim((string) ($detalle['marca'] ?? ''));
+
+            if ($marca !== '') {
+                $partes[] = 'marca: ' . $marca;
+            }
+
+            $modelo = trim((string) ($detalle['modelo'] ?? ''));
+
+            if ($modelo !== '') {
+                $partes[] = 'modelo: ' . $modelo;
+            }
+
+            return implode(', ', $partes);
+        };
     ?>
 
     <h1>Detalle de traslado</h1>
@@ -78,7 +98,7 @@
                 <?php foreach ($detalles as $detalle): ?>
                     <tr>
                         <td><?= $mostrar($detalle['codigo_mostrado'] ?? null) ?></td>
-                        <td><?= $mostrar($detalle['descripcion'] ?? null) ?></td>
+                        <td><?= $mostrar($construirDescripcion($detalle)) ?></td>
                         <td><?= $mostrar($detalle['serie'] ?? null) ?></td>
                         <td><?= $mostrar($detalle['condicion_nueva'] ?? null) ?></td>
                         <td><?= $mostrar($detalle['valor_movimiento'] ?? null) ?></td>

@@ -40,6 +40,10 @@
 
     <p><a href="index.php?modulo=prestamos&accion=descargar_constancia&id=<?= (int) ($prestamo['id_prestamo'] ?? 0) ?>">Descargar constancia</a></p>
 
+    <?php if (in_array($prestamo['estado_prestamo'] ?? '', ['activo', 'parcial'], true) && tieneRol(['Administrador', 'Operativo'])): ?>
+        <p><a href="index.php?modulo=devoluciones&accion=crear&id_prestamo=<?= (int) ($prestamo['id_prestamo'] ?? 0) ?>">Registrar devolución</a></p>
+    <?php endif; ?>
+
     <h2>Datos generales</h2>
     <dl>
         <dt>No. interno</dt>
@@ -107,10 +111,13 @@
                     <th>Valor</th>
                     <th>Condición al entregar</th>
                     <th>Estado</th>
+                    <th>Fecha de devolución</th>
+                    <th>Condición al devolver</th>
                 </tr>
             </thead>
             <tbody>
                 <?php foreach ($detalles as $detalle): ?>
+                    <?php $devuelto = ($detalle['estado_detalle'] ?? '') === 'devuelto'; ?>
                     <tr>
                         <td><?= $mostrar($detalle['codigo_interno_mostrado'] ?? null) ?></td>
                         <td><?= $mostrar($detalle['codigo_sicoin_mostrado'] ?? null) ?></td>
@@ -119,6 +126,16 @@
                         <td><?= $mostrar($detalle['valor_prestamo'] ?? null) ?></td>
                         <td><?= $mostrar($detalle['condicion_entrega'] ?? null) ?></td>
                         <td><?= $mostrar($etiquetasEstadoDetalle[$detalle['estado_detalle'] ?? ''] ?? ($detalle['estado_detalle'] ?? null)) ?></td>
+                        <td>
+                            <?php if ($devuelto): ?>
+                                <a href="index.php?modulo=devoluciones&accion=ver&id=<?= (int) ($detalle['id_devolucion'] ?? 0) ?>">
+                                    <?= $mostrar(formatDate($detalle['fecha_devolucion'] ?? null)) ?>
+                                </a>
+                            <?php else: ?>
+                                -
+                            <?php endif; ?>
+                        </td>
+                        <td><?= $devuelto ? $mostrar($detalle['condicion_devolucion'] ?? null) : '-' ?></td>
                     </tr>
                 <?php endforeach; ?>
             </tbody>

@@ -55,6 +55,9 @@ class DetallePrestamo extends Model
         return (int) $this->lastInsertId();
     }
 
+    // Incluye el snapshot de devolución (si el detalle ya fue devuelto) vía LEFT JOIN — usado por
+    // "Ver préstamo" para mostrar Pendiente/Devuelto, fecha de devolución y condición de devolución
+    // sin necesidad de una segunda consulta. Un detalle 'prestado' simplemente trae esas columnas NULL.
     public function listarPorPrestamo(int $idPrestamo): array
     {
         $sql = "
@@ -71,13 +74,111 @@ class DetallePrestamo extends Model
                 dp.valor_prestamo,
                 dp.condicion_entrega,
                 dp.estado_detalle,
-                dp.observaciones
+                dp.observaciones,
+                dd.condicion_devolucion,
+                dd.observaciones AS observaciones_devolucion,
+                dev.id_devolucion,
+                dev.numero_devolucion,
+                dev.fecha_devolucion
             FROM detalle_prestamo dp
+            LEFT JOIN detalle_devolucion dd ON dd.id_detalle_prestamo = dp.id_detalle_prestamo
+            LEFT JOIN devoluciones dev ON dev.id_devolucion = dd.id_devolucion
             WHERE dp.id_prestamo = :id_prestamo
             ORDER BY dp.id_detalle_prestamo ASC
         ";
 
         return $this->fetchAll($sql, [':id_prestamo' => $idPrestamo]);
+    }
+
+    // Bienes de un préstamo todavía pendientes de devolución — precarga informativa (sin lock) para
+    // el formulario de Devoluciones/crear(). La validación real y definitiva ocurre dentro de la
+    // transacción vía findPendienteForUpdate().
+    public function listarPendientesPorPrestamo(int $idPrestamo): array
+    {
+        $sql = "
+            SELECT
+                id_detalle_prestamo,
+                id_bien,
+                codigo_interno_mostrado,
+                codigo_sicoin_mostrado,
+                descripcion_mostrada,
+                serie_mostrada,
+                modelo_mostrado,
+                valor_prestamo,
+                condicion_entrega
+            FROM detalle_prestamo
+            WHERE id_prestamo = :id_prestamo
+              AND estado_detalle = 'prestado'
+            ORDER BY id_detalle_prestamo ASC
+        ";
+
+        return $this->fetchAll($sql, [':id_prestamo' => $idPrestamo]);
+    }
+
+    // Debe ejecutarse dentro de una transacción activa para que el bloqueo FOR UPDATE tenga efecto,
+    // y solo después de bloquear la cabecera del préstamo con Prestamo::findByIdForUpdate() (ver
+    // comentario allí sobre por qué el orden importa para el conteo de pendientes). Exige que el
+    // detalle pertenezca exactamente a ese préstamo y siga 'prestado': un id_detalle_prestamo de
+    // otro préstamo, o ya devuelto, no se encuentra aquí y el llamador debe rechazar la operación.
+    public function findPendienteForUpdate(int $idDetallePrestamo, int $idPrestamo): array|false
+    {
+        $sql = "
+            SELECT
+                id_detalle_prestamo,
+                id_prestamo,
+                id_bien,
+                codigo_interno_mostrado,
+                codigo_sicoin_mostrado,
+                descripcion_mostrada,
+                serie_mostrada,
+                modelo_mostrado,
+                valor_prestamo,
+                condicion_entrega,
+                estado_detalle
+            FROM detalle_prestamo
+            WHERE id_detalle_prestamo = :id_detalle_prestamo
+              AND id_prestamo = :id_prestamo
+              AND estado_detalle = 'prestado'
+            LIMIT 1
+            FOR UPDATE
+        ";
+
+        return $this->fetchOne($sql, [
+            ':id_detalle_prestamo' => $idDetallePrestamo,
+            ':id_prestamo' => $idPrestamo,
+        ]);
+    }
+
+    public function marcarDevuelto(int $idDetallePrestamo): bool
+    {
+        $sql = "
+            UPDATE detalle_prestamo
+            SET estado_detalle = 'devuelto'
+            WHERE id_detalle_prestamo = :id_detalle_prestamo
+        ";
+
+        $this->query($sql, [':id_detalle_prestamo' => $idDetallePrestamo]);
+
+        return true;
+    }
+
+    // Debe ejecutarse dentro de la misma transacción, después de bloquear la cabecera del préstamo
+    // (ver Prestamo::findByIdForUpdate()): con esa cabecera bloqueada, ninguna otra transacción puede
+    // estar devolviendo detalles de este mismo préstamo en paralelo, así que este conteo (tomado antes
+    // de marcar nada como devuelto) es seguro para calcular cuántos quedarán pendientes después de
+    // restarle la cantidad que se está devolviendo ahora mismo.
+    public function contarPendientesPorPrestamo(int $idPrestamo): int
+    {
+        $sql = "
+            SELECT COUNT(*) AS total
+            FROM detalle_prestamo
+            WHERE id_prestamo = :id_prestamo
+              AND estado_detalle = 'prestado'
+        ";
+
+        $resultado = $this->fetchOne($sql, [':id_prestamo' => $idPrestamo]);
+
+        return $resultado !== false ? (int) $resultado['total'] : 0;
     }
 
     // Debe ejecutarse dentro de una transacción activa para que el bloqueo FOR UPDATE tenga efecto.

@@ -6,6 +6,13 @@ class Bien extends Model
 {
     protected string $table = 'bienes';
 
+    // Catálogo real de `bienes.condicion_bien` (confirmado en BienesController::crear()/actualizar()/
+    // cambiarCondicion(), donde hoy sigue duplicado como array literal en 3 sitios más las 3 vistas
+    // de Bienes — no se tocan esos 6 usos ya existentes para no rehacer un módulo cerrado). Punto único
+    // de reutilización para módulos nuevos que necesiten el mismo catálogo (Préstamos: condición de
+    // entrega; Devoluciones: condición de devolución) en vez de que cada uno defina su propia lista.
+    public const CONDICIONES_VALIDAS = ['Bueno', 'Regular', 'Malo'];
+
     public function getAll(): array
     {
         $sql = "

@@ -210,6 +210,24 @@ switch ($modulo) {
         }
         break;
 
+    case 'devoluciones':
+        if (!isset($_SESSION['id_usuario'])) {
+            header('Location: index.php');
+            exit;
+        }
+
+        require_once __DIR__ . '/app/controllers/DevolucionesController.php';
+        $devolucionesController = new DevolucionesController();
+
+        if ($accion === 'crear') {
+            $devolucionesController->crear();
+        } elseif ($accion === 'ver') {
+            $devolucionesController->ver();
+        } else {
+            $devolucionesController->index();
+        }
+        break;
+
     case 'requisiciones':
         if (!isset($_SESSION['id_usuario'])) {
             header('Location: index.php');

@@ -8,8 +8,20 @@
 <body>
     <h1>Asignaciones</h1>
 
-    <?php if (tieneRol(['Administrador', 'Operativo'])): ?>
-        <p><a href="index.php?modulo=asignaciones&accion=crear">Registrar asignación</a></p>
+    <p>Consulta de asignaciones. Se generan y actualizan automáticamente a partir de Ingreso de bienes, Requisiciones y Traslados.</p>
+
+    <?php
+        $mensajeExito = $_SESSION['mensaje_exito'] ?? null;
+        $mensajeError = $_SESSION['mensaje_error'] ?? null;
+        unset($_SESSION['mensaje_exito'], $_SESSION['mensaje_error']);
+    ?>
+
+    <?php if ($mensajeExito !== null): ?>
+        <p><strong><?= htmlspecialchars($mensajeExito, ENT_QUOTES, 'UTF-8') ?></strong></p>
+    <?php endif; ?>
+
+    <?php if ($mensajeError !== null): ?>
+        <p><strong><?= htmlspecialchars($mensajeError, ENT_QUOTES, 'UTF-8') ?></strong></p>
     <?php endif; ?>
 
     <?php $q = $q ?? ''; ?>
@@ -32,10 +44,11 @@
                     <th>Número</th>
                     <th>Responsable</th>
                     <th>Ubicación</th>
-                    <th>Fecha</th>
                     <th>Estado</th>
+                    <th>Cantidad de bienes</th>
+                    <th>Fecha</th>
                     <th>Registrado por</th>
-                    <th>Acción</th>
+                    <th>Ver</th>
                 </tr>
             </thead>
             <tbody>
@@ -54,8 +67,9 @@
                         <td><?= htmlspecialchars($asignacion['numero_asignacion'] ?: '-', ENT_QUOTES, 'UTF-8') ?></td>
                         <td><?= htmlspecialchars($asignacion['responsable_nombre'] ?: '-', ENT_QUOTES, 'UTF-8') ?></td>
                         <td><?= htmlspecialchars($ubicacionTexto ?: '-', ENT_QUOTES, 'UTF-8') ?></td>
-                        <td><?= htmlspecialchars(formatDate($asignacion['fecha_asignacion'] ?? null) ?: '-', ENT_QUOTES, 'UTF-8') ?></td>
                         <td><?= htmlspecialchars($asignacion['estado_asignacion'] ?: '-', ENT_QUOTES, 'UTF-8') ?></td>
+                        <td><?= (int) ($asignacion['cantidad_bienes'] ?? 0) ?></td>
+                        <td><?= htmlspecialchars(formatDate($asignacion['fecha_asignacion'] ?? null) ?: '-', ENT_QUOTES, 'UTF-8') ?></td>
                         <td><?= htmlspecialchars($asignacion['usuario_registra_nombre'] ?: '-', ENT_QUOTES, 'UTF-8') ?></td>
                         <td>
                             <a href="index.php?modulo=asignaciones&accion=ver&id=<?= (int) $asignacion['id_asignacion'] ?>">Ver</a>

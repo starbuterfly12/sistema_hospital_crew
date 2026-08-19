@@ -23,7 +23,13 @@ class Asignacion extends Model
                 a.estado_asignacion,
                 a.observaciones,
                 a.created_at,
-                a.updated_at
+                a.updated_at,
+                (
+                    SELECT COUNT(*)
+                    FROM detalle_asignacion da
+                    WHERE da.id_asignacion = a.id_asignacion
+                      AND da.estado_detalle = 'activo'
+                ) AS cantidad_bienes
             FROM asignaciones a
             LEFT JOIN responsables r ON a.id_responsable = r.id_responsable
             LEFT JOIN ubicaciones u ON a.id_ubicacion = u.id_ubicacion
@@ -80,7 +86,13 @@ class Asignacion extends Model
                 a.estado_asignacion,
                 a.observaciones,
                 a.created_at,
-                a.updated_at
+                a.updated_at,
+                (
+                    SELECT COUNT(*)
+                    FROM detalle_asignacion da
+                    WHERE da.id_asignacion = a.id_asignacion
+                      AND da.estado_detalle = 'activo'
+                ) AS cantidad_bienes
             FROM asignaciones a
             LEFT JOIN responsables r ON a.id_responsable = r.id_responsable
             LEFT JOIN ubicaciones u ON a.id_ubicacion = u.id_ubicacion
@@ -422,6 +434,43 @@ class Asignacion extends Model
         ]);
     }
 
+    // Único método que deben usar los procesos automáticos (Bienes/Requisiciones/Traslados) para
+    // resolver una asignación destino: busca EXCLUSIVAMENTE una 'Asignada' que coincida con
+    // responsable Y ubicación a la vez. Una 'Pendiente' nunca es candidata — es residual del antiguo
+    // flujo manual de Asignaciones (ver AsignacionesController, ya reducido a solo consulta) y debe
+    // permanecer intacta, sin reutilizarse ni bloquear nada. Tampoco es candidata una 'Asignada' de
+    // una ubicación distinta a la buscada (p. ej. si el responsable cambió de ubicación): en ambos
+    // casos se devuelve false y el llamador debe crear una 'Asignada' nueva (Caso B), nunca lanzar un
+    // error de "ubicación no coincide" — eso ya no aplica con este método.
+    // Debe ejecutarse dentro de una transacción activa para que el bloqueo FOR UPDATE tenga efecto.
+    public function findAsignadaPorResponsableUbicacionForUpdate(int $idResponsable, int $idUbicacion): array|false
+    {
+        $sql = "
+            SELECT
+                id_asignacion,
+                numero_asignacion,
+                id_responsable,
+                id_ubicacion,
+                estado_asignacion
+            FROM asignaciones
+            WHERE id_responsable = :id_responsable
+              AND id_ubicacion = :id_ubicacion
+              AND estado_asignacion = 'Asignada'
+            LIMIT 1
+            FOR UPDATE
+        ";
+
+        return $this->fetchOne($sql, [
+            ':id_responsable' => $idResponsable,
+            ':id_ubicacion' => $idUbicacion,
+        ]);
+    }
+
+    // Histórico: sigue usado por ningún flujo automático tras la migración a
+    // findAsignadaPorResponsableUbicacionForUpdate() (Requisiciones/Traslados/Bienes ya no la llaman).
+    // Se conserva sin modificar su comportamiento porque no es responsabilidad de este ajuste
+    // eliminar métodos del modelo, y podría seguir siendo útil para una consulta genérica de
+    // "¿este responsable tiene alguna asignación vigente, sea cual sea su estado?".
     // Debe ejecutarse dentro de una transacción activa para que el bloqueo FOR UPDATE tenga efecto.
     public function findVigentePorResponsableForUpdate(int $idResponsable): array|false
     {

@@ -702,19 +702,13 @@ class RequisicionesController extends Controller
                 throw new RuntimeException('No se puede confirmar la entrega porque la ubicación del responsable solicitante está inactiva.');
             }
 
-            // Resolver asignación vigente destino — mismos Casos A/B/C que TrasladosController::crear().
-            $asignacionVigenteDestino = $asignacionModel->findVigentePorResponsableForUpdate($idResponsableSolicitante);
+            // Resolver asignación destino: findAsignadaPorResponsableUbicacionForUpdate() solo puede
+            // devolver una 'Asignada' que coincida con responsable Y ubicación a la vez — una
+            // 'Pendiente' antigua ni siquiera entra como candidata (ver comentario en Asignacion.php).
+            $asignacionDestino = $asignacionModel->findAsignadaPorResponsableUbicacionForUpdate($idResponsableSolicitante, $idUbicacionDestino);
 
-            if ($asignacionVigenteDestino !== false && $asignacionVigenteDestino['estado_asignacion'] === 'Pendiente') {
-                throw new RuntimeException('El responsable solicitante tiene una asignación Pendiente sin confirmar. Debe resolverse antes de confirmar la entrega.');
-            }
-
-            if ($asignacionVigenteDestino !== false && $asignacionVigenteDestino['estado_asignacion'] === 'Asignada') {
-                $idAsignacionDestino = (int) $asignacionVigenteDestino['id_asignacion'];
-
-                if ((int) $asignacionVigenteDestino['id_ubicacion'] !== $idUbicacionDestino) {
-                    throw new RuntimeException('La ubicación de la asignación destino no coincide con la ubicación actual del responsable.');
-                }
+            if ($asignacionDestino !== false) {
+                $idAsignacionDestino = (int) $asignacionDestino['id_asignacion'];
             } else {
                 $numeroAsignacionDestino = $asignacionModel->generarSiguienteNumero((int) date('Y'));
 

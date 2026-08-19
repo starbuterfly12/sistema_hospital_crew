@@ -191,14 +191,25 @@ class TrasladosController extends Controller
             }
         }
 
-        // Tabla de bienes: snapshots históricos de detalle_movimiento, nunca espejos actuales del bien.
+        // Tabla de bienes: código/valor/estado son snapshots históricos de detalle_movimiento.
+        // Descripción/marca/modelo/serie NO lo son (ver nota en DetalleMovimiento::listarPorMovimiento())
+        // — se leen dinámicamente de bienes, igual que ya hacía este método con descripción/serie
+        // antes de este ajuste. Serie va exclusivamente en su columna propia (E) — nunca se concatena
+        // dentro de la descripción, porque la plantilla ya la muestra por separado.
+        //
+        // IMPORTANTE — igual que TarjetasController::generarWorkbookTarjeta() (ver comentario allí):
+        // anchos de columna, ALTURAS DE FILA, wrapText, merges y demás formato son los de la plantilla
+        // y NUNCA se tocan por código — ni con setRowHeight() ni con setWrapText(). Aquí solo se
+        // escriben VALORES de celda. Si una descripción larga necesita más espacio del que la fila ya
+        // tiene, es la usuaria quien ajusta la fila manualmente en Excel — no este generador.
         $fila = self::CONSTANCIA_FILA_PRIMER_BIEN;
 
         foreach ($detalles as $detalle) {
             $serie = trim((string) ($detalle['serie'] ?? ''));
+            $descripcionCompleta = $this->construirDescripcionCompleta($detalle);
 
             $hoja->setCellValue('A' . $fila, 1);
-            $hoja->setCellValueExplicit('B' . $fila, (string) ($detalle['descripcion'] ?? ''), DataType::TYPE_STRING);
+            $hoja->setCellValueExplicit('B' . $fila, $descripcionCompleta, DataType::TYPE_STRING);
             $hoja->setCellValueExplicit('E' . $fila, $serie !== '' ? $serie : '-', DataType::TYPE_STRING);
             $hoja->setCellValue('F' . $fila, (float) $detalle['valor_movimiento']);
             $hoja->setCellValueExplicit('G' . $fila, (string) ($detalle['codigo_mostrado'] ?? ''), DataType::TYPE_STRING);
@@ -215,6 +226,34 @@ class TrasladosController extends Controller
         $hoja->getPageSetup()->setRowsToRepeatAtTopByStartAndEnd(1, 10);
 
         return $spreadsheet;
+    }
+
+    /**
+     * Compone "Descripción, marca: X, modelo: Y" para la columna B:D de la constancia. Regla propia
+     * de Traslados — DISTINTA de RequisicionesController::construirDescripcionCompleta() y
+     * PrestamosController::construirDescripcionCompleta() (que usan modelo/serie), porque la
+     * plantilla de Traslado ya tiene una columna institucional independiente para Serie (columna E,
+     * ver generarWorkbookConstancia()): la serie nunca debe duplicarse dentro de la descripción.
+     * Fragmentos opcionales: marca/modelo solo se añaden si no están vacíos, nunca "marca: " ni
+     * "modelo: " sueltos.
+     */
+    private function construirDescripcionCompleta(array $detalle): string
+    {
+        $partes = [trim((string) ($detalle['descripcion'] ?? ''))];
+
+        $marca = trim((string) ($detalle['marca'] ?? ''));
+
+        if ($marca !== '') {
+            $partes[] = 'marca: ' . $marca;
+        }
+
+        $modelo = trim((string) ($detalle['modelo'] ?? ''));
+
+        if ($modelo !== '') {
+            $partes[] = 'modelo: ' . $modelo;
+        }
+
+        return implode(', ', $partes);
     }
 
     /**
@@ -451,23 +490,14 @@ class TrasladosController extends Controller
                 throw new RuntimeException('No se puede trasladar porque la ubicación del responsable destino está inactiva.');
             }
 
-            // 5. Resolver asignación destino (Casos A/B/C).
-            $asignacionVigenteDestino = $asignacionModel->findVigentePorResponsableForUpdate($idResponsableDestino);
+            // 5. Resolver asignación destino: findAsignadaPorResponsableUbicacionForUpdate() solo puede
+            // devolver una 'Asignada' que coincida con responsable Y ubicación a la vez — una
+            // 'Pendiente' antigua ni siquiera entra como candidata (ver comentario en Asignacion.php);
+            // no reutiliza, no bloquea el traslado, y el flujo cae directo a crear una 'Asignada' nueva.
+            $asignacionDestino = $asignacionModel->findAsignadaPorResponsableUbicacionForUpdate($idResponsableDestino, $idUbicacionDestino);
 
-            if ($asignacionVigenteDestino !== false && $asignacionVigenteDestino['estado_asignacion'] === 'Pendiente') {
-                throw new RuntimeException(
-                    'El responsable seleccionado posee una asignación pendiente. Debe confirmarse antes de recibir bienes mediante traslado.'
-                );
-            }
-
-            if ($asignacionVigenteDestino !== false && $asignacionVigenteDestino['estado_asignacion'] === 'Asignada') {
-                $idAsignacionDestino = (int) $asignacionVigenteDestino['id_asignacion'];
-
-                if ((int) $asignacionVigenteDestino['id_ubicacion'] !== $idUbicacionDestino) {
-                    throw new RuntimeException(
-                        'La ubicación de la asignación destino no coincide con la ubicación actual del responsable.'
-                    );
-                }
+            if ($asignacionDestino !== false) {
+                $idAsignacionDestino = (int) $asignacionDestino['id_asignacion'];
             } else {
                 $anioDestino = (int) substr($fechaMovimiento, 0, 4);
                 $numeroAsignacionDestino = $asignacionModel->generarSiguienteNumero($anioDestino);

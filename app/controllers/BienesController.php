@@ -63,24 +63,14 @@ class BienesController extends Controller
         $idUbicacion = $bodega['id_ubicacion'];
         $fechaAsignacion = date('Y-m-d');
 
-        $asignacionVigente = $asignacionModel->findVigentePorResponsableForUpdate($idResponsable);
-
-        if ($asignacionVigente !== false && $asignacionVigente['estado_asignacion'] === 'Pendiente') {
-            throw new RuntimeException(
-                'El responsable de Bodega de Almacén tiene una asignación pendiente sin confirmar. '
-                . 'Debe confirmarse desde el módulo Asignaciones antes de poder registrar nuevos bienes.'
-            );
-        }
+        // findAsignadaPorResponsableUbicacionForUpdate() solo puede devolver una 'Asignada' que
+        // coincida con responsable Y ubicación de Bodega a la vez — una 'Pendiente' antigua ni siquiera
+        // entra como candidata (ver comentario en Asignacion.php); no reutiliza, no bloquea el ingreso
+        // de bienes, y el flujo cae directo a crear una 'Asignada' nueva.
+        $asignacionVigente = $asignacionModel->findAsignadaPorResponsableUbicacionForUpdate($idResponsable, $idUbicacion);
 
         if ($asignacionVigente !== false) {
             $idAsignacion = (int) $asignacionVigente['id_asignacion'];
-
-            if ((int) $asignacionVigente['id_ubicacion'] !== $idUbicacion) {
-                throw new RuntimeException(
-                    'La ubicación de la asignación vigente de Bodega de Almacén no coincide con la '
-                    . 'ubicación actual de su responsable. Revise la configuración antes de continuar.'
-                );
-            }
         } else {
             $anio = (int) substr($fechaAsignacion, 0, 4);
             $numeroAsignacion = $asignacionModel->generarSiguienteNumero($anio);

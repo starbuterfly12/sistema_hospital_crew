@@ -89,6 +89,76 @@ class Prestamo extends Model
         return sprintf('PRE-%04d-%06d', $anio, $siguienteConsecutivo);
     }
 
+    // Préstamos con bienes todavía pendientes de devolución — únicos elegibles para registrar una
+    // devolución (ver Devoluciones/crear()). 'finalizado' y 'anulado' quedan fuera a propósito.
+    public function getPendientesDevolucion(): array
+    {
+        $sql = "
+            SELECT
+                p.id_prestamo,
+                p.numero_prestamo,
+                p.tipo_prestamo,
+                p.numero_oficio,
+                p.responsable_origen_mostrado,
+                p.ubicacion_origen_mostrada,
+                p.responsable_destino_mostrado,
+                p.ubicacion_destino_mostrada,
+                p.fecha_prestamo,
+                p.fecha_devolucion_estimada,
+                p.motivo,
+                p.estado_prestamo
+            FROM prestamos p
+            WHERE p.estado_prestamo IN ('activo', 'parcial')
+            ORDER BY p.id_prestamo DESC
+        ";
+
+        return $this->fetchAll($sql);
+    }
+
+    // Debe ejecutarse dentro de una transacción activa para que el bloqueo FOR UPDATE tenga efecto.
+    // Bloquea la cabecera del préstamo ANTES que cualquier detalle (ver DetallePrestamo::
+    // findPendienteForUpdate()): esto serializa toda devolución concurrente sobre el mismo préstamo,
+    // evitando que dos devoluciones parciales simultáneas calculen cada una un conteo de pendientes
+    // desactualizado y dejen el préstamo en un estado_prestamo incorrecto.
+    public function findByIdForUpdate(int $idPrestamo): array|false
+    {
+        $sql = "
+            SELECT
+                id_prestamo,
+                numero_prestamo,
+                tipo_prestamo,
+                responsable_origen_mostrado,
+                ubicacion_origen_mostrada,
+                responsable_destino_mostrado,
+                ubicacion_destino_mostrada,
+                fecha_prestamo,
+                fecha_devolucion_estimada,
+                estado_prestamo
+            FROM prestamos
+            WHERE id_prestamo = :id_prestamo
+            LIMIT 1
+            FOR UPDATE
+        ";
+
+        return $this->fetchOne($sql, [':id_prestamo' => $idPrestamo]);
+    }
+
+    public function actualizarEstado(int $idPrestamo, string $estado): bool
+    {
+        $sql = "
+            UPDATE prestamos
+            SET estado_prestamo = :estado_prestamo
+            WHERE id_prestamo = :id_prestamo
+        ";
+
+        $this->query($sql, [
+            ':estado_prestamo' => $estado,
+            ':id_prestamo' => $idPrestamo,
+        ]);
+
+        return true;
+    }
+
     public function crear(array $datos): int
     {
         $sql = "

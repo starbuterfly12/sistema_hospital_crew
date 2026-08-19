@@ -58,16 +58,12 @@
         <dd><?= $mostrar(formatDateTime($asignacion['updated_at'] ?? null)) ?></dd>
     </dl>
 
-    <?php if (($asignacion['estado_asignacion'] ?? null) === 'Pendiente' && tieneRol(['Administrador', 'Operativo'])): ?>
-        <p><a href="index.php?modulo=asignaciones&accion=editar&id=<?= (int) $asignacion['id_asignacion'] ?>">Editar asignación</a></p>
-    <?php endif; ?>
-
     <h2>Bienes de la asignación</h2>
 
     <?php $bienesAsignacion = $bienesAsignacion ?? []; ?>
 
     <?php if (empty($bienesAsignacion)): ?>
-        <p>Todavía no se han agregado bienes a esta asignación.</p>
+        <p>Esta asignación no contiene bienes.</p>
     <?php else: ?>
         <table border="1" cellpadding="5" cellspacing="0">
             <thead>
@@ -83,7 +79,6 @@
                     <th>Fecha retirado</th>
                     <th>Estado</th>
                     <th>Observaciones</th>
-                    <th>Acción</th>
                 </tr>
             </thead>
             <tbody>
@@ -100,80 +95,10 @@
                         <td><?= $mostrar(formatDate($detalle['fecha_retirado'] ?? null)) ?></td>
                         <td><?= $mostrar($detalle['estado_detalle'] ?? null) ?></td>
                         <td><?= $mostrar($detalle['observaciones_detalle'] ?? null) ?></td>
-                        <td>
-                            <?php if (($detalle['estado_detalle'] ?? null) === 'activo' && ($asignacion['estado_asignacion'] ?? null) === 'Pendiente' && tieneRol(['Administrador', 'Operativo'])): ?>
-                                <form method="POST" action="index.php?modulo=asignaciones&accion=retirar_bien&id=<?= (int) $asignacion['id_asignacion'] ?>">
-                                    <?= csrfField() ?>
-                                    <input type="hidden" name="id_detalle_asignacion" value="<?= (int) $detalle['id_detalle_asignacion'] ?>">
-                                    <button type="submit">Retirar</button>
-                                </form>
-                            <?php else: ?>
-                                -
-                            <?php endif; ?>
-                        </td>
                     </tr>
                 <?php endforeach; ?>
             </tbody>
         </table>
-    <?php endif; ?>
-
-    <?php if (in_array($asignacion['estado_asignacion'] ?? null, ['Pendiente', 'Asignada'], true) && tieneRol(['Administrador', 'Operativo'])): ?>
-        <h2>Agregar bien</h2>
-
-        <?php $bienesDisponibles = $bienesDisponibles ?? []; ?>
-
-        <?php if (empty($bienesDisponibles)): ?>
-            <p>No hay bienes disponibles para agregar.</p>
-        <?php else: ?>
-            <form method="POST" action="index.php?modulo=asignaciones&accion=agregar_bien&id=<?= (int) $asignacion['id_asignacion'] ?>">
-                <?= csrfField() ?>
-
-                <div>
-                    <label for="id_bien">Bien *</label>
-                    <select id="id_bien" name="id_bien" required>
-                        <option value="">Seleccione</option>
-                        <?php foreach ($bienesDisponibles as $bien): ?>
-                            <?php
-                                $etiqueta = ($bien['codigo_interno'] ?? '-')
-                                    . ' - ' . ($bien['descripcion'] ?? '-')
-                                    . ' - ' . ($bien['serie'] ?: '-');
-                            ?>
-                            <option value="<?= (int) $bien['id_bien'] ?>"><?= htmlspecialchars($etiqueta, ENT_QUOTES, 'UTF-8') ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-
-                <div>
-                    <label for="observaciones_detalle">Observaciones del detalle</label>
-                    <textarea id="observaciones_detalle" name="observaciones_detalle"></textarea>
-                </div>
-
-                <div>
-                    <button type="submit">Agregar bien</button>
-                </div>
-            </form>
-        <?php endif; ?>
-    <?php endif; ?>
-
-    <?php if (($asignacion['estado_asignacion'] ?? null) === 'Pendiente' && tieneRol(['Administrador', 'Operativo'])): ?>
-        <?php
-            $tieneDetalleActivo = false;
-            foreach ($bienesAsignacion as $detalle) {
-                if (($detalle['estado_detalle'] ?? null) === 'activo') {
-                    $tieneDetalleActivo = true;
-                    break;
-                }
-            }
-        ?>
-
-        <?php if ($tieneDetalleActivo): ?>
-            <form method="POST" action="index.php?modulo=asignaciones&accion=confirmar&id=<?= (int) $asignacion['id_asignacion'] ?>">
-                <?= csrfField() ?>
-                <button type="submit">Confirmar asignación</button>
-            </form>
-        <?php else: ?>
-            <p>Agregue al menos un bien antes de confirmar la asignación.</p>
-        <?php endif; ?>
     <?php endif; ?>
 
     <p><a href="index.php?modulo=asignaciones">Volver al listado</a></p>

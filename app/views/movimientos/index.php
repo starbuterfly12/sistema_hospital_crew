@@ -20,7 +20,7 @@
         </li>
 
         <li>
-            <span>Devolución</span> — <em>Pendiente</em>
+            <a href="index.php?modulo=devoluciones">Devolución</a>
             <p>Registro de devolución total o parcial de bienes prestados.</p>
         </li>
 

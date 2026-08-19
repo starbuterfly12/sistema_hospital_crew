@@ -55,6 +55,13 @@ class DetalleMovimiento extends Model
         return (int) $this->lastInsertId();
     }
 
+    // NOTA: descripcion/marca/modelo/serie se leen aquí de `bienes` (espejo actual), NO de un
+    // snapshot histórico — detalle_movimiento no tiene columnas propias para esto (a diferencia de
+    // detalle_prestamo/detalle_requisicion, que sí guardan *_mostrado). Si el bien se edita después
+    // del traslado, una constancia vuelta a descargar reflejará el dato nuevo, no el vigente al
+    // momento del traslado. Comportamiento preexistente para descripcion/serie; marca/modelo se
+    // agregan aquí con el mismo criterio dinámico para no introducir una inconsistencia nueva entre
+    // las columnas. Ver auditoría 2026-08-19 en TrasladosController antes de considerar un ALTER.
     public function listarPorMovimiento(int $idMovimiento): array
     {
         $sql = "
@@ -65,6 +72,8 @@ class DetalleMovimiento extends Model
                 b.codigo_interno,
                 b.codigo_sicoin,
                 b.descripcion,
+                b.marca,
+                b.modelo,
                 b.serie,
                 dm.id_detalle_asignacion_origen,
                 ao.numero_asignacion AS numero_asignacion_origen,

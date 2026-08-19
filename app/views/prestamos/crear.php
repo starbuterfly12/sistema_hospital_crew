@@ -41,6 +41,7 @@
         $fechaDevolucionValor = $datosFormulario['fecha_devolucion_estimada'] ?? '';
         $condicionesEntregaValor = $datosFormulario['condicion_entrega'] ?? [];
         $inventariosDisponible = (bool) ($inventariosDisponible ?? false);
+        $origenInventarios = $origenInventarios ?? null;
     ?>
 
     <?php if (!empty($error)): ?>
@@ -77,9 +78,9 @@
 
         <h2>Responsable origen</h2>
 
-        <div>
+        <div id="bloque-origen-select">
             <label for="id_responsable_origen">Responsable origen *</label>
-            <select id="id_responsable_origen" name="id_responsable_origen" required>
+            <select id="id_responsable_origen" name="id_responsable_origen">
                 <option value="">Seleccione</option>
                 <?php foreach ($responsablesOrigen as $responsable): ?>
                     <?php
@@ -92,6 +93,23 @@
                     ><?= htmlspecialchars($etiqueta, ENT_QUOTES, 'UTF-8') ?></option>
                 <?php endforeach; ?>
             </select>
+        </div>
+
+        <div id="bloque-origen-inventarios" style="display:none;">
+            <label for="origen_inventarios_texto">Responsable origen</label>
+            <input
+                type="text"
+                id="origen_inventarios_texto"
+                value="<?= $origenInventarios ? htmlspecialchars($origenInventarios['nombre_completo'] . ' — ' . $origenInventarios['nombre_ubicacion'], ENT_QUOTES, 'UTF-8') : '' ?>"
+                readonly
+            >
+            <input
+                type="hidden"
+                id="id_responsable_origen_inventarios"
+                name="id_responsable_origen"
+                value="<?= $origenInventarios ? (int) $origenInventarios['id_responsable'] : '' ?>"
+                disabled
+            >
         </div>
 
         <h2>Bienes disponibles</h2>
@@ -181,13 +199,23 @@
         var bienesPorResponsable = <?= json_encode($bienesPorResponsable, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE) ?>;
         var bienesSeleccionadosPrevios = <?= json_encode($bienesSeleccionados, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
         var condicionesEntregaPrevias = <?= json_encode($condicionesEntregaValor, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE) ?>;
+        var condicionesValidas = <?= json_encode(Bien::CONDICIONES_VALIDAS, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE) ?>;
 
         (function () {
             var selectTipo = document.getElementById('tipo_prestamo');
             var selectOrigen = document.getElementById('id_responsable_origen');
+            var bloqueOrigenSelect = document.getElementById('bloque-origen-select');
+            var bloqueOrigenInventarios = document.getElementById('bloque-origen-inventarios');
+            var inputOrigenInventarios = document.getElementById('id_responsable_origen_inventarios');
             var contenedorBienes = document.getElementById('contenedor-bienes');
             var selectResponsableDestino = document.getElementById('id_responsable_destino');
             var campoAreaDestino = document.getElementById('area_destino_derivada');
+
+            function idResponsableOrigenActivo() {
+                return selectTipo.value === 'desde_inventarios'
+                    ? inputOrigenInventarios.value
+                    : selectOrigen.value;
+            }
 
             function escapeHtml(texto) {
                 var div = document.createElement('div');
@@ -195,8 +223,21 @@
                 return div.innerHTML;
             }
 
+            function construirSelectCondicion(nombreCampo, valorSeleccionado) {
+                var html = '<select class="campo-condicion" name="' + nombreCampo + '">'
+                    + '<option value="">Seleccione...</option>';
+
+                condicionesValidas.forEach(function (condicion) {
+                    var seleccionada = condicion === valorSeleccionado ? ' selected' : '';
+                    html += '<option value="' + escapeHtml(condicion) + '"' + seleccionada + '>' + escapeHtml(condicion) + '</option>';
+                });
+
+                html += '</select>';
+                return html;
+            }
+
             function renderizarBienes() {
-                var idResponsable = selectOrigen.value;
+                var idResponsable = idResponsableOrigenActivo();
                 var bienes = idResponsable ? (bienesPorResponsable[idResponsable] || []) : [];
 
                 if (!idResponsable) {
@@ -229,7 +270,7 @@
                         + '<td>' + escapeHtml(marcaModelo) + '</td>'
                         + '<td>' + escapeHtml(bien.serie || '-') + '</td>'
                         + '<td>' + escapeHtml(bien.condicion_bien || '-') + '</td>'
-                        + '<td><input type="text" class="campo-condicion" maxlength="50" name="condicion_entrega[' + bien.id_bien + ']" value="' + escapeHtml(condicionPrevia) + '"></td>'
+                        + '<td>' + construirSelectCondicion('condicion_entrega[' + bien.id_bien + ']', condicionPrevia) + '</td>'
                         + '<td>' + escapeHtml(bien.valor !== null ? bien.valor : '-') + '</td>'
                         + '<td>' + escapeHtml(bien.ubicacion_actual || '-') + '</td>'
                         + '</tr>';
@@ -239,20 +280,23 @@
                 contenedorBienes.innerHTML = html;
             }
 
-            function actualizarBloqueoOrigenPorTipo() {
-                // "Desde Inventarios" está deshabilitada como <option> (ver más abajo) mientras no
-                // exista un responsable fijo de Inventarios, así que este valor no debería poder
-                // seleccionarse desde la interfaz normal. Si de todas formas llegara a estar
-                // seleccionado, se bloquean todos los orígenes en vez de asumir un id concreto.
+            function actualizarModoOrigen() {
+                // "Desde Inventarios" fija el origen a la encargada institucional y no permite
+                // cambiarlo: se oculta el <select> normal y se muestra el bloque de solo lectura. Solo
+                // un bloque queda habilitado a la vez para que "id_responsable_origen" se envíe una
+                // única vez en el POST (el backend igual vuelve a resolverlo por su cuenta, nunca
+                // confía en este valor para "Desde Inventarios").
                 var esDesdeInventarios = selectTipo.value === 'desde_inventarios';
 
-                Array.prototype.forEach.call(selectOrigen.options, function (opcion) {
-                    opcion.disabled = esDesdeInventarios;
-                });
+                bloqueOrigenSelect.style.display = esDesdeInventarios ? 'none' : '';
+                bloqueOrigenInventarios.style.display = esDesdeInventarios ? '' : 'none';
+                selectOrigen.disabled = esDesdeInventarios;
+                selectOrigen.required = !esDesdeInventarios;
+                inputOrigenInventarios.disabled = !esDesdeInventarios;
             }
 
             function actualizarOpcionesDestino() {
-                var idResponsableOrigen = selectOrigen.value;
+                var idResponsableOrigen = idResponsableOrigenActivo();
 
                 Array.prototype.forEach.call(selectResponsableDestino.options, function (opcion) {
                     if (!opcion.value) {
@@ -290,7 +334,7 @@
             }
 
             selectTipo.addEventListener('change', function () {
-                actualizarBloqueoOrigenPorTipo();
+                actualizarModoOrigen();
                 renderizarBienes();
                 actualizarOpcionesDestino();
             });
@@ -302,7 +346,7 @@
 
             selectResponsableDestino.addEventListener('change', actualizarAreaDestino);
 
-            actualizarBloqueoOrigenPorTipo();
+            actualizarModoOrigen();
             renderizarBienes();
             actualizarOpcionesDestino();
             actualizarAreaDestino();
