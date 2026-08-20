@@ -256,6 +256,38 @@ switch ($modulo) {
         }
         break;
 
+    case 'bajas':
+        if (!isset($_SESSION['id_usuario'])) {
+            header('Location: index.php');
+            exit;
+        }
+
+        require_once __DIR__ . '/app/controllers/BajasController.php';
+        $bajasController = new BajasController();
+
+        if ($accion === 'crear') {
+            $bajasController->crear();
+        } elseif ($accion === 'ver') {
+            $bajasController->ver();
+        } elseif ($accion === 'editar') {
+            $bajasController->editar();
+        } elseif ($accion === 'solicitudes') {
+            $bajasController->solicitudes();
+        } elseif ($accion === 'revisar') {
+            $bajasController->revisar();
+        } elseif ($accion === 'autorizar') {
+            $bajasController->autorizar();
+        } elseif ($accion === 'rechazar') {
+            $bajasController->rechazar();
+        } elseif ($accion === 'finalizar') {
+            $bajasController->finalizar();
+        } elseif ($accion === 'descargarComprobante') {
+            $bajasController->descargarComprobante();
+        } else {
+            $bajasController->index();
+        }
+        break;
+
     default:
         echo 'Módulo no encontrado';
         break;

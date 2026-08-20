@@ -68,6 +68,7 @@ class TarjetasController extends Controller
         $historialSicoinModel = $this->model('HistorialSicoin');
         $detalleMovimientoModel = $this->model('DetalleMovimiento');
         $detalleRequisicionModel = $this->model('DetalleRequisicion');
+        $detalleBajaModel = $this->model('DetalleBaja');
         $bitacoraModel = $this->model('Bitacora');
 
         try {
@@ -159,7 +160,7 @@ class TarjetasController extends Controller
 
                 $historialBien = $historialSicoinModel->getPorBien((int) $detalle['id_bien']);
                 $entrada = $this->resolverEntradaDetalle($idDetalleAsignacion, $detalleMovimientoModel, $detalleRequisicionModel);
-                $salida = $this->resolverSalidaDetalle($idDetalleAsignacion, $detalleMovimientoModel, $detalleRequisicionModel);
+                $salida = $this->resolverSalidaDetalle($idDetalleAsignacion, $detalleMovimientoModel, $detalleRequisicionModel, $detalleBajaModel);
 
                 array_push($eventos, ...$this->construirEventosDetalle($detalle, $historialBien, $entrada, $salida));
             }
@@ -453,8 +454,8 @@ class TarjetasController extends Controller
      * PrestamosController::construirDescripcionCompleta() (métodos independientes, no se tocan
      * aquí). Si falta modelo y/o serie, esa parte simplemente se omite — nunca se muestran campos
      * vacíos, NULL ni guiones artificiales. NUNCA muestra tipo_operacion (ALTA,
-     * TRASLADO_ENTRADA/SALIDA, REQUISICION_ENTRADA/SALIDA) como descripción — esos siguen siendo
-     * solo para Debe/Haber y trazabilidad.
+     * TRASLADO_ENTRADA/SALIDA, REQUISICION_ENTRADA/SALIDA, BAJA_SALIDA) como descripción — esos
+     * siguen siendo solo para Debe/Haber y trazabilidad.
      */
     private function construirDescripcionCompleta(array $operacion): string
     {
@@ -552,11 +553,18 @@ class TarjetasController extends Controller
 
     /**
      * Simétrico a resolverEntradaDetalle() pero para el evento de SALIDA (HABER) de un
-     * detalle_asignacion específico — hoy Bodega es el único origen práctico, pero cualquier
-     * detalle retirado por Requisición queda cubierto igual que uno retirado por Traslado.
+     * detalle_asignacion específico — Traslado, Requisición o Baja finalizada (mutuamente
+     * excluyentes: un mismo detalle_asignacion solo pudo ser retirado por uno de los tres, porque
+     * cada uno llama a Asignacion::retirarBien() una sola vez sobre su propio detalle "causante").
+     * Una Baja solo 'autorizada' (sin finalizar) NO cuenta como salida todavía — ver
+     * DetalleBaja::findSalidaPorDetalleOrigen(), que exige estado_baja='finalizada'.
      */
-    private function resolverSalidaDetalle(int $idDetalleAsignacion, DetalleMovimiento $detalleMovimientoModel, DetalleRequisicion $detalleRequisicionModel): array|false
-    {
+    private function resolverSalidaDetalle(
+        int $idDetalleAsignacion,
+        DetalleMovimiento $detalleMovimientoModel,
+        DetalleRequisicion $detalleRequisicionModel,
+        DetalleBaja $detalleBajaModel
+    ): array|false {
         $salidaTraslado = $detalleMovimientoModel->findSalidaPorDetalleOrigen($idDetalleAsignacion);
 
         if ($salidaTraslado !== false) {
@@ -584,6 +592,24 @@ class TarjetasController extends Controller
                 'descripcion_mostrada' => $salidaRequisicion['descripcion_mostrada'],
                 'modelo_mostrado' => $salidaRequisicion['modelo_mostrado'],
                 'serie_mostrada' => $salidaRequisicion['serie_mostrada'],
+            ];
+        }
+
+        $salidaBaja = $detalleBajaModel->findSalidaPorDetalleOrigen($idDetalleAsignacion);
+
+        if ($salidaBaja !== false) {
+            // bajas.fecha_baja es DATE (sin hora) — mismo criterio que fecha_agregado (también DATE)
+            // ya usado como clave_fecha en el evento ALTA de construirEventosDetalle(): un valor de
+            // fecha pura es válido ahí, no requiere hora.
+            return [
+                'tipo_operacion' => 'BAJA_SALIDA',
+                'fecha_movimiento' => $salidaBaja['fecha_baja'],
+                'codigo_mostrado' => $salidaBaja['codigo_mostrado'],
+                'valor_movimiento' => $salidaBaja['valor_mostrado'],
+                'id_detalle_movimiento' => null,
+                'descripcion_mostrada' => $salidaBaja['descripcion_mostrada'],
+                'modelo_mostrado' => $salidaBaja['modelo_mostrado'],
+                'serie_mostrada' => $salidaBaja['serie_mostrada'],
             ];
         }
 

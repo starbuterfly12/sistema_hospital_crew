@@ -631,4 +631,230 @@ class Bien extends Model
             ':id_ubicacion_almacen' => $idUbicacionAlmacen,
         ]);
     }
+
+    // Bienes elegibles para Baja de un responsable: Activos, con detalle_asignacion activo
+    // resolvible, sin préstamo activo, sin reserva de Requisición autorizada, y sin estar ya en otra
+    // Baja vigente (pendiente/autorizada). $idBajaExcluir permite reutilizar esta misma consulta al
+    // editar una Baja Pendiente (excluye la propia baja de la validación "ya está en otra baja").
+    public function getElegiblesParaBajaPorResponsable(int $idResponsable, int $idBajaExcluir = 0): array
+    {
+        $sql = "
+            SELECT
+                b.id_bien,
+                b.codigo_interno,
+                b.codigo_sicoin,
+                b.descripcion,
+                b.marca,
+                b.modelo,
+                b.serie,
+                b.condicion_bien,
+                b.costo,
+                b.valor_estimado,
+                b.id_estado_bien,
+                b.id_asignacion_actual,
+                b.id_responsable_actual,
+                b.id_ubicacion_actual,
+                u.nombre_ubicacion
+            FROM bienes b
+            INNER JOIN estados_bien eb ON b.id_estado_bien = eb.id_estado_bien
+            INNER JOIN asignaciones a ON b.id_asignacion_actual = a.id_asignacion
+            INNER JOIN detalle_asignacion da
+                ON da.id_asignacion = b.id_asignacion_actual
+               AND da.id_bien = b.id_bien
+               AND da.estado_detalle = 'activo'
+            LEFT JOIN ubicaciones u ON b.id_ubicacion_actual = u.id_ubicacion
+            WHERE b.id_responsable_actual = :id_responsable
+              AND eb.nombre_estado = 'Activo'
+              AND NOT EXISTS (
+                    SELECT 1
+                    FROM detalle_prestamo dp
+                    WHERE dp.id_bien = b.id_bien
+                      AND dp.estado_detalle = 'prestado'
+              )
+              AND NOT EXISTS (
+                    SELECT 1
+                    FROM detalle_requisicion dr
+                    WHERE dr.id_bien = b.id_bien
+                      AND dr.estado_detalle = 'reservado'
+              )
+              AND NOT EXISTS (
+                    SELECT 1
+                    FROM detalle_baja db
+                    INNER JOIN bajas ba ON db.id_baja = ba.id_baja
+                    WHERE db.id_bien = b.id_bien
+                      AND ba.estado_baja IN ('pendiente', 'autorizada')
+                      AND ba.id_baja <> :id_baja_excluir
+              )
+            ORDER BY b.codigo_interno ASC
+        ";
+
+        return $this->fetchAll($sql, [
+            ':id_responsable' => $idResponsable,
+            ':id_baja_excluir' => $idBajaExcluir,
+        ]);
+    }
+
+    // Debe ejecutarse dentro de una transacción activa para que el bloqueo FOR UPDATE tenga efecto.
+    // Mismas condiciones que getElegiblesParaBajaPorResponsable(), para revalidar en el instante exacto
+    // de guardar (crear/editar) que el bien sigue siendo elegible — no se confía en lo mostrado en el
+    // formulario.
+    public function findElegibleParaBajaForUpdate(int $idBien, int $idResponsable, int $idBajaExcluir = 0): array|false
+    {
+        $sql = "
+            SELECT
+                b.id_bien,
+                b.codigo_interno,
+                b.codigo_sicoin,
+                b.descripcion,
+                b.marca,
+                b.modelo,
+                b.serie,
+                b.costo,
+                b.valor_estimado,
+                b.id_estado_bien,
+                b.id_asignacion_actual,
+                b.id_responsable_actual,
+                b.id_ubicacion_actual
+            FROM bienes b
+            INNER JOIN estados_bien eb ON b.id_estado_bien = eb.id_estado_bien
+            WHERE b.id_bien = :id_bien
+              AND b.id_responsable_actual = :id_responsable
+              AND b.id_asignacion_actual IS NOT NULL
+              AND eb.nombre_estado = 'Activo'
+              AND EXISTS (
+                    SELECT 1
+                    FROM detalle_asignacion da
+                    WHERE da.id_asignacion = b.id_asignacion_actual
+                      AND da.id_bien = b.id_bien
+                      AND da.estado_detalle = 'activo'
+              )
+              AND NOT EXISTS (
+                    SELECT 1
+                    FROM detalle_prestamo dp
+                    WHERE dp.id_bien = b.id_bien
+                      AND dp.estado_detalle = 'prestado'
+              )
+              AND NOT EXISTS (
+                    SELECT 1
+                    FROM detalle_requisicion dr
+                    WHERE dr.id_bien = b.id_bien
+                      AND dr.estado_detalle = 'reservado'
+              )
+              AND NOT EXISTS (
+                    SELECT 1
+                    FROM detalle_baja db
+                    INNER JOIN bajas ba ON db.id_baja = ba.id_baja
+                    WHERE db.id_bien = b.id_bien
+                      AND ba.estado_baja IN ('pendiente', 'autorizada')
+                      AND ba.id_baja <> :id_baja_excluir
+              )
+            LIMIT 1
+            FOR UPDATE
+        ";
+
+        return $this->fetchOne($sql, [
+            ':id_bien' => $idBien,
+            ':id_responsable' => $idResponsable,
+            ':id_baja_excluir' => $idBajaExcluir,
+        ]);
+    }
+
+    // Debe ejecutarse dentro de una transacción activa para que el bloqueo FOR UPDATE tenga efecto.
+    // Revalida, en el instante exacto de finalizar (nunca antes), que el bien sigue exactamente en
+    // las condiciones esperadas: mismo responsable y ubicación que el snapshot de detalle_baja,
+    // Activo, con asignación vigente y detalle_asignacion activo resolvible, sin préstamo activo, sin
+    // reserva de Requisición, y sin estar en otra Baja pendiente/autorizada distinta de la propia
+    // (mismas exclusiones que findElegibleParaBajaForUpdate(), reaplicadas por si algo cambió entre
+    // Autorizar y Finalizar). No se confía en el snapshot histórico para decidir el estado actual.
+    public function findParaFinalizarBajaForUpdate(
+        int $idBien,
+        int $idResponsableEsperado,
+        int $idUbicacionEsperada,
+        int $idBajaExcluir
+    ): array|false {
+        $sql = "
+            SELECT
+                b.id_bien,
+                b.codigo_interno,
+                b.id_estado_bien,
+                b.id_asignacion_actual,
+                b.id_responsable_actual,
+                b.id_ubicacion_actual
+            FROM bienes b
+            INNER JOIN estados_bien eb ON b.id_estado_bien = eb.id_estado_bien
+            WHERE b.id_bien = :id_bien
+              AND b.id_responsable_actual = :id_responsable_esperado
+              AND b.id_ubicacion_actual = :id_ubicacion_esperada
+              AND b.id_asignacion_actual IS NOT NULL
+              AND eb.nombre_estado = 'Activo'
+              AND EXISTS (
+                    SELECT 1
+                    FROM detalle_asignacion da
+                    WHERE da.id_asignacion = b.id_asignacion_actual
+                      AND da.id_bien = b.id_bien
+                      AND da.estado_detalle = 'activo'
+              )
+              AND NOT EXISTS (
+                    SELECT 1
+                    FROM detalle_prestamo dp
+                    WHERE dp.id_bien = b.id_bien
+                      AND dp.estado_detalle = 'prestado'
+              )
+              AND NOT EXISTS (
+                    SELECT 1
+                    FROM detalle_requisicion dr
+                    WHERE dr.id_bien = b.id_bien
+                      AND dr.estado_detalle = 'reservado'
+              )
+              AND NOT EXISTS (
+                    SELECT 1
+                    FROM detalle_baja db2
+                    INNER JOIN bajas ba2 ON db2.id_baja = ba2.id_baja
+                    WHERE db2.id_bien = b.id_bien
+                      AND ba2.estado_baja IN ('pendiente', 'autorizada')
+                      AND ba2.id_baja <> :id_baja_excluir
+              )
+            LIMIT 1
+            FOR UPDATE
+        ";
+
+        return $this->fetchOne($sql, [
+            ':id_bien' => $idBien,
+            ':id_responsable_esperado' => $idResponsableEsperado,
+            ':id_ubicacion_esperada' => $idUbicacionEsperada,
+            ':id_baja_excluir' => $idBajaExcluir,
+        ]);
+    }
+
+    // Debe ejecutarse dentro de una transacción activa. Aplica el retiro definitivo por Baja: estado
+    // Baja, sin responsable, sin asignación, ubicación = Bodega destino de la propia Baja. Nunca crea
+    // asignación ni busca responsable de esa Bodega — es solo su ubicación física final.
+    // $idAsignacionOrigenEsperada exige coincidencia exacta (mismo criterio de concurrencia que
+    // actualizarAsignacionActual()): 0 filas afectadas = el bien cambió durante el proceso.
+    public function finalizarBaja(
+        int $idBien,
+        int $idAsignacionOrigenEsperada,
+        int $idEstadoBienBaja,
+        int $idUbicacionBodegaDestino
+    ): bool {
+        $sql = "
+            UPDATE bienes
+            SET
+                id_estado_bien = :id_estado_bien_baja,
+                id_responsable_actual = NULL,
+                id_asignacion_actual = NULL,
+                id_ubicacion_actual = :id_ubicacion_bodega_destino
+            WHERE id_bien = :id_bien
+              AND id_asignacion_actual = :id_asignacion_origen_esperada
+        ";
+
+        $statement = $this->query($sql, [
+            ':id_estado_bien_baja' => $idEstadoBienBaja,
+            ':id_ubicacion_bodega_destino' => $idUbicacionBodegaDestino,
+            ':id_bien' => $idBien,
+            ':id_asignacion_origen_esperada' => $idAsignacionOrigenEsperada,
+        ]);
+
+        return $statement->rowCount() === 1;
+    }
 }

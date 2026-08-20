@@ -6,6 +6,8 @@
     <title>Movimientos</title>
 </head>
 <body>
+    <?php $totalBajasPendientes = (int) ($totalBajasPendientes ?? 0); ?>
+
     <h1>Movimientos</h1>
 
     <ul>
@@ -25,7 +27,7 @@
         </li>
 
         <li>
-            <span>Baja</span> — <em>Pendiente</em>
+            <a href="index.php?modulo=bajas">Baja</a>
             <p>Preparación y registro de baja de uno o varios bienes institucionales.</p>
         </li>
 
@@ -34,10 +36,15 @@
             <p>Comprobación física de ubicación, responsable y condición de los bienes.</p>
         </li>
 
-        <li>
-            <span>Solicitudes de baja</span> — <em>Pendiente</em>
-            <p>Consulta y autorización de solicitudes de baja pendientes.</p>
-        </li>
+        <?php if (tieneRol(['Administrador'])): ?>
+            <li>
+                <a href="index.php?modulo=bajas&accion=solicitudes">Solicitudes de baja</a>
+                <?php if ($totalBajasPendientes > 0): ?>
+                    (<?= $totalBajasPendientes ?> <?= $totalBajasPendientes === 1 ? 'pendiente' : 'pendientes' ?>)
+                <?php endif; ?>
+                <p>Bandeja administrativa: consulta de solicitudes de baja enviadas.</p>
+            </li>
+        <?php endif; ?>
     </ul>
 
     <p><a href="index.php?modulo=dashboard">Volver al panel principal</a></p>

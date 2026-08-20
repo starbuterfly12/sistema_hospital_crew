@@ -11,6 +11,17 @@ class MovimientosController extends Controller
             exit;
         }
 
-        $this->view('movimientos/index', []);
+        // El contador solo se calcula para Administrador: es el único rol que puede ver el enlace
+        // de Solicitudes de baja (bandeja administrativa, BajasController::solicitudes()).
+        $totalBajasPendientes = null;
+
+        if (tieneRol(['Administrador'])) {
+            $bajaModel = $this->model('Baja');
+            $totalBajasPendientes = $bajaModel->contarPendientes();
+        }
+
+        $this->view('movimientos/index', [
+            'totalBajasPendientes' => $totalBajasPendientes,
+        ]);
     }
 }

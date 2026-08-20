@@ -242,6 +242,25 @@ class Ubicacion extends Model
     // con el nombre que la usuaria ya dejó como ejemplo real en la plantilla de Requisición.
     public const ID_UBICACION_INVENTARIOS_INSTITUCIONAL = 1;
 
+    // Bodega destino de Bajas: cualquier ubicación activa tipo 'Bodega', no una única fija (a
+    // diferencia de ID_UBICACION_ALMACEN_INSTITUCIONAL). Hoy solo existe "Almacén Institucional",
+    // pero el selector debe seguir funcionando igual si en el futuro existe más de una.
+    public function getBodegasActivas(): array
+    {
+        $sql = "
+            SELECT
+                id_ubicacion,
+                nombre_ubicacion,
+                tipo_ubicacion
+            FROM ubicaciones
+            WHERE tipo_ubicacion = 'Bodega'
+              AND estado_ubicacion = 'activa'
+            ORDER BY nombre_ubicacion ASC
+        ";
+
+        return $this->fetchAll($sql);
+    }
+
     public function findInventariosInstitucional(): array|false
     {
         $sql = "
