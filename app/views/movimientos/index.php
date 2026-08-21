@@ -32,7 +32,7 @@
         </li>
 
         <li>
-            <span>Verificación física</span> — <em>Pendiente</em>
+            <a href="index.php?modulo=verificaciones">Verificación física</a>
             <p>Comprobación física de ubicación, responsable y condición de los bienes.</p>
         </li>
 

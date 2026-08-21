@@ -230,7 +230,18 @@
         <?php endif; ?>
     <?php endif; ?>
 
+    <p>
+        <a href="index.php?modulo=verificaciones&id_bien=<?= (int) $bien['id_bien'] ?>">
+            Ver historial de verificaciones
+        </a>
+    </p>
+
     <?php if (tieneRol(['Administrador', 'Operativo'])): ?>
+        <p>
+            <a href="index.php?modulo=verificaciones&accion=crear&id_bien=<?= (int) $bien['id_bien'] ?>">
+                Registrar verificación física
+            </a>
+        </p>
         <p>
             <a href="index.php?modulo=bienes&accion=editar&id=<?= (int) $bien['id_bien'] ?>">
                 Editar

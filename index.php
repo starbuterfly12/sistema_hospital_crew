@@ -288,6 +288,24 @@ switch ($modulo) {
         }
         break;
 
+    case 'verificaciones':
+        if (!isset($_SESSION['id_usuario'])) {
+            header('Location: index.php');
+            exit;
+        }
+
+        require_once __DIR__ . '/app/controllers/VerificacionesController.php';
+        $verificacionesController = new VerificacionesController();
+
+        if ($accion === 'crear') {
+            $verificacionesController->crear();
+        } elseif ($accion === 'ver') {
+            $verificacionesController->ver();
+        } else {
+            $verificacionesController->index();
+        }
+        break;
+
     default:
         echo 'Módulo no encontrado';
         break;

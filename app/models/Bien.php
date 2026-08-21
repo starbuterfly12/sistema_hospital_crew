@@ -241,6 +241,41 @@ class Bien extends Model
         return true;
     }
 
+    // Búsqueda simple para Verificación física: SIN filtro de estado a propósito — un bien en Baja
+    // sigue formando parte del inventario histórico y puede existir físicamente en Bodega, así que
+    // debe poder localizarse y verificarse igual que uno Activo (a diferencia de
+    // getDisponiblesParaAsignacion() y similares, que sí filtran por 'Activo' porque resuelven
+    // elegibilidad para un movimiento administrativo, no una simple consulta).
+    public function buscar(string $termino): array
+    {
+        $sql = "
+            SELECT
+                b.id_bien,
+                b.codigo_interno,
+                b.codigo_sicoin,
+                b.descripcion,
+                eb.nombre_estado,
+                r.nombre_completo AS responsable_actual,
+                u.nombre_ubicacion AS ubicacion_actual
+            FROM bienes b
+            LEFT JOIN estados_bien eb ON b.id_estado_bien = eb.id_estado_bien
+            LEFT JOIN responsables r ON b.id_responsable_actual = r.id_responsable
+            LEFT JOIN ubicaciones u ON b.id_ubicacion_actual = u.id_ubicacion
+            WHERE b.codigo_interno LIKE :termino_codigo
+               OR b.codigo_sicoin LIKE :termino_sicoin
+               OR b.descripcion LIKE :termino_descripcion
+            ORDER BY b.codigo_interno ASC
+        ";
+
+        $like = '%' . $termino . '%';
+
+        return $this->fetchAll($sql, [
+            ':termino_codigo' => $like,
+            ':termino_sicoin' => $like,
+            ':termino_descripcion' => $like,
+        ]);
+    }
+
     public function getDisponiblesParaAsignacion(): array
     {
         $sql = "
