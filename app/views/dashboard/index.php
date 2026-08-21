@@ -22,7 +22,7 @@
         <li><a href="index.php?modulo=requisiciones">Requisiciones</a></li>
         <li><a href="index.php?modulo=tarjetas">Tarjetas de responsabilidad</a></li>
         <li><a href="index.php?modulo=movimientos">Movimientos</a></li>
-        <li>Reportes</li>
+        <li><a href="index.php?modulo=reportes">Reportes</a></li>
         <li>Usuarios</li>
         <li>Bitácora</li>
         <li>Respaldos</li>

@@ -68,6 +68,17 @@ if (!function_exists('calcularFinGarantia')) {
     }
 }
 
+if (!function_exists('formatFechaSegunTipo')) {
+    // Usado por Reportes (Movimientos / Bienes con actividad) donde un mismo listado mezcla fuentes
+    // con DATETIME real (Traslado/Requisición/Verificación) y fuentes que solo tienen DATE
+    // (Préstamo/Devolución/Baja). Sin esta distinción, una fecha DATE se mostraba con "00:00"
+    // pegado, dando la falsa impresión de ser una hora real.
+    function formatFechaSegunTipo(?string $fecha, bool $esDatetime): string
+    {
+        return $esDatetime ? formatDateTime($fecha) : formatDate($fecha);
+    }
+}
+
 if (!function_exists('formatDateTime')) {
     function formatDateTime(?string $fechaHora): string
     {

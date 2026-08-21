@@ -14,6 +14,7 @@ require_once __DIR__ . '/app/helpers/auth.php';
 require_once __DIR__ . '/app/helpers/csrf.php';
 require_once __DIR__ . '/app/helpers/fecha.php';
 require_once __DIR__ . '/app/helpers/archivos.php';
+require_once __DIR__ . '/app/helpers/exportacion.php';
 
 $modulo = $_GET['modulo'] ?? 'auth';
 $accion = $_GET['accion'] ?? 'index';
@@ -285,6 +286,36 @@ switch ($modulo) {
             $bajasController->descargarComprobante();
         } else {
             $bajasController->index();
+        }
+        break;
+
+    case 'reportes':
+        if (!isset($_SESSION['id_usuario'])) {
+            header('Location: index.php');
+            exit;
+        }
+
+        require_once __DIR__ . '/app/controllers/ReportesController.php';
+        $reportesController = new ReportesController();
+
+        if ($accion === 'movimientos') {
+            $reportesController->movimientos();
+        } elseif ($accion === 'bienesActividad') {
+            $reportesController->bienesActividad();
+        } elseif ($accion === 'bienesSinAsignacion') {
+            $reportesController->bienesSinAsignacion();
+        } elseif ($accion === 'prestamos') {
+            $reportesController->prestamos();
+        } elseif ($accion === 'bajas') {
+            $reportesController->bajas();
+        } elseif ($accion === 'verificaciones') {
+            $reportesController->verificaciones();
+        } elseif ($accion === 'ingresos') {
+            $reportesController->ingresos();
+        } elseif ($accion === 'resumen') {
+            $reportesController->resumen();
+        } else {
+            $reportesController->index();
         }
         break;
 
