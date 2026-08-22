@@ -302,8 +302,6 @@ switch ($modulo) {
             $reportesController->movimientos();
         } elseif ($accion === 'bienesActividad') {
             $reportesController->bienesActividad();
-        } elseif ($accion === 'bienesSinAsignacion') {
-            $reportesController->bienesSinAsignacion();
         } elseif ($accion === 'prestamos') {
             $reportesController->prestamos();
         } elseif ($accion === 'bajas') {

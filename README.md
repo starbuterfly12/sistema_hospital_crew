@@ -19,7 +19,8 @@ Proyecto de graduación aplicado al área de inventario del **Hospital General d
 - HTML / CSS / JavaScript
 - Composer
 - [endroid/qr-code](https://github.com/endroid/qr-code) (generación de códigos QR)
-- [phpoffice/phpspreadsheet](https://github.com/PHPOffice/PhpSpreadsheet) 5.9.0 (generación de las Tarjetas de Responsabilidad en formato XLSX)
+- [phpoffice/phpspreadsheet](https://github.com/PHPOffice/PhpSpreadsheet) 5.9.0 (generación de las Tarjetas de Responsabilidad en formato XLSX, y de la exportación Excel del módulo Reportes)
+- [dompdf/dompdf](https://github.com/dompdf/dompdf) 3.1.6 (exportación PDF del módulo Reportes, usando la fuente DejaVu Sans incluida en el propio paquete — sin fuentes externas)
 - [Flatpickr](https://flatpickr.js.org/) 4.6.13 (selector de fechas en formularios, con presentación `DD/MM/AAAA` y almacenamiento interno `YYYY-MM-DD`; assets servidos localmente desde `public/vendor/flatpickr/`, sin CDN)
 - Git y GitHub
 - XAMPP (entorno de desarrollo local)
@@ -87,6 +88,20 @@ Panel único (`Movimientos`, con una sola entrada en el Dashboard) que agrupa lo
 - **Constancia de Traslado**: descarga en XLSX generada en memoria a partir de la plantilla institucional (ver más abajo), con fecha en español, origen/destino, responsables, todos los bienes trasladados, usuario de Inventarios, y el número de traslado (`TRA-YYYY-NNNNNN`) únicamente como referencia discreta en el pie de página.
 - **Integración con Tarjetas de Responsabilidad**: una nueva emisión de tarjeta reconstruye automáticamente el historial de bienes trasladados como `TRASLADO_SALIDA` (en la tarjeta del responsable de origen) y `TRASLADO_ENTRADA` (en la del responsable de destino), sin duplicar el alta original ni el saldo. Las tarjetas ya emitidas antes de un traslado no se modifican.
 
+### Reportes
+
+Módulo de solo consulta (los tres roles pueden consultar y exportar) con **7 reportes definitivos**:
+
+1. Movimientos por período
+2. Bienes con actividad en un período
+3. Préstamos pendientes o vencidos
+4. Bajas por período
+5. Verificaciones con diferencias
+6. Ingresos de bienes por período
+7. Resumen de movimientos por período
+
+Cada reporte tiene vista web con sus propios filtros, y exportación en **Excel (XLSX)** y **PDF**. Ambos formatos comparten exactamente los mismos datos, filtros, orden y totales que la vista web — el PDF se genera en Carta horizontal (una sola página de ancho) con Dompdf.
+
 ## Plantillas XLSX
 
 Ambas plantillas **forman parte funcional del proyecto y sí están versionadas en Git** (a diferencia del resto de `storage/`, que son archivos generados/subidos) — no deben eliminarse:
@@ -108,7 +123,6 @@ Dentro del panel Movimientos, listados pero **sin funcionalidad real todavía**:
 
 Fuera de Movimientos, con su estructura base creada (controlador/modelo/vista) pero **aún en desarrollo**:
 
-- Reportes
 - Usuarios (administración complementaria más allá del login)
 - Bitácora (vista de consulta; los registros ya se generan internamente pero no hay una pantalla para navegarlos)
 - Respaldos

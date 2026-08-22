@@ -32,6 +32,10 @@
         $paramsExportar['accion'] = 'prestamos';
         $paramsExportar['formato'] = 'excel';
         $urlExportar = 'index.php?' . http_build_query($paramsExportar);
+
+        $paramsExportarPdf = $paramsExportar;
+        $paramsExportarPdf['formato'] = 'pdf';
+        $urlExportarPdf = 'index.php?' . http_build_query($paramsExportarPdf);
     ?>
 
     <h1>Préstamos pendientes o vencidos</h1>
@@ -92,7 +96,7 @@
         </fieldset>
     </form>
 
-    <p><a href="<?= htmlspecialchars($urlExportar, ENT_QUOTES, 'UTF-8') ?>">Exportar Excel</a></p>
+    <p><a href="<?= htmlspecialchars($urlExportar, ENT_QUOTES, 'UTF-8') ?>">Exportar Excel</a> | <a href="<?= htmlspecialchars($urlExportarPdf, ENT_QUOTES, 'UTF-8') ?>">Exportar PDF</a></p>
 
     <?php if ($error === null && empty($filas)): ?>
         <p>No existen préstamos pendientes o vencidos con los criterios seleccionados.</p>

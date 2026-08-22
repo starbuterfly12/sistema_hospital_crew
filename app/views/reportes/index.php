@@ -24,10 +24,6 @@
             <p>Bienes que tuvieron al menos un evento en el período: cantidad, primer y último evento.</p>
         </li>
         <li class="tarjeta-reporte">
-            <h3><a href="index.php?modulo=reportes&accion=bienesSinAsignacion">Bienes sin responsable/asignación</a></h3>
-            <p>Detecta bienes Activo con alguna anomalía operativa real — no incluye bienes en Baja.</p>
-        </li>
-        <li class="tarjeta-reporte">
             <h3><a href="index.php?modulo=reportes&accion=prestamos">Préstamos pendientes o vencidos</a></h3>
             <p>Préstamos activos o parcialmente devueltos, con días de vencimiento cuando aplica.</p>
         </li>

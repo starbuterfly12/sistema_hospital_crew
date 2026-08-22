@@ -3,6 +3,7 @@
 require_once __DIR__ . '/../core/Controller.php';
 require_once __DIR__ . '/../models/ReportesService.php';
 require_once __DIR__ . '/../helpers/exportacion.php';
+require_once __DIR__ . '/../helpers/exportacion_pdf.php';
 
 // Controlador delgado: cada acción solo lee/valida filtros, llama a ReportesService, y decide entre
 // mostrar la vista web o exportar a Excel (según $_GET['formato']) usando el helper de exportación
@@ -45,8 +46,15 @@ class ReportesController extends Controller
         $service = $this->model('ReportesService');
         $filas = $error === null ? $service->getMovimientosPorPeriodo($filtros) : [];
 
-        if ($error === null && ($_GET['formato'] ?? '') === 'excel') {
+        $formato = in_array($_GET['formato'] ?? '', ['excel', 'pdf'], true) ? $_GET['formato'] : 'web';
+
+        if ($error === null && $formato === 'excel') {
             $this->exportarMovimientos($filas, $filtros);
+            return;
+        }
+
+        if ($error === null && $formato === 'pdf') {
+            $this->exportarMovimientosPdf($filas, $filtros);
             return;
         }
 
@@ -100,6 +108,36 @@ class ReportesController extends Controller
         descargarExcelReporte($spreadsheet, nombreArchivoReporte('Movimientos', $filtros['fecha_desde'], $filtros['fecha_hasta']));
     }
 
+    private function exportarMovimientosPdf(array $filas, array $filtros): void
+    {
+        $columnas = [
+            ['clave' => 'fecha', 'titulo' => 'Fecha', 'tipo' => 'fecha_variable', 'ancho' => 8],
+            ['clave' => 'tipo', 'titulo' => 'Tipo', 'tipo' => 'texto', 'ancho' => 9],
+            ['clave' => 'codigo_interno', 'titulo' => 'No. de Bien', 'tipo' => 'texto', 'ancho' => 9],
+            ['clave' => 'descripcion', 'titulo' => 'Descripción', 'tipo' => 'texto', 'ancho' => 20],
+            ['clave' => 'responsable', 'titulo' => 'Responsable relacionado', 'tipo' => 'texto', 'ancho' => 17],
+            ['clave' => 'ubicacion', 'titulo' => 'Ubicación relacionada', 'tipo' => 'texto', 'ancho' => 15],
+            ['clave' => 'resumen', 'titulo' => 'Detalle', 'tipo' => 'texto', 'ancho' => 22],
+        ];
+
+        foreach ($filas as &$fila) {
+            $fila['fecha'] = ['valor' => $fila['fecha'], 'es_datetime' => $fila['fecha_es_datetime']];
+        }
+        unset($fila);
+
+        $meta = [$this->lineaPeriodo($filtros)];
+        if ($filtros['tipo'] !== '') {
+            $meta[] = 'Tipo: ' . $filtros['tipo'];
+        }
+        if (!empty($filtros['id_responsable'])) {
+            $meta[] = 'Responsable: ' . $this->nombreResponsablePorId((int) $filtros['id_responsable']);
+        }
+
+        $dompdf = construirPdfReporte('Movimientos por período', $columnas, $filas, $meta, $this->nombreUsuarioActual());
+
+        descargarPdfReporte($dompdf, nombreArchivoReportePdf('Movimientos', $filtros['fecha_desde'], $filtros['fecha_hasta']));
+    }
+
     // ---------------------------------------------------------------------------------------
     // Reporte 2 — Bienes con actividad en un período
     // ---------------------------------------------------------------------------------------
@@ -121,8 +159,15 @@ class ReportesController extends Controller
         $service = $this->model('ReportesService');
         $filas = $error === null ? $service->getBienesConActividad($filtros) : [];
 
-        if ($error === null && ($_GET['formato'] ?? '') === 'excel') {
+        $formato = in_array($_GET['formato'] ?? '', ['excel', 'pdf'], true) ? $_GET['formato'] : 'web';
+
+        if ($error === null && $formato === 'excel') {
             $this->exportarBienesActividad($filas, $filtros);
+            return;
+        }
+
+        if ($error === null && $formato === 'pdf') {
+            $this->exportarBienesActividadPdf($filas, $filtros);
             return;
         }
 
@@ -168,100 +213,31 @@ class ReportesController extends Controller
         descargarExcelReporte($spreadsheet, nombreArchivoReporte('BienesConActividad', $filtros['fecha_desde'], $filtros['fecha_hasta']));
     }
 
-    // ---------------------------------------------------------------------------------------
-    // Reporte 3 — Bienes sin responsable/asignación
-    // (El antiguo Reporte "Bienes actualmente asignados" se eliminó del módulo: en este sistema
-    // los bienes Activo prácticamente siempre están asignados —a un responsable o al de Almacén
-    // Institucional—, así que ese reporte aportaba poco y duplicaba lo ya consultable desde
-    // Bienes/Asignaciones. Ver revisión funcional aprobada.)
-    // ---------------------------------------------------------------------------------------
-    public function bienesSinAsignacion(): void
+    private function exportarBienesActividadPdf(array $filas, array $filtros): void
     {
-        if (!isset($_SESSION['id_usuario'])) {
-            header('Location: index.php');
-            exit;
-        }
-
-        $fechaIngresoDesde = trim((string) ($_GET['fecha_ingreso_desde'] ?? ''));
-        $fechaIngresoHasta = trim((string) ($_GET['fecha_ingreso_hasta'] ?? ''));
-        $error = null;
-
-        if ($fechaIngresoDesde !== '' && !isValidIsoDate($fechaIngresoDesde)) {
-            $error = 'La fecha de ingreso "desde" no es válida.';
-        } elseif ($fechaIngresoHasta !== '' && !isValidIsoDate($fechaIngresoHasta)) {
-            $error = 'La fecha de ingreso "hasta" no es válida.';
-        } elseif ($fechaIngresoDesde !== '' && $fechaIngresoHasta !== '' && $fechaIngresoDesde > $fechaIngresoHasta) {
-            $error = 'La fecha de ingreso "desde" no puede ser posterior a "hasta".';
-        }
-
-        // Condición y el checkbox "Incluir otros estados" se quitaron del formulario visible.
-        // "Incluir otros estados" se eliminó por completo (no solo se ocultó): con datos reales,
-        // NUNCA produjo un resultado legítimo — el único bien en Baja del sistema no tiene ninguna
-        // incoherencia estructural real, así que activarlo siempre devolvía 0 filas, dando la falsa
-        // impresión de que el reporte estaba roto. El service conserva la capacidad de ampliar el
-        // universo de análisis (getBienesSinAsignacion() sigue aceptando 'incluir_otros_estados'),
-        // por si en el futuro se decide reintroducir la opción con una señal real que mostrar.
-        $filtros = [
-            'id_categoria' => (int) ($_GET['id_categoria'] ?? 0),
-            'id_ubicacion' => (int) ($_GET['id_ubicacion'] ?? 0),
-            'fecha_ingreso_desde' => $fechaIngresoDesde,
-            'fecha_ingreso_hasta' => $fechaIngresoHasta,
-            'incluir_otros_estados' => false,
-        ];
-
-        $service = $this->model('ReportesService');
-        $filas = $error === null ? $service->getBienesSinAsignacion($filtros) : [];
-
-        if ($error === null && ($_GET['formato'] ?? '') === 'excel') {
-            $this->exportarBienesSinAsignacion($filas, $filtros);
-            return;
-        }
-
-        $this->view('reportes/bienes_sin_asignacion', [
-            'filas' => $filas,
-            'filtros' => $filtros,
-            'error' => $error,
-            'categorias' => $this->model('CategoriaBien')->getActivas(),
-            'ubicaciones' => $this->model('Ubicacion')->getActivas(),
-        ]);
-    }
-
-    private function exportarBienesSinAsignacion(array $filas, array $filtros): void
-    {
-        // Excel compacto: se quitan SICOIN y Condición (sigue disponible en la vista web).
         $columnas = [
-            ['clave' => 'codigo_interno', 'titulo' => 'No. de Bien', 'tipo' => 'texto', 'ancho' => 12],
+            ['clave' => 'codigo_interno', 'titulo' => 'No. de Bien', 'tipo' => 'texto', 'ancho' => 10],
             ['clave' => 'descripcion', 'titulo' => 'Descripción', 'tipo' => 'texto', 'ancho' => 26],
-            ['clave' => 'nombre_estado', 'titulo' => 'Estado', 'tipo' => 'texto', 'ancho' => 12],
-            ['clave' => 'nombre_categoria', 'titulo' => 'Categoría', 'tipo' => 'texto', 'ancho' => 16],
-            ['clave' => 'ubicacion_actual', 'titulo' => 'Ubicación actual', 'tipo' => 'texto', 'ancho' => 20],
-            ['clave' => 'fecha_ingreso', 'titulo' => 'Fecha de ingreso', 'tipo' => 'fecha', 'ancho' => 13],
-            ['clave' => 'tipo_anomalia', 'titulo' => 'Tipo de anomalía', 'tipo' => 'texto', 'ancho' => 32],
+            ['clave' => 'eventos', 'titulo' => 'Cant. eventos', 'tipo' => 'entero', 'ancho' => 10],
+            ['clave' => 'primer_evento', 'titulo' => 'Primer evento', 'tipo' => 'fecha_variable', 'ancho' => 12],
+            ['clave' => 'ultimo_evento', 'titulo' => 'Último evento', 'tipo' => 'fecha_variable', 'ancho' => 12],
+            ['clave' => 'tipos', 'titulo' => 'Tipos de actividad', 'tipo' => 'texto', 'ancho' => 30],
         ];
 
-        $meta = ['Alcance: solo bienes en estado Activo con anomalía real'];
+        foreach ($filas as &$fila) {
+            $fila['primer_evento'] = ['valor' => $fila['primer_evento'], 'es_datetime' => $fila['primer_evento_es_datetime']];
+            $fila['ultimo_evento'] = ['valor' => $fila['ultimo_evento'], 'es_datetime' => $fila['ultimo_evento_es_datetime']];
+        }
+        unset($fila);
 
-        if (!empty($filtros['id_categoria'])) {
-            $meta[] = 'Categoría: ' . $this->nombreCategoriaPorId((int) $filtros['id_categoria']);
-        }
-        if (!empty($filtros['id_ubicacion'])) {
-            $meta[] = 'Ubicación: ' . $this->nombreUbicacionPorId((int) $filtros['id_ubicacion']);
-        }
-        if (!empty($filtros['fecha_ingreso_desde']) || !empty($filtros['fecha_ingreso_hasta'])) {
-            $meta[] = 'Fecha de ingreso: ' . ($filtros['fecha_ingreso_desde'] !== '' ? formatDate($filtros['fecha_ingreso_desde']) : '(sin definir)')
-                . ' al ' . ($filtros['fecha_ingreso_hasta'] !== '' ? formatDate($filtros['fecha_ingreso_hasta']) : '(sin definir)');
+        $meta = [$this->lineaPeriodo($filtros)];
+        if ($filtros['tipo'] !== '') {
+            $meta[] = 'Tipo de actividad: ' . $filtros['tipo'];
         }
 
-        $spreadsheet = construirReporteExcel(
-            'Bienes sin responsable/asignación',
-            $columnas,
-            $filas,
-            $meta,
-            $this->nombreUsuarioActual(),
-            'landscape'
-        );
+        $dompdf = construirPdfReporte('Bienes con actividad en el período', $columnas, $filas, $meta, $this->nombreUsuarioActual());
 
-        descargarExcelReporte($spreadsheet, nombreArchivoReporte('BienesSinAsignacion'));
+        descargarPdfReporte($dompdf, nombreArchivoReportePdf('BienesConActividad', $filtros['fecha_desde'], $filtros['fecha_hasta']));
     }
 
     // ---------------------------------------------------------------------------------------
@@ -289,8 +265,15 @@ class ReportesController extends Controller
         $service = $this->model('ReportesService');
         $filas = $error === null ? $service->getPrestamosPendientesVencidos($filtros) : [];
 
-        if ($error === null && ($_GET['formato'] ?? '') === 'excel') {
+        $formato = in_array($_GET['formato'] ?? '', ['excel', 'pdf'], true) ? $_GET['formato'] : 'web';
+
+        if ($error === null && $formato === 'excel') {
             $this->exportarPrestamos($filas, $filtros);
+            return;
+        }
+
+        if ($error === null && $formato === 'pdf') {
+            $this->exportarPrestamosPdf($filas, $filtros);
             return;
         }
 
@@ -346,6 +329,43 @@ class ReportesController extends Controller
         descargarExcelReporte($spreadsheet, nombreArchivoReporte('PrestamosPendientes', $filtros['fecha_desde'] ?: null, $filtros['fecha_hasta'] ?: null));
     }
 
+    private function exportarPrestamosPdf(array $filas, array $filtros): void
+    {
+        $columnas = [
+            ['clave' => 'numero_prestamo', 'titulo' => 'No. préstamo', 'tipo' => 'texto', 'ancho' => 13],
+            ['clave' => 'responsable_destino_mostrado', 'titulo' => 'Receptor', 'tipo' => 'texto', 'ancho' => 23],
+            ['clave' => 'fecha_prestamo', 'titulo' => 'Fecha préstamo', 'tipo' => 'fecha', 'ancho' => 12],
+            ['clave' => 'fecha_devolucion_estimada', 'titulo' => 'Fecha prevista', 'tipo' => 'fecha', 'ancho' => 12],
+            ['clave' => 'estado_prestamo', 'titulo' => 'Estado', 'tipo' => 'texto', 'ancho' => 10],
+            ['clave' => 'bienes_pendientes', 'titulo' => 'Bienes pendientes', 'tipo' => 'entero', 'ancho' => 10],
+            ['clave' => 'vencido_texto', 'titulo' => 'Vencido', 'tipo' => 'texto', 'ancho' => 10],
+            ['clave' => 'dias_vencido', 'titulo' => 'Días vencidos', 'tipo' => 'entero', 'ancho' => 10],
+        ];
+
+        foreach ($filas as &$fila) {
+            $fila['vencido_texto'] = $fila['vencido'] ? 'Sí' : 'No';
+        }
+        unset($fila);
+
+        $meta = [];
+        if ($filtros['fecha_desde'] !== '' && $filtros['fecha_hasta'] !== '') {
+            $meta[] = $this->lineaPeriodo($filtros);
+        }
+        if (!empty($filtros['estado'])) {
+            $meta[] = 'Estado: ' . ucfirst($filtros['estado']);
+        }
+        if (!empty($filtros['id_responsable_destino'])) {
+            $meta[] = 'Receptor: ' . $this->nombreResponsablePorId((int) $filtros['id_responsable_destino']);
+        }
+        if (isset($filtros['vencido']) && $filtros['vencido'] !== '') {
+            $meta[] = 'Vencido: ' . ($filtros['vencido'] === '1' ? 'Sí' : 'No');
+        }
+
+        $dompdf = construirPdfReporte('Préstamos pendientes o vencidos', $columnas, $filas, $meta, $this->nombreUsuarioActual());
+
+        descargarPdfReporte($dompdf, nombreArchivoReportePdf('PrestamosPendientes', $filtros['fecha_desde'] ?: null, $filtros['fecha_hasta'] ?: null));
+    }
+
     // ---------------------------------------------------------------------------------------
     // Reporte 6 — Bajas por período
     // ---------------------------------------------------------------------------------------
@@ -375,8 +395,15 @@ class ReportesController extends Controller
         $service = $this->model('ReportesService');
         $filas = $error === null ? $service->getBajasPorPeriodo($filtros) : [];
 
-        if ($error === null && ($_GET['formato'] ?? '') === 'excel') {
+        $formato = in_array($_GET['formato'] ?? '', ['excel', 'pdf'], true) ? $_GET['formato'] : 'web';
+
+        if ($error === null && $formato === 'excel') {
             $this->exportarBajas($filas, $filtros);
+            return;
+        }
+
+        if ($error === null && $formato === 'pdf') {
+            $this->exportarBajasPdf($filas, $filtros);
             return;
         }
 
@@ -444,6 +471,57 @@ class ReportesController extends Controller
         descargarExcelReporte($spreadsheet, nombreArchivoReporte('Bajas', $filtros['fecha_desde'] ?: null, $filtros['fecha_hasta'] ?: null));
     }
 
+    private function exportarBajasPdf(array $filas, array $filtros): void
+    {
+        // Misma consolidación de fecha aprobada para Excel: fecha_baja cuando el estado es
+        // Finalizada, fecha_preparacion en cualquier otro caso.
+        $esFinalizada = $filtros['estado'] === 'finalizada';
+        $tituloColumnaFecha = $esFinalizada ? 'Fecha de baja' : 'Fecha de trámite';
+        $tipoColumnaFecha = $esFinalizada ? 'fecha' : 'fecha_hora';
+
+        foreach ($filas as &$fila) {
+            $fila['fecha_funcional'] = $esFinalizada ? $fila['fecha_baja'] : $fila['fecha_preparacion'];
+        }
+        unset($fila);
+
+        $columnas = [
+            ['clave' => 'numero_baja', 'titulo' => 'No. Baja', 'tipo' => 'texto', 'ancho' => 7],
+            ['clave' => 'fecha_funcional', 'titulo' => $tituloColumnaFecha, 'tipo' => $tipoColumnaFecha, 'ancho' => 9],
+            ['clave' => 'estado_baja', 'titulo' => 'Estado', 'tipo' => 'texto', 'ancho' => 8],
+            ['clave' => 'codigo_interno_mostrado', 'titulo' => 'No. de Bien', 'tipo' => 'texto', 'ancho' => 8],
+            ['clave' => 'descripcion_mostrada', 'titulo' => 'Descripción', 'tipo' => 'texto', 'ancho' => 16],
+            ['clave' => 'responsable_anterior', 'titulo' => 'Responsable anterior', 'tipo' => 'texto', 'ancho' => 12],
+            ['clave' => 'ubicacion_anterior', 'titulo' => 'Servicio', 'tipo' => 'texto', 'ancho' => 10],
+            ['clave' => 'nombre_tipo_baja', 'titulo' => 'Tipo de baja', 'tipo' => 'texto', 'ancho' => 10],
+            ['clave' => 'valor_mostrado', 'titulo' => 'Valor', 'tipo' => 'moneda', 'ancho' => 9],
+            ['clave' => 'bodega_destino', 'titulo' => 'Bodega destino', 'tipo' => 'texto', 'ancho' => 11],
+        ];
+
+        $totalValor = array_sum(array_map(static fn(array $f) => (float) ($f['valor_mostrado'] ?? 0), $filas));
+
+        $meta = ['Estado: ' . ($filtros['estado'] !== '' ? ucfirst($filtros['estado']) : 'Todos')];
+        if ($filtros['fecha_desde'] !== '' && $filtros['fecha_hasta'] !== '') {
+            $meta[] = $this->lineaPeriodo($filtros);
+        }
+        if (!empty($filtros['id_tipo_baja'])) {
+            $meta[] = 'Tipo de baja: ' . $this->nombreTipoBajaPorId((int) $filtros['id_tipo_baja']);
+        }
+        if (!empty($filtros['id_ubicacion_anterior'])) {
+            $meta[] = 'Servicio/ubicación anterior: ' . $this->nombreUbicacionPorId((int) $filtros['id_ubicacion_anterior']);
+        }
+
+        $dompdf = construirPdfReporte(
+            'Bajas por período',
+            $columnas,
+            $filas,
+            $meta,
+            $this->nombreUsuarioActual(),
+            ['valores' => ['valor_mostrado' => $totalValor]]
+        );
+
+        descargarPdfReporte($dompdf, nombreArchivoReportePdf('Bajas', $filtros['fecha_desde'] ?: null, $filtros['fecha_hasta'] ?: null));
+    }
+
     // ---------------------------------------------------------------------------------------
     // Reporte 7 — Verificaciones con diferencias
     // ---------------------------------------------------------------------------------------
@@ -472,8 +550,15 @@ class ReportesController extends Controller
         $service = $this->model('ReportesService');
         $filas = $error === null ? $service->getVerificacionesConDiferencias($filtros) : [];
 
-        if ($error === null && ($_GET['formato'] ?? '') === 'excel') {
+        $formato = in_array($_GET['formato'] ?? '', ['excel', 'pdf'], true) ? $_GET['formato'] : 'web';
+
+        if ($error === null && $formato === 'excel') {
             $this->exportarVerificaciones($filas, $filtros);
+            return;
+        }
+
+        if ($error === null && $formato === 'pdf') {
+            $this->exportarVerificacionesPdf($filas, $filtros);
             return;
         }
 
@@ -534,6 +619,46 @@ class ReportesController extends Controller
         descargarExcelReporte($spreadsheet, nombreArchivoReporte('Verificaciones', $filtros['fecha_desde'] ?: null, $filtros['fecha_hasta'] ?: null));
     }
 
+    private function exportarVerificacionesPdf(array $filas, array $filtros): void
+    {
+        $columnas = [
+            ['clave' => 'fecha_hora', 'titulo' => 'Fecha/hora', 'tipo' => 'fecha_hora', 'ancho' => 8],
+            ['clave' => 'codigo_interno', 'titulo' => 'No. de Bien', 'tipo' => 'texto', 'ancho' => 7],
+            ['clave' => 'descripcion', 'titulo' => 'Descripción', 'tipo' => 'texto', 'ancho' => 14],
+            ['clave' => 'responsable_registrado', 'titulo' => 'Responsable registrado', 'tipo' => 'texto', 'ancho' => 11],
+            ['clave' => 'ubicacion_registrada', 'titulo' => 'Ubicación registrada', 'tipo' => 'texto', 'ancho' => 10],
+            ['clave' => 'localizado_texto', 'titulo' => 'Localizado', 'tipo' => 'texto', 'ancho' => 6],
+            ['clave' => 'condicion_registrada', 'titulo' => 'Condición registrada', 'tipo' => 'texto', 'ancho' => 8],
+            ['clave' => 'condicion_observada', 'titulo' => 'Condición observada', 'tipo' => 'texto', 'ancho' => 8],
+            ['clave' => 'resultado_texto', 'titulo' => 'Resultado', 'tipo' => 'texto', 'ancho' => 8],
+            ['clave' => 'observaciones', 'titulo' => 'Observaciones', 'tipo' => 'texto', 'ancho' => 20],
+        ];
+
+        foreach ($filas as &$fila) {
+            $fila['localizado_texto'] = (int) $fila['bien_localizado'] === 1 ? 'Sí' : 'No';
+            $fila['resultado_texto'] = (int) $fila['tiene_diferencias'] === 1 ? 'Con diferencias' : 'Sin diferencias';
+            $fila['condicion_observada'] = $fila['condicion_observada'] !== null ? $fila['condicion_observada'] : 'No aplica';
+        }
+        unset($fila);
+
+        $meta = [];
+        if ($filtros['fecha_desde'] !== '' && $filtros['fecha_hasta'] !== '') {
+            $meta[] = $this->lineaPeriodo($filtros);
+        }
+        $etiquetasResultado = ['1' => 'Con diferencias', '0' => 'Sin diferencias', '' => 'Todas'];
+        $meta[] = 'Resultado: ' . $etiquetasResultado[$filtros['resultado']];
+        if (isset($filtros['localizado']) && $filtros['localizado'] !== '') {
+            $meta[] = 'Localizado: ' . ($filtros['localizado'] === '1' ? 'Sí' : 'No');
+        }
+        if (!empty($filtros['id_ubicacion_registrada'])) {
+            $meta[] = 'Ubicación registrada: ' . $this->nombreUbicacionPorId((int) $filtros['id_ubicacion_registrada']);
+        }
+
+        $dompdf = construirPdfReporte('Verificaciones con diferencias', $columnas, $filas, $meta, $this->nombreUsuarioActual());
+
+        descargarPdfReporte($dompdf, nombreArchivoReportePdf('Verificaciones', $filtros['fecha_desde'] ?: null, $filtros['fecha_hasta'] ?: null));
+    }
+
     // ---------------------------------------------------------------------------------------
     // Reporte 8 — Ingresos de bienes por período
     // ---------------------------------------------------------------------------------------
@@ -560,8 +685,15 @@ class ReportesController extends Controller
         $service = $this->model('ReportesService');
         $filas = $error === null ? $service->getIngresos($filtros) : [];
 
-        if ($error === null && ($_GET['formato'] ?? '') === 'excel') {
+        $formato = in_array($_GET['formato'] ?? '', ['excel', 'pdf'], true) ? $_GET['formato'] : 'web';
+
+        if ($error === null && $formato === 'excel') {
             $this->exportarIngresos($filas, $filtros);
+            return;
+        }
+
+        if ($error === null && $formato === 'pdf') {
+            $this->exportarIngresosPdf($filas, $filtros);
             return;
         }
 
@@ -613,6 +745,43 @@ class ReportesController extends Controller
         descargarExcelReporte($spreadsheet, nombreArchivoReporte('Ingresos', $filtros['fecha_desde'], $filtros['fecha_hasta']));
     }
 
+    private function exportarIngresosPdf(array $filas, array $filtros): void
+    {
+        $columnas = [
+            ['clave' => 'fecha_ingreso', 'titulo' => 'Fecha ingreso', 'tipo' => 'fecha', 'ancho' => 10],
+            ['clave' => 'codigo_interno', 'titulo' => 'No. de Bien', 'tipo' => 'texto', 'ancho' => 9],
+            ['clave' => 'descripcion', 'titulo' => 'Descripción', 'tipo' => 'texto', 'ancho' => 22],
+            ['clave' => 'nombre_forma', 'titulo' => 'Forma de ingreso', 'tipo' => 'texto', 'ancho' => 14],
+            ['clave' => 'nombre_categoria', 'titulo' => 'Categoría', 'tipo' => 'texto', 'ancho' => 14],
+            ['clave' => 'procedencia', 'titulo' => 'Procedencia / Proveedor', 'tipo' => 'texto', 'ancho' => 22],
+            ['clave' => 'valor', 'titulo' => 'Valor', 'tipo' => 'moneda', 'ancho' => 9],
+        ];
+
+        $totalValor = array_sum(array_map(static fn(array $f) => (float) ($f['valor'] ?? 0), $filas));
+
+        $meta = [$this->lineaPeriodo($filtros)];
+        if (!empty($filtros['id_forma_ingreso'])) {
+            $meta[] = 'Forma de ingreso: ' . $this->nombreFormaIngresoPorId((int) $filtros['id_forma_ingreso']);
+        }
+        if (!empty($filtros['id_categoria'])) {
+            $meta[] = 'Categoría: ' . $this->nombreCategoriaPorId((int) $filtros['id_categoria']);
+        }
+        if ($filtros['procedencia'] !== '') {
+            $meta[] = 'Procedencia / Proveedor contiene: ' . $filtros['procedencia'];
+        }
+
+        $dompdf = construirPdfReporte(
+            'Ingresos de bienes por período',
+            $columnas,
+            $filas,
+            $meta,
+            $this->nombreUsuarioActual(),
+            ['valores' => ['valor' => $totalValor]]
+        );
+
+        descargarPdfReporte($dompdf, nombreArchivoReportePdf('Ingresos', $filtros['fecha_desde'], $filtros['fecha_hasta']));
+    }
+
     // ---------------------------------------------------------------------------------------
     // Reporte 9 — Resumen de movimientos por período
     // ---------------------------------------------------------------------------------------
@@ -632,8 +801,15 @@ class ReportesController extends Controller
             ? $service->getResumenMovimientos($filtros)
             : ['filas' => [], 'total_operaciones' => 0, 'total_bienes_unicos' => 0];
 
-        if ($error === null && ($_GET['formato'] ?? '') === 'excel') {
+        $formato = in_array($_GET['formato'] ?? '', ['excel', 'pdf'], true) ? $_GET['formato'] : 'web';
+
+        if ($error === null && $formato === 'excel') {
             $this->exportarResumen($resultado, $filtros);
+            return;
+        }
+
+        if ($error === null && $formato === 'pdf') {
+            $this->exportarResumenPdf($resultado, $filtros);
             return;
         }
 
@@ -669,6 +845,26 @@ class ReportesController extends Controller
         );
 
         descargarExcelReporte($spreadsheet, nombreArchivoReporte('ResumenMovimientos', $filtros['fecha_desde'], $filtros['fecha_hasta']));
+    }
+
+    private function exportarResumenPdf(array $resultado, array $filtros): void
+    {
+        $columnas = [
+            ['clave' => 'tipo', 'titulo' => 'Tipo', 'tipo' => 'texto', 'ancho' => 50],
+            ['clave' => 'operaciones', 'titulo' => 'Operaciones', 'tipo' => 'entero', 'ancho' => 25],
+            ['clave' => 'bienes_involucrados', 'titulo' => 'Bienes involucrados', 'tipo' => 'entero', 'ancho' => 25],
+        ];
+
+        $filas = $resultado['filas'];
+        $filas[] = [
+            'tipo' => 'TOTAL (bienes únicos, sin duplicar entre tipos)',
+            'operaciones' => $resultado['total_operaciones'],
+            'bienes_involucrados' => $resultado['total_bienes_unicos'],
+        ];
+
+        $dompdf = construirPdfReporte('Resumen de movimientos por período', $columnas, $filas, [$this->lineaPeriodo($filtros)], $this->nombreUsuarioActual());
+
+        descargarPdfReporte($dompdf, nombreArchivoReportePdf('ResumenMovimientos', $filtros['fecha_desde'], $filtros['fecha_hasta']));
     }
 
     // =========================================================================================

@@ -33,6 +33,10 @@
         $paramsExportar['accion'] = 'ingresos';
         $paramsExportar['formato'] = 'excel';
         $urlExportar = 'index.php?' . http_build_query($paramsExportar);
+
+        $paramsExportarPdf = $paramsExportar;
+        $paramsExportarPdf['formato'] = 'pdf';
+        $urlExportarPdf = 'index.php?' . http_build_query($paramsExportarPdf);
     ?>
 
     <h1>Ingresos de bienes por período</h1>
@@ -90,7 +94,7 @@
         </fieldset>
     </form>
 
-    <p><a href="<?= htmlspecialchars($urlExportar, ENT_QUOTES, 'UTF-8') ?>">Exportar Excel</a></p>
+    <p><a href="<?= htmlspecialchars($urlExportar, ENT_QUOTES, 'UTF-8') ?>">Exportar Excel</a> | <a href="<?= htmlspecialchars($urlExportarPdf, ENT_QUOTES, 'UTF-8') ?>">Exportar PDF</a></p>
 
     <?php if ($error === null && empty($filas)): ?>
         <p>No se encontraron ingresos de bienes para los filtros seleccionados.</p>

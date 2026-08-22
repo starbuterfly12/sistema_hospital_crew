@@ -22,6 +22,8 @@ Deben estar **disponibles** en el PHP que se use (la mayoría ya vienen activas 
 - `fileinfo` — valida el tipo real de los documentos de respaldo subidos en el módulo de Bienes.
 - `gd` — requerida por `endroid/qr-code` para generar las imágenes PNG de los códigos QR.
 - `zip` — **obligatoria**, requerida por `phpoffice/phpspreadsheet` para leer y escribir archivos `.xlsx` (un `.xlsx` es internamente un archivo ZIP). Sin ella, la generación y descarga de Tarjetas de Responsabilidad no funciona.
+- `dom` — **obligatoria**, requerida por `dompdf/dompdf` para parsear el HTML interno con el que arma cada PDF del módulo Reportes.
+- `mbstring` — **obligatoria**, requerida por `dompdf/dompdf` para el manejo de texto/codificación al generar el PDF.
 
 Verificar desde la terminal:
 
@@ -49,7 +51,7 @@ En instalaciones de XAMPP esta extensión puede venir deshabilitada por defecto.
 ## 3. Instalación local (desarrollo)
 
 1. Clonar u obtener una copia del repositorio dentro de `htdocs/` (u otro directorio servido por Apache).
-2. Ejecutar `composer install` — **no** `composer update`. Esto instala exactamente las versiones bloqueadas en `composer.lock` (actualmente `endroid/qr-code` y `phpoffice/phpspreadsheet`, junto con sus dependencias), sin arriesgar una actualización no probada.
+2. Ejecutar `composer install` — **no** `composer update`. Esto instala exactamente las versiones bloqueadas en `composer.lock` (actualmente `endroid/qr-code`, `phpoffice/phpspreadsheet` y `dompdf/dompdf`, junto con sus dependencias), sin arriesgar una actualización no probada. `dompdf/dompdf` no requiere ningún paso manual adicional ni fuentes externas — `composer install` lo resuelve por completo a partir de `composer.json`/`composer.lock`. Para confirmar que las tres quedaron instaladas: `composer show | findstr /I "qr-code phpspreadsheet dompdf"` (en Linux/macOS: `composer show | grep -iE "qr-code|phpspreadsheet|dompdf"`).
 3. Crear `config/Database.php` a partir de `config/Database.example.php` y completar ahí las credenciales locales de MariaDB. El nombre de base de datos usado por el proyecto es `sistema_hospital`.
 4. Crear `config/app.php` a partir de `config/app.example.php` y definir `base_url` según la URL local.
 5. Preparar la base de datos — ver advertencia importante en la sección 4, todavía no hay un script SQL consolidado en el repositorio.
