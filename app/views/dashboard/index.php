@@ -23,7 +23,9 @@
         <li><a href="index.php?modulo=tarjetas">Tarjetas de responsabilidad</a></li>
         <li><a href="index.php?modulo=movimientos">Movimientos</a></li>
         <li><a href="index.php?modulo=reportes">Reportes</a></li>
-        <li>Usuarios</li>
+        <?php if (tieneRol(['Administrador'])): ?>
+            <li><a href="index.php?modulo=usuarios">Usuarios</a></li>
+        <?php endif; ?>
         <li>Bitácora</li>
         <li>Respaldos</li>
     </ul>

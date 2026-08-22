@@ -102,6 +102,20 @@ Módulo de solo consulta (los tres roles pueden consultar y exportar) con **7 re
 
 Cada reporte tiene vista web con sus propios filtros, y exportación en **Excel (XLSX)** y **PDF**. Ambos formatos comparten exactamente los mismos datos, filtros, orden y totales que la vista web — el PDF se genera en Carta horizontal (una sola página de ancho) con Dompdf.
 
+### Usuarios
+
+Acceso exclusivo al rol **Administrador** (protegido tanto en el menú como en el backend de cada acción).
+
+- Listado con filtros por nombre/usuario, rol y estado.
+- Registro de usuarios: nombre completo, usuario, correo (opcional, único), teléfono (opcional), rol, contraseña y estado inicial.
+- Edición de datos generales, rol y estado.
+- Roles cargados dinámicamente desde la tabla `roles` (solo los activos se ofrecen para nuevas asignaciones).
+- Activar/inactivar usuario — baja lógica únicamente, nunca eliminación física.
+- Cambio de contraseña: un Administrador puede restablecer la de otro usuario sin conocer la actual; para la propia, se exige la contraseña actual.
+- Protecciones de backend (no solo ocultar botones): un Administrador no puede inactivarse a sí mismo ni cambiar su propio rol de Administrador; y ninguna operación puede dejar el sistema sin al menos un Administrador activo con un `password_hash` realmente evaluable por `password_verify()` — verificación hecha dentro de una transacción corta con bloqueo `FOR UPDATE` para cerrar condiciones de carrera.
+- `ultimo_acceso` se actualiza automáticamente en cada inicio de sesión exitoso.
+- Bitácora de todas las acciones administrativas (`REGISTRAR_USUARIO`, `MODIFICAR_USUARIO`, `CAMBIAR_ESTADO_USUARIO`, `CAMBIAR_PASSWORD_USUARIO`) y de autenticación (`INICIAR_SESION` exitoso/fallido, `CERRAR_SESION`) — nunca se registra contraseña ni hash.
+
 ## Plantillas XLSX
 
 Ambas plantillas **forman parte funcional del proyecto y sí están versionadas en Git** (a diferencia del resto de `storage/`, que son archivos generados/subidos) — no deben eliminarse:
@@ -123,7 +137,6 @@ Dentro del panel Movimientos, listados pero **sin funcionalidad real todavía**:
 
 Fuera de Movimientos, con su estructura base creada (controlador/modelo/vista) pero **aún en desarrollo**:
 
-- Usuarios (administración complementaria más allá del login)
 - Bitácora (vista de consulta; los registros ya se generan internamente pero no hay una pantalla para navegarlos)
 - Respaldos
 

@@ -317,6 +317,34 @@ switch ($modulo) {
         }
         break;
 
+    case 'usuarios':
+        if (!isset($_SESSION['id_usuario'])) {
+            header('Location: index.php');
+            exit;
+        }
+
+        require_once __DIR__ . '/app/controllers/UsuariosController.php';
+        $usuariosController = new UsuariosController();
+
+        if ($accion === 'ver') {
+            $usuariosController->ver();
+        } elseif ($accion === 'crear') {
+            $usuariosController->crear();
+        } elseif ($accion === 'guardar') {
+            $usuariosController->guardar();
+        } elseif ($accion === 'editar') {
+            $usuariosController->editar();
+        } elseif ($accion === 'actualizar') {
+            $usuariosController->actualizar();
+        } elseif ($accion === 'cambiarEstado') {
+            $usuariosController->cambiarEstado();
+        } elseif ($accion === 'cambiarPassword') {
+            $usuariosController->cambiarPassword();
+        } else {
+            $usuariosController->index();
+        }
+        break;
+
     case 'verificaciones':
         if (!isset($_SESSION['id_usuario'])) {
             header('Location: index.php');
