@@ -345,6 +345,22 @@ switch ($modulo) {
         }
         break;
 
+    case 'bitacora':
+        if (!isset($_SESSION['id_usuario'])) {
+            header('Location: index.php');
+            exit;
+        }
+
+        require_once __DIR__ . '/app/controllers/BitacoraController.php';
+        $bitacoraController = new BitacoraController();
+
+        if ($accion === 'ver') {
+            $bitacoraController->ver();
+        } else {
+            $bitacoraController->index();
+        }
+        break;
+
     case 'verificaciones':
         if (!isset($_SESSION['id_usuario'])) {
             header('Location: index.php');

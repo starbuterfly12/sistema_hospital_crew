@@ -26,7 +26,9 @@
         <?php if (tieneRol(['Administrador'])): ?>
             <li><a href="index.php?modulo=usuarios">Usuarios</a></li>
         <?php endif; ?>
-        <li>Bitácora</li>
+        <?php if (tieneRol(['Administrador'])): ?>
+            <li><a href="index.php?modulo=bitacora">Bitácora</a></li>
+        <?php endif; ?>
         <li>Respaldos</li>
     </ul>
 </body>

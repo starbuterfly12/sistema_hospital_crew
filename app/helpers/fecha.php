@@ -101,3 +101,26 @@ if (!function_exists('formatDateTime')) {
         return $fechaObjeto->format('d/m/Y H:i');
     }
 }
+
+if (!function_exists('formatDateTimeSeconds')) {
+    // Igual que formatDateTime() pero conservando los segundos — usado únicamente por Bitácora, donde
+    // dos registros distintos pueden compartir el mismo minuto (ej. varios intentos de login
+    // seguidos) y la distinción visual sí importa. No modifica formatDateTime(): otros módulos ya
+    // dependen de su formato actual sin segundos.
+    function formatDateTimeSeconds(?string $fechaHora): string
+    {
+        if ($fechaHora === null || trim($fechaHora) === '') {
+            return '';
+        }
+
+        $normalizado = str_replace('T', ' ', trim($fechaHora));
+
+        $fechaObjeto = DateTime::createFromFormat('Y-m-d H:i:s', $normalizado);
+
+        if ($fechaObjeto === false) {
+            return $fechaHora;
+        }
+
+        return $fechaObjeto->format('d/m/Y H:i:s');
+    }
+}

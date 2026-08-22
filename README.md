@@ -116,6 +116,17 @@ Acceso exclusivo al rol **Administrador** (protegido tanto en el menú como en e
 - `ultimo_acceso` se actualiza automáticamente en cada inicio de sesión exitoso.
 - Bitácora de todas las acciones administrativas (`REGISTRAR_USUARIO`, `MODIFICAR_USUARIO`, `CAMBIAR_ESTADO_USUARIO`, `CAMBIAR_PASSWORD_USUARIO`) y de autenticación (`INICIAR_SESION` exitoso/fallido, `CERRAR_SESION`) — nunca se registra contraseña ni hash.
 
+### Bitácora
+
+Acceso exclusivo al rol **Administrador**. Módulo de **solo lectura** — sin edición ni eliminación de registros.
+
+- Listado de eventos con filtros por rango de fechas, búsqueda libre, módulo y resultado (Exitoso/Fallido), paginado de 25 registros por página.
+- Detalle individual de cada evento.
+- Registra autenticación (inicio de sesión exitoso/fallido, cierre de sesión), además de las acciones administrativas de los demás módulos.
+- Muestra el usuario autenticado (nombre y username) cuando existe, o el username intentado cuando el inicio de sesión falló sin llegar a autenticar a nadie.
+- Fecha/hora con precisión de segundos.
+- El detalle incluye además tabla y registro afectados, e IP de origen.
+
 ## Plantillas XLSX
 
 Ambas plantillas **forman parte funcional del proyecto y sí están versionadas en Git** (a diferencia del resto de `storage/`, que son archivos generados/subidos) — no deben eliminarse:
@@ -137,7 +148,6 @@ Dentro del panel Movimientos, listados pero **sin funcionalidad real todavía**:
 
 Fuera de Movimientos, con su estructura base creada (controlador/modelo/vista) pero **aún en desarrollo**:
 
-- Bitácora (vista de consulta; los registros ya se generan internamente pero no hay una pantalla para navegarlos)
 - Respaldos
 
 ## Estructura principal de carpetas
