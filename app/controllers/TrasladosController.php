@@ -409,7 +409,7 @@ class TrasladosController extends Controller
                 $bien = $bienModel->findActualParaTrasladoForUpdate($idBien, $idResponsableOrigen);
 
                 if ($bien === false) {
-                    throw new RuntimeException('Uno de los bienes seleccionados ya no pertenece al responsable origen o no está disponible.');
+                    throw new RuntimeException('Uno o más bienes seleccionados ya no están disponibles para traslado.');
                 }
 
                 $idAsignacionActualBien = (int) $bien['id_asignacion_actual'];

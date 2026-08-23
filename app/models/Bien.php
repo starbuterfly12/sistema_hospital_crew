@@ -398,7 +398,10 @@ class Bien extends Model
     // Bienes actuales de un responsable, independientemente de la asignación administrativa
     // (histórica) de la que provengan. Solo incluye bienes con estado Activo y con un detalle de
     // asignación activo resolvible (INNER JOIN): si no puede identificarse su detalle vigente,
-    // el bien queda excluido y no aparece como trasladable.
+    // el bien queda excluido y no aparece como trasladable. Excluye además bienes con una Baja
+    // pendiente/autorizada en curso (mismo criterio que getElegiblesParaBajaPorResponsable()): un
+    // bien con solicitud de Baja activa no debe aparecer como trasladable hasta que esa Baja se
+    // resuelva (rechazada no bloquea; finalizada ya deja de ser 'Activo' y queda fuera por sí sola).
     public function getActualesPorResponsable(int $idResponsable): array
     {
         $sql = "
@@ -428,6 +431,13 @@ class Bien extends Model
             LEFT JOIN ubicaciones u ON b.id_ubicacion_actual = u.id_ubicacion
             WHERE b.id_responsable_actual = :id_responsable
               AND eb.nombre_estado = 'Activo'
+              AND NOT EXISTS (
+                    SELECT 1
+                    FROM detalle_baja db
+                    INNER JOIN bajas ba ON db.id_baja = ba.id_baja
+                    WHERE db.id_bien = b.id_bien
+                      AND ba.estado_baja IN ('pendiente', 'autorizada')
+              )
             ORDER BY a.numero_asignacion ASC, b.codigo_interno ASC
         ";
 
@@ -436,7 +446,11 @@ class Bien extends Model
 
     // Debe ejecutarse dentro de una transacción activa para que el bloqueo FOR UPDATE tenga efecto.
     // No asume una asignación origen fija: el bien puede provenir de cualquier asignación siempre
-    // que su responsable actual coincida con el responsable origen seleccionado.
+    // que su responsable actual coincida con el responsable origen seleccionado. Excluye bienes con
+    // una Baja pendiente/autorizada en curso (mismo criterio que
+    // Bien::getElegiblesParaBajaPorResponsable() / findElegibleParaBajaForUpdate()) — validación
+    // obligatoria aquí porque esta es la consulta que realmente bloquea y confirma el traslado; no
+    // basta con excluirlo solo del listado del formulario.
     public function findActualParaTrasladoForUpdate(int $idBien, int $idResponsableOrigen): array|false
     {
         $sql = "
@@ -458,6 +472,13 @@ class Bien extends Model
               AND b.id_responsable_actual = :id_responsable_origen
               AND b.id_asignacion_actual IS NOT NULL
               AND eb.nombre_estado = 'Activo'
+              AND NOT EXISTS (
+                    SELECT 1
+                    FROM detalle_baja db
+                    INNER JOIN bajas ba ON db.id_baja = ba.id_baja
+                    WHERE db.id_bien = b.id_bien
+                      AND ba.estado_baja IN ('pendiente', 'autorizada')
+              )
             LIMIT 1
             FOR UPDATE
         ";

@@ -152,6 +152,10 @@ Cada descarga carga la plantilla correspondiente, trabaja sobre una copia en mem
 
 No hay módulos principales pendientes: todos los módulos del sistema (incluyendo Respaldos, el último en implementarse) cuentan con implementación real. Las tareas restantes son de despliegue/infraestructura, no de funcionalidad — ver [INSTALL.md](INSTALL.md), sección "Pendientes antes del despliegue".
 
+## Mejoras futuras
+
+- Permitir traslados directos hacia Bodegas sin responsable asociado. Esta mejora requiere adaptar el modelo de movimientos y los flujos relacionados para admitir bienes activos ubicados físicamente en Bodega sin asignación vigente.
+
 ## Estructura principal de carpetas
 
 ```

@@ -15,6 +15,14 @@
             return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
         };
 
+        // Para el value="" del input de búsqueda (editable): a diferencia de $mostrar() (pensado para
+        // texto de solo lectura), esto NUNCA debe convertir vacío/null en "-" — si lo hiciera, el
+        // campo de búsqueda quedaría con el literal "-" como valor, y al reenviar el formulario sin
+        // tocarlo se buscaría por "-" en vez de mostrar todos los usuarios.
+        $valorInput = static function ($value): string {
+            return htmlspecialchars((string) ($value ?? ''), ENT_QUOTES, 'UTF-8');
+        };
+
         $usuarios = $usuarios ?? [];
         $roles = $roles ?? [];
         $q = $q ?? '';
@@ -28,7 +36,7 @@
 
     <form method="GET" action="index.php">
         <input type="hidden" name="modulo" value="usuarios">
-        <input type="text" name="q" value="<?= $mostrar($q) ?>" placeholder="Buscar por nombre o usuario">
+        <input type="text" name="q" value="<?= $valorInput($q) ?>" placeholder="Buscar por nombre o usuario">
 
         <select name="id_rol">
             <option value="">Todos los roles</option>

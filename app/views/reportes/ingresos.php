@@ -22,6 +22,14 @@
             return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
         };
 
+        // Para el value="" de inputs EDITABLES (filtros de fecha y texto libre): a diferencia de
+        // $mostrar() (pensado para texto de solo lectura), esto NUNCA debe convertir vacío/null en
+        // "-" — si lo hiciera, un filtro vacío quedaría con el literal "-" como valor, y al reenviar
+        // el formulario sin tocarlo el backend recibiría "-" en vez de "", rompiendo el filtro.
+        $valorInput = static function ($value): string {
+            return htmlspecialchars((string) ($value ?? ''), ENT_QUOTES, 'UTF-8');
+        };
+
         $filas = $filas ?? [];
         $filtros = $filtros ?? [];
         $error = $error ?? null;
@@ -54,12 +62,12 @@
             <div class="filtros-campos">
                 <div class="campo-filtro">
                     <label for="fecha_desde">Fecha desde</label>
-                    <span><input type="text" id="fecha_desde" name="fecha_desde" value="<?= $mostrar($filtros['fecha_desde'] ?? '') ?>"> <button type="button" data-flatpickr-target="fecha_desde">📅</button></span>
+                    <span><input type="text" id="fecha_desde" name="fecha_desde" value="<?= $valorInput($filtros['fecha_desde'] ?? '') ?>"> <button type="button" data-flatpickr-target="fecha_desde">📅</button></span>
                 </div>
 
                 <div class="campo-filtro">
                     <label for="fecha_hasta">Fecha hasta</label>
-                    <span><input type="text" id="fecha_hasta" name="fecha_hasta" value="<?= $mostrar($filtros['fecha_hasta'] ?? '') ?>"> <button type="button" data-flatpickr-target="fecha_hasta">📅</button></span>
+                    <span><input type="text" id="fecha_hasta" name="fecha_hasta" value="<?= $valorInput($filtros['fecha_hasta'] ?? '') ?>"> <button type="button" data-flatpickr-target="fecha_hasta">📅</button></span>
                 </div>
 
                 <div class="campo-filtro">
@@ -84,7 +92,7 @@
 
                 <div class="campo-filtro">
                     <label for="procedencia">Procedencia / Proveedor</label>
-                    <input type="text" id="procedencia" name="procedencia" value="<?= $mostrar($filtros['procedencia'] ?? '') ?>">
+                    <input type="text" id="procedencia" name="procedencia" value="<?= $valorInput($filtros['procedencia'] ?? '') ?>">
                 </div>
 
                 <div class="campo-filtro">

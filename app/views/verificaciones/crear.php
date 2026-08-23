@@ -15,6 +15,13 @@
             return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
         };
 
+        // Para el value="" del input de búsqueda (editable): nunca debe convertir vacío/null en "-",
+        // o el campo quedaría con el literal "-" como valor y, al reenviar sin tocarlo, se buscaría
+        // por "-" en vez de limpiar la búsqueda.
+        $valorInput = static function ($value): string {
+            return htmlspecialchars((string) ($value ?? ''), ENT_QUOTES, 'UTF-8');
+        };
+
         $busqueda = $busqueda ?? '';
         $resultadosBusqueda = $resultadosBusqueda ?? [];
         $bienSeleccionado = $bienSeleccionado ?? null;
@@ -42,7 +49,7 @@
         <input type="hidden" name="accion" value="crear">
 
         <label for="busqueda_bien">Código interno / SICOIN / descripción</label>
-        <input type="text" id="busqueda_bien" name="busqueda" value="<?= $mostrar($busqueda) ?>">
+        <input type="text" id="busqueda_bien" name="busqueda" value="<?= $valorInput($busqueda) ?>">
         <button type="submit">Buscar</button>
     </form>
 
