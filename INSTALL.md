@@ -48,6 +48,15 @@ En instalaciones de XAMPP esta extensión puede venir deshabilitada por defecto.
 
 `php.ini` **no forma parte del repositorio** (es configuración del entorno PHP del servidor, no del proyecto) — cada instalación nueva debe revisar sus propias extensiones siguiendo esta sección.
 
+### Requisito adicional: módulo Respaldos (mysqldump)
+
+El módulo Respaldos genera el `.sql` invocando `mysqldump` directamente, sin librerías externas:
+
+- XAMPP/MariaDB debe incluir `mysqldump.exe` (viene incluido en una instalación estándar de XAMPP, no requiere instalación aparte).
+- Ubicación típica: `C:\xampp\mysql\bin\mysqldump.exe`. El sistema intenta resolverla automáticamente a partir de la ubicación del propio proyecto dentro de XAMPP; esa ruta es solo el valor esperado si la instalación es estándar.
+- PHP debe permitir `proc_open()` (no debe aparecer en `disable_functions` de `php.ini`).
+- `storage/respaldos/` debe existir y ser escribible por PHP (ya cubierto en el paso 6 de la sección 3).
+
 ## 3. Instalación local (desarrollo)
 
 1. Clonar u obtener una copia del repositorio dentro de `htdocs/` (u otro directorio servido por Apache).
@@ -78,7 +87,6 @@ El esquema real (incluyendo tablas y columnas agregadas durante el desarrollo de
 
 ### Pendientes antes del despliegue
 
-- Finalizar los módulos del sistema que aún están en desarrollo (ver README.md, sección "Módulos pendientes").
 - Generar y versionar el script SQL consolidado en `database/` (ver sección 4).
 - Determinar qué catálogos iniciales deben incluirse en la base de datos.
 - Definir la versión de Ubuntu a utilizar.

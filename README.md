@@ -78,7 +78,7 @@ Registro y consulta de áreas/ubicaciones del Hospital.
 
 ### Movimientos
 
-Panel único (`Movimientos`, con una sola entrada en el Dashboard) que agrupa los procesos administrativos que movilizan bienes. Por ahora solo **Traslado** tiene implementación real; Préstamo, Devolución, Baja, Verificación física y Solicitudes de baja aparecen listados como pendientes dentro del mismo panel, sin funcionalidad todavía.
+Panel único (`Movimientos`, con una sola entrada en el Dashboard) que agrupa los procesos administrativos que movilizan bienes: Traslado, Préstamo, Devolución, Baja (incluye Solicitudes de baja) y Verificación física — todos con implementación real.
 
 **Traslado multi-bien:**
 
@@ -127,6 +127,18 @@ Acceso exclusivo al rol **Administrador**. Módulo de **solo lectura** — sin e
 - Fecha/hora con precisión de segundos.
 - El detalle incluye además tabla y registro afectados, e IP de origen.
 
+### Respaldos
+
+Acceso exclusivo al rol **Administrador**.
+
+- Generación manual de un respaldo completo de la base de datos, usando `mysqldump` de MariaDB/XAMPP.
+- El archivo `.sql` generado se almacena en `storage/respaldos/`.
+- Listado de los respaldos generados: fecha y hora, archivo, usuario que lo generó, tamaño (calculado desde el archivo físico, no almacenado en BD) y estado (`Generado`).
+- Descarga del archivo `.sql` de cualquier respaldo listado.
+- La generación y la descarga quedan registradas en Bitácora.
+- Alcance actual: respalda **únicamente la base de datos**. Documentos adjuntos, fotos de baja, códigos QR y plantillas (almacenados fuera de MariaDB) no se incluyen.
+- Restauración y eliminación de respaldos **no** están implementadas en esta versión.
+
 ## Plantillas XLSX
 
 Ambas plantillas **forman parte funcional del proyecto y sí están versionadas en Git** (a diferencia del resto de `storage/`, que son archivos generados/subidos) — no deben eliminarse:
@@ -138,17 +150,7 @@ Cada descarga carga la plantilla correspondiente, trabaja sobre una copia en mem
 
 ## Módulos pendientes
 
-Dentro del panel Movimientos, listados pero **sin funcionalidad real todavía**:
-
-- Préstamos
-- Devoluciones
-- Bajas
-- Verificación física
-- Solicitudes de baja
-
-Fuera de Movimientos, con su estructura base creada (controlador/modelo/vista) pero **aún en desarrollo**:
-
-- Respaldos
+No hay módulos principales pendientes: todos los módulos del sistema (incluyendo Respaldos, el último en implementarse) cuentan con implementación real. Las tareas restantes son de despliegue/infraestructura, no de funcionalidad — ver [INSTALL.md](INSTALL.md), sección "Pendientes antes del despliegue".
 
 ## Estructura principal de carpetas
 

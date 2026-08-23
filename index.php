@@ -15,6 +15,7 @@ require_once __DIR__ . '/app/helpers/csrf.php';
 require_once __DIR__ . '/app/helpers/fecha.php';
 require_once __DIR__ . '/app/helpers/archivos.php';
 require_once __DIR__ . '/app/helpers/exportacion.php';
+require_once __DIR__ . '/app/helpers/respaldo_bd.php';
 
 $modulo = $_GET['modulo'] ?? 'auth';
 $accion = $_GET['accion'] ?? 'index';
@@ -376,6 +377,24 @@ switch ($modulo) {
             $verificacionesController->ver();
         } else {
             $verificacionesController->index();
+        }
+        break;
+
+    case 'respaldos':
+        if (!isset($_SESSION['id_usuario'])) {
+            header('Location: index.php');
+            exit;
+        }
+
+        require_once __DIR__ . '/app/controllers/RespaldosController.php';
+        $respaldosController = new RespaldosController();
+
+        if ($accion === 'generar') {
+            $respaldosController->generar();
+        } elseif ($accion === 'descargar') {
+            $respaldosController->descargar();
+        } else {
+            $respaldosController->index();
         }
         break;
 
