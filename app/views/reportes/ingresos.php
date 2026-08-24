@@ -97,6 +97,7 @@
 
                 <div class="campo-filtro">
                     <button type="submit">Filtrar</button>
+                    <a href="index.php?modulo=reportes&accion=ingresos">Limpiar filtros</a>
                 </div>
             </div>
         </fieldset>

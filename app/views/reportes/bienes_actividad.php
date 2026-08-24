@@ -22,6 +22,15 @@
             return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
         };
 
+        // Para el value="" de inputs EDITABLES (los filtros de fecha): a diferencia de $mostrar()
+        // (pensado para texto de solo lectura), esto NUNCA debe convertir vacío/null en "-" — si lo
+        // hiciera, un filtro de fecha vacío quedaría con el literal "-" como valor, y al reenviar el
+        // formulario sin tocarlo el backend recibiría "-" en vez de "", rompiendo la validación de
+        // fecha opcional.
+        $valorInput = static function ($value): string {
+            return htmlspecialchars((string) ($value ?? ''), ENT_QUOTES, 'UTF-8');
+        };
+
         $filas = $filas ?? [];
         $filtros = $filtros ?? [];
         $error = $error ?? null;
@@ -52,12 +61,12 @@
             <div class="filtros-campos">
                 <div class="campo-filtro">
                     <label for="fecha_desde">Fecha desde</label>
-                    <span><input type="text" id="fecha_desde" name="fecha_desde" value="<?= $mostrar($filtros['fecha_desde'] ?? '') ?>"> <button type="button" data-flatpickr-target="fecha_desde">📅</button></span>
+                    <span><input type="text" id="fecha_desde" name="fecha_desde" value="<?= $valorInput($filtros['fecha_desde'] ?? '') ?>"> <button type="button" data-flatpickr-target="fecha_desde">📅</button></span>
                 </div>
 
                 <div class="campo-filtro">
                     <label for="fecha_hasta">Fecha hasta</label>
-                    <span><input type="text" id="fecha_hasta" name="fecha_hasta" value="<?= $mostrar($filtros['fecha_hasta'] ?? '') ?>"> <button type="button" data-flatpickr-target="fecha_hasta">📅</button></span>
+                    <span><input type="text" id="fecha_hasta" name="fecha_hasta" value="<?= $valorInput($filtros['fecha_hasta'] ?? '') ?>"> <button type="button" data-flatpickr-target="fecha_hasta">📅</button></span>
                 </div>
 
                 <div class="campo-filtro">
@@ -72,6 +81,7 @@
 
                 <div class="campo-filtro">
                     <button type="submit">Filtrar</button>
+                    <a href="index.php?modulo=reportes&accion=bienesActividad">Limpiar filtros</a>
                 </div>
             </div>
         </fieldset>
