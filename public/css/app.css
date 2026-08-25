@@ -1,0 +1,898 @@
+/* ==========================================================================
+   Sistema de Gestión de Bienes — Hospital General de Chiquimula
+   app.css — hoja de estilos global (layout + componentes reutilizables)
+
+   Cargado únicamente por app/views/layouts/main.php. Las vistas que todavía
+   no usan este layout siguen con su propio <style> inline hasta migrarse.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1. Variables
+   -------------------------------------------------------------------------- */
+:root {
+    --sgb-azul: #2f6fed;
+    --sgb-azul-oscuro: #14315c;
+    --sgb-azul-sidebar: #eaf2ff;
+    --sgb-azul-hover: #dce9ff;
+
+    --sgb-fondo: #f4f7fc;
+    --sgb-superficie: #ffffff;
+    --sgb-borde: #e2e8f0;
+
+    --sgb-texto: #1f2937;
+    --sgb-texto-secundario: #64748b;
+
+    --sgb-verde: #16a34a;
+    --sgb-verde-fondo: #e3f8ec;
+    --sgb-naranja: #b45309;
+    --sgb-naranja-fondo: #fef3e0;
+    --sgb-rojo: #dc2626;
+    --sgb-rojo-fondo: #fdeaea;
+
+    --sgb-pastel-azul: #cfe3ff;
+    --sgb-pastel-lila: #e6ddff;
+    --sgb-pastel-menta: #d3f5e6;
+    --sgb-pastel-rosa: #ffe0ec;
+    --sgb-pastel-turquesa: #cdeeea;
+
+    --sgb-radio: 10px;
+    --sgb-sombra: 0 1px 3px rgba(20, 49, 92, 0.08);
+
+    --sgb-sidebar-ancho: 264px;
+    --sgb-topbar-alto: 84px;
+
+    --sgb-fuente: Arial, "Segoe UI", Helvetica, sans-serif;
+}
+
+/* --------------------------------------------------------------------------
+   2. Reset / base
+   -------------------------------------------------------------------------- */
+*, *::before, *::after {
+    box-sizing: border-box;
+}
+
+html, body {
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: var(--sgb-fuente);
+    color: var(--sgb-texto);
+    background: var(--sgb-fondo);
+    font-size: 15px;
+    line-height: 1.45;
+}
+
+h1, h2, h3, h4 {
+    margin: 0 0 0.5em;
+    color: var(--sgb-azul-oscuro);
+    font-weight: 700;
+}
+
+a {
+    color: var(--sgb-azul);
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+img {
+    max-width: 100%;
+}
+
+/* --------------------------------------------------------------------------
+   3. Layout
+   -------------------------------------------------------------------------- */
+.app-shell {
+    display: flex;
+    min-height: 100vh;
+}
+
+.app-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    margin-left: var(--sgb-sidebar-ancho);
+}
+
+/* --------------------------------------------------------------------------
+   4. Sidebar
+   -------------------------------------------------------------------------- */
+.sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: var(--sgb-sidebar-ancho);
+    background: var(--sgb-azul-sidebar);
+    border-right: 1px solid var(--sgb-borde);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    z-index: 10;
+}
+
+.sidebar-brand {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding-top: 14px;
+    padding-bottom: 12px;
+    padding-left: 10px;
+    padding-right: 10px;
+    border-bottom: 1px solid var(--sgb-borde);
+}
+
+.sidebar-brand-logo {
+    display: block;
+    width: auto;
+    height: auto;
+    max-width: 175px;
+    max-height: 82px;
+    object-fit: contain;
+    margin: 0 auto;
+}
+
+.sidebar-brand-placeholder {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 64px;
+    height: 64px;
+    border-radius: 12px;
+    background: var(--sgb-pastel-azul);
+    color: var(--sgb-azul-oscuro);
+    font-weight: 700;
+    font-size: 18px;
+    letter-spacing: 0.5px;
+    margin: 0 auto;
+}
+
+.sidebar-nav {
+    flex: 1;
+    padding: 12px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.sidebar-link {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: var(--sgb-radio);
+    color: var(--sgb-texto-secundario);
+    border-left: 3px solid transparent;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.sidebar-link:hover {
+    background: var(--sgb-azul-hover);
+    text-decoration: none;
+    color: var(--sgb-azul-oscuro);
+}
+
+.sidebar-link-icono {
+    display: inline-flex;
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+}
+
+.sidebar-link-icono svg {
+    width: 100%;
+    height: 100%;
+}
+
+.sidebar-link-activo {
+    background: var(--sgb-superficie);
+    color: var(--sgb-azul);
+    border-left-color: var(--sgb-azul);
+    box-shadow: var(--sgb-sombra);
+}
+
+.sidebar-link-activo .sidebar-link-icono {
+    color: var(--sgb-azul);
+}
+
+.sidebar-footer {
+    padding: 10px;
+    border-top: 1px solid var(--sgb-borde);
+}
+
+.sidebar-link-logout {
+    color: var(--sgb-rojo);
+}
+
+.sidebar-link-logout:hover {
+    background: var(--sgb-rojo-fondo);
+    color: var(--sgb-rojo);
+}
+
+/* --------------------------------------------------------------------------
+   5. Topbar
+   -------------------------------------------------------------------------- */
+.topbar {
+    height: var(--sgb-topbar-alto);
+    background: var(--sgb-superficie);
+    border-bottom: 1px solid var(--sgb-borde);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 28px;
+    position: sticky;
+    top: 0;
+    z-index: 5;
+}
+
+.topbar-saludo {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.3;
+}
+
+.topbar-saludo-linea {
+    font-size: 13px;
+    color: var(--sgb-texto-secundario);
+}
+
+.topbar-saludo-nombre {
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--sgb-azul-oscuro);
+}
+
+.topbar-acciones {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+}
+
+.topbar-campana {
+    display: inline-flex;
+    width: 22px;
+    height: 22px;
+    color: var(--sgb-texto-secundario);
+}
+
+.topbar-campana svg {
+    width: 100%;
+    height: 100%;
+}
+
+.topbar-avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: var(--sgb-pastel-azul);
+    color: var(--sgb-azul-oscuro);
+    font-weight: 700;
+    font-size: 15px;
+}
+
+/* --------------------------------------------------------------------------
+   6. Contenido
+   -------------------------------------------------------------------------- */
+.app-content {
+    position: relative;
+    flex: 1;
+    overflow: hidden;
+}
+
+.fondo-decorativo {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    overflow: hidden;
+    background:
+        radial-gradient(320px 320px at 92% -8%, var(--sgb-pastel-azul) 0%, transparent 70%),
+        radial-gradient(280px 280px at 100% 30%, var(--sgb-pastel-lila) 0%, transparent 70%),
+        radial-gradient(260px 260px at -5% 55%, var(--sgb-pastel-menta) 0%, transparent 70%),
+        radial-gradient(240px 240px at 20% 105%, var(--sgb-pastel-rosa) 0%, transparent 70%);
+    opacity: 0.55;
+}
+
+.app-content-inner {
+    position: relative;
+    z-index: 1;
+    padding: 28px 32px 40px;
+    max-width: 1400px;
+}
+
+/* --------------------------------------------------------------------------
+   7. Cards
+   -------------------------------------------------------------------------- */
+.card {
+    background: var(--sgb-superficie);
+    border: 1px solid var(--sgb-borde);
+    border-radius: var(--sgb-radio);
+    box-shadow: var(--sgb-sombra);
+    padding: 18px 20px;
+}
+
+.page-header {
+    margin-bottom: 22px;
+}
+
+.page-title {
+    font-size: 22px;
+    margin-bottom: 2px;
+}
+
+.page-subtitle {
+    color: var(--sgb-texto-secundario);
+    font-size: 14px;
+    margin: 0;
+}
+
+/* Fila título + acciones dentro de .page-header (Bienes y siguientes módulos con botón principal
+   en el encabezado). No modifica .page-header en sí — el Dashboard sigue usándolo sin esta fila. */
+.page-header-fila {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.page-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+/* --------------------------------------------------------------------------
+   8. Botones
+   -------------------------------------------------------------------------- */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 9px 16px;
+    border-radius: var(--sgb-radio);
+    border: 1px solid transparent;
+    background: var(--sgb-superficie);
+    color: var(--sgb-texto);
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+}
+
+.btn:hover {
+    text-decoration: none;
+    filter: brightness(0.97);
+}
+
+.btn-primary {
+    background: var(--sgb-azul);
+    border-color: var(--sgb-azul);
+    color: #fff;
+}
+
+.btn-secondary {
+    background: var(--sgb-superficie);
+    border-color: var(--sgb-borde);
+    color: var(--sgb-texto);
+}
+
+.btn-danger {
+    background: var(--sgb-rojo);
+    border-color: var(--sgb-rojo);
+    color: #fff;
+}
+
+.btn-success {
+    background: var(--sgb-verde);
+    border-color: var(--sgb-verde);
+    color: #fff;
+}
+
+/* --------------------------------------------------------------------------
+   9. Formularios
+   -------------------------------------------------------------------------- */
+.form-grupo {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 14px;
+}
+
+.form-grupo label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--sgb-texto-secundario);
+}
+
+.form-grupo input,
+.form-grupo select,
+.form-grupo textarea {
+    font-family: inherit;
+    font-size: 14px;
+    padding: 8px 10px;
+    border: 1px solid var(--sgb-borde);
+    border-radius: 8px;
+    background: var(--sgb-superficie);
+    color: var(--sgb-texto);
+}
+
+.form-grupo input:focus,
+.form-grupo select:focus,
+.form-grupo textarea:focus {
+    outline: 2px solid var(--sgb-pastel-azul);
+    border-color: var(--sgb-azul);
+}
+
+/* --------------------------------------------------------------------------
+   10. Filtros
+   -------------------------------------------------------------------------- */
+.filters {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 12px 20px;
+    background: var(--sgb-superficie);
+    border: 1px solid var(--sgb-borde);
+    border-radius: var(--sgb-radio);
+    padding: 14px 18px;
+    margin-bottom: 18px;
+}
+
+/* --------------------------------------------------------------------------
+   11. Tablas
+   -------------------------------------------------------------------------- */
+.table-responsive {
+    width: 100%;
+    overflow-x: auto;
+    border: 1px solid var(--sgb-borde);
+    border-radius: var(--sgb-radio);
+    background: var(--sgb-superficie);
+}
+
+.table-app {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13.5px;
+}
+
+.table-app th,
+.table-app td {
+    padding: 10px 14px;
+    text-align: left;
+    border-bottom: 1px solid var(--sgb-borde);
+    white-space: nowrap;
+}
+
+.table-app thead th {
+    background: var(--sgb-fondo);
+    color: var(--sgb-texto-secundario);
+    font-weight: 700;
+    font-size: 12.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    text-align: center;
+}
+
+.table-app tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.table-app tbody tr:hover {
+    background: var(--sgb-fondo);
+}
+
+/* Utilidades genéricas de celda, reutilizables en cualquier tabla .table-app (no específicas de
+   Bienes): centrar códigos/estado/acciones, y truncar con elipsis una columna de texto largo
+   (Descripción) sin tocar el dato real ni forzar scroll horizontal antes de tiempo. */
+.table-app .celda-centrada {
+    text-align: center;
+}
+
+.celda-truncada {
+    max-width: 260px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* --------------------------------------------------------------------------
+   Tabla con columnas redimensionables manualmente (public/js/app.js inicializa el arrastre solo
+   en tablas con esta clase — ver esa nota en app.js). Se prueba primero en Bienes; NO se aplica
+   automáticamente a .table-app en general.
+
+   table-layout:fixed + width:auto (en vez del width:100% de .table-app) es lo que permite que la
+   tabla crezca más allá del contenedor cuando se amplía una columna, para que .table-responsive
+   saque scroll horizontal en vez de comprimir las demás columnas.
+   -------------------------------------------------------------------------- */
+.table-resizable {
+    table-layout: fixed;
+    width: auto;
+    min-width: 100%;
+}
+
+.table-resizable th,
+.table-resizable td {
+    text-align: center;
+}
+
+.table-resizable td {
+    white-space: normal;
+    word-break: break-word;
+}
+
+.table-resizable th {
+    position: relative;
+    /* Solo permite salto ENTRE palabras (ej. "RESPONSABLE" / "ACTUAL" en dos líneas) — nunca a
+       mitad de palabra. word-break/overflow-wrap normal anulan el word-break:break-word que sí
+       aplica a las celdas de datos (necesario ahí para texto largo sin espacios). */
+    white-space: normal;
+    word-break: normal;
+    overflow-wrap: normal;
+}
+
+/* Anchos iniciales "cómodos" por columna (referencia visual aprobada, no máximos: la usuaria puede
+   ampliar o reducir cualquiera arrastrando el handle). Sin esto, table-layout:fixed repartía el
+   min-width:100% del contenedor en partes iguales entre las 12 columnas y comprimía cada
+   encabezado a ~80-100px, partiendo palabras. Los valores exactos también viven en app.js como
+   referencia del ancho "natural" que se restaura si algo necesita recalcularse. */
+.table-resizable thead th:nth-child(1) { width: 125px; min-width: 100px; } /* Código interno */
+.table-resizable thead th:nth-child(2) { width: 120px; min-width: 100px; } /* Código SICOIN */
+.table-resizable thead th:nth-child(3) { width: 220px; min-width: 140px; } /* Descripción */
+.table-resizable thead th:nth-child(4) { width: 125px; min-width: 90px;  } /* Marca */
+.table-resizable thead th:nth-child(5) { width: 150px; min-width: 110px; } /* Modelo */
+.table-resizable thead th:nth-child(6) { width: 160px; min-width: 120px; } /* Categoría */
+.table-resizable thead th:nth-child(7) { width: 105px; min-width: 85px;  } /* Estado */
+.table-resizable thead th:nth-child(8) { width: 100px; min-width: 90px;  } /* Acciones */
+
+.table-resizable tbody td {
+    font-size: 13px;
+}
+
+/* "Ver" y el badge de Estado nunca deben partirse aunque la columna se reduzca hasta su mínimo. */
+.table-resizable td .btn {
+    white-space: nowrap;
+}
+
+.table-resize-handle {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 6px;
+    height: 100%;
+    cursor: col-resize;
+    background: transparent;
+    user-select: none;
+}
+
+.table-resize-handle:hover,
+.table-resize-handle.resize-activo {
+    background: rgba(47, 111, 237, 0.35);
+}
+
+/* --------------------------------------------------------------------------
+   Estado vacío genérico (listados sin registros) — reutilizable fuera del Dashboard, que
+   conserva su propia clase .dashboard-vacio sin cambios.
+   -------------------------------------------------------------------------- */
+.estado-vacio {
+    color: var(--sgb-texto-secundario);
+    font-size: 14px;
+    padding: 18px 4px;
+    text-align: center;
+}
+
+/* --------------------------------------------------------------------------
+   12. Badges / estados
+   -------------------------------------------------------------------------- */
+.badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    background: var(--sgb-borde);
+    color: var(--sgb-texto);
+    white-space: nowrap;
+}
+
+.badge-exito {
+    background: var(--sgb-verde-fondo);
+    color: var(--sgb-verde);
+}
+
+.badge-pendiente {
+    background: var(--sgb-naranja-fondo);
+    color: var(--sgb-naranja);
+}
+
+.badge-error {
+    background: var(--sgb-rojo-fondo);
+    color: var(--sgb-rojo);
+}
+
+/* --------------------------------------------------------------------------
+   13. Alertas
+   -------------------------------------------------------------------------- */
+.alert {
+    padding: 12px 16px;
+    border-radius: var(--sgb-radio);
+    border: 1px solid transparent;
+    font-size: 14px;
+    margin-bottom: 16px;
+}
+
+.alert-error {
+    background: var(--sgb-rojo-fondo);
+    border-color: #f6c6c6;
+    color: var(--sgb-rojo);
+}
+
+.alert-exito {
+    background: var(--sgb-verde-fondo);
+    border-color: #b7ebc9;
+    color: var(--sgb-verde);
+}
+
+/* --------------------------------------------------------------------------
+   14. Paginación
+   -------------------------------------------------------------------------- */
+.pagination {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-top: 14px;
+    font-size: 13.5px;
+    color: var(--sgb-texto-secundario);
+}
+
+/* --------------------------------------------------------------------------
+   15. Modales
+   Mismas clases que ya usan los <style> inline de bienes/crear.php,
+   bienes/editar.php, bajas/crear.php, bajas/ver.php, respaldos/index.php y
+   verificaciones/crear.php: al migrarlas, su <style> local se puede retirar
+   sin tocar el HTML porque los nombres de clase ya coinciden.
+   -------------------------------------------------------------------------- */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(20, 49, 92, 0.45);
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+}
+
+.modal-overlay.modal-abierto {
+    display: flex;
+}
+
+.modal-caja {
+    background: var(--sgb-superficie);
+    border-radius: var(--sgb-radio);
+    padding: 1.5rem;
+    width: 90%;
+    max-width: 420px;
+    box-shadow: 0 10px 30px rgba(20, 49, 92, 0.25);
+}
+
+.modal-mensaje {
+    color: var(--sgb-rojo);
+}
+
+/* --------------------------------------------------------------------------
+   16. Responsive
+   -------------------------------------------------------------------------- */
+@media (max-width: 1366px) {
+    .app-content-inner {
+        padding: 22px 20px 32px;
+    }
+}
+
+@media (max-width: 1180px) {
+    /* El sidebar se mantiene expandido (ícono + texto) también en este rango:
+       en esta fase no se quiere colapso automático a solo-íconos en escritorio. */
+    .topbar {
+        padding: 0 18px;
+    }
+}
+
+/* --------------------------------------------------------------------------
+   Dashboard piloto (F1) — clases especificas de la composicion del panel
+   principal. Si otro modulo necesita un patron equivalente mas adelante,
+   promover estas reglas a nombres genericos en ese momento.
+   -------------------------------------------------------------------------- */
+.dashboard-indicadores {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.dashboard-indicador-valor {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--sgb-azul-oscuro);
+    margin: 4px 0 2px;
+}
+
+.dashboard-indicador-etiqueta {
+    font-size: 13px;
+    color: var(--sgb-texto-secundario);
+}
+
+.dashboard-pendientes {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.dashboard-pendiente-card {
+    background: var(--sgb-superficie);
+    border: 1px solid var(--sgb-borde);
+    border-left: 3px solid var(--sgb-naranja);
+    border-radius: var(--sgb-radio);
+    padding: 14px 16px;
+}
+
+.dashboard-pendiente-valor {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--sgb-azul-oscuro);
+}
+
+.dashboard-pendiente-etiqueta {
+    font-size: 12.5px;
+    color: var(--sgb-texto-secundario);
+}
+
+.dashboard-inferior {
+    display: grid;
+    grid-template-columns: 1.6fr 1fr;
+    gap: 20px;
+    align-items: start;
+}
+
+.dashboard-accesos {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.dashboard-acceso-link {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    border: 1px solid var(--sgb-borde);
+    border-radius: var(--sgb-radio);
+    background: var(--sgb-fondo);
+    color: var(--sgb-azul-oscuro);
+    font-weight: 600;
+    font-size: 13.5px;
+    cursor: pointer;
+    transition: transform 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.dashboard-acceso-link:hover {
+    text-decoration: none;
+    transform: translateY(-2px);
+}
+
+.dashboard-acceso-icono {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 21px;
+    height: 21px;
+    flex-shrink: 0;
+}
+
+.dashboard-acceso-icono svg {
+    width: 100%;
+    height: 100%;
+}
+
+/* Acento pastel por acceso — mismo texto/ícono azul oscuro institucional en los seis, solo cambia
+   el fondo/borde suave de la tarjeta y su tono al hover. */
+.dashboard-acceso-azul {
+    background: var(--sgb-pastel-azul);
+    border-color: #b7d4ff;
+}
+.dashboard-acceso-azul:hover {
+    background: #c2ddff;
+    border-color: var(--sgb-azul);
+}
+
+.dashboard-acceso-menta {
+    background: var(--sgb-pastel-menta);
+    border-color: #b7e8cf;
+}
+.dashboard-acceso-menta:hover {
+    background: #c3f0dc;
+    border-color: var(--sgb-verde);
+}
+
+.dashboard-acceso-lila {
+    background: var(--sgb-pastel-lila);
+    border-color: #d3c5fb;
+}
+.dashboard-acceso-lila:hover {
+    background: #ddd1fc;
+    border-color: #9a7fe0;
+}
+
+.dashboard-acceso-celeste {
+    background: var(--sgb-azul-sidebar);
+    border-color: #cfe1fb;
+}
+.dashboard-acceso-celeste:hover {
+    background: #ddebfd;
+    border-color: var(--sgb-azul);
+}
+
+.dashboard-acceso-turquesa {
+    background: var(--sgb-pastel-turquesa);
+    border-color: #a9e0da;
+}
+.dashboard-acceso-turquesa:hover {
+    background: #bdeae4;
+    border-color: #3fb3a6;
+}
+
+.dashboard-acceso-institucional {
+    background: rgba(47, 111, 237, 0.1);
+    border-color: rgba(47, 111, 237, 0.28);
+}
+.dashboard-acceso-institucional:hover {
+    background: rgba(47, 111, 237, 0.18);
+    border-color: var(--sgb-azul);
+}
+
+.dashboard-panel-titulo {
+    font-size: 16px;
+    margin-bottom: 12px;
+}
+
+.dashboard-vacio {
+    color: var(--sgb-texto-secundario);
+    font-size: 14px;
+    padding: 18px 4px;
+}
+
+/* Solo la tabla "Últimos movimientos registrados" del Dashboard — no afecta .table-app en otras
+   pantallas (Bienes, Bitácora, Reportes, etc.), que mantienen su alineación y tamaño actuales. */
+.dashboard-movimientos-tabla th,
+.dashboard-movimientos-tabla td {
+    text-align: center;
+}
+
+.dashboard-movimientos-tabla tbody {
+    font-size: 13px;
+}
+
+@media (max-width: 1366px) {
+    .dashboard-indicadores,
+    .dashboard-pendientes {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .dashboard-inferior {
+        grid-template-columns: 1fr;
+    }
+}

@@ -1,62 +1,80 @@
-<!DOCTYPE html>
-<html lang="es-GT">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bienes institucionales</title>
-</head>
-<body>
-    <h1>Bienes institucionales</h1>
+<?php
+// Fragmento de contenido: se renderiza dentro de layouts/main.php (ver BienesController::index()).
+// Sin filtros/búsqueda/paginación: Bien::getAll() no los tiene hoy y esta fase es solo visual —
+// no se inventa funcionalidad nueva, solo se re-viste la tabla existente.
 
-    <?php if (tieneRol(['Administrador', 'Operativo'])): ?>
-        <p>
-            <a href="index.php?modulo=bienes&accion=crear">Registrar bien</a>
-        </p>
-    <?php endif; ?>
+$bienes = $bienes ?? [];
+$puedeRegistrar = tieneRol(['Administrador', 'Operativo']);
 
+$mostrar = static function (?string $valor): string {
+    return ($valor !== null && trim($valor) !== '') ? htmlspecialchars($valor, ENT_QUOTES, 'UTF-8') : '—';
+};
+
+$claseBadgeEstado = static function (?string $nombreEstado): string {
+    return match ($nombreEstado) {
+        'Activo' => 'badge badge-exito',
+        'Baja' => 'badge badge-error',
+        default => 'badge',
+    };
+};
+?>
+<div class="page-header">
+    <div class="page-header-fila">
+        <div>
+            <h1 class="page-title">Bienes institucionales</h1>
+            <p class="page-subtitle">Gestión y consulta de los bienes registrados en el sistema.</p>
+        </div>
+
+        <?php if ($puedeRegistrar): ?>
+            <div class="page-actions">
+                <a class="btn btn-primary" href="index.php?modulo=bienes&accion=crear">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                    Registrar bien
+                </a>
+            </div>
+        <?php endif; ?>
+    </div>
+</div>
+
+<div class="card">
     <?php if (empty($bienes)): ?>
-        <p>No hay bienes registrados.</p>
+        <p class="estado-vacio">No hay bienes registrados.</p>
     <?php else: ?>
-        <table border="1" cellpadding="5" cellspacing="0">
-            <thead>
-                <tr>
-                    <th>Código interno</th>
-                    <th>Código SICOIN</th>
-                    <th>Descripción</th>
-                    <th>Marca</th>
-                    <th>Modelo</th>
-                    <th>Serie</th>
-                    <th>Categoría</th>
-                    <th>Estado</th>
-                    <th>Condición</th>
-                    <th>Responsable actual</th>
-                    <th>Ubicación actual</th>
-                    <th>Acciones</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php foreach ($bienes as $bien): ?>
+        <div class="table-responsive">
+            <table class="table-app table-resizable">
+                <thead>
                     <tr>
-                        <td><?= htmlspecialchars($bien['codigo_interno'] ?: '-', ENT_QUOTES, 'UTF-8') ?></td>
-                        <td><?= htmlspecialchars($bien['codigo_sicoin'] ?: '-', ENT_QUOTES, 'UTF-8') ?></td>
-                        <td><?= htmlspecialchars($bien['descripcion'] ?: '-', ENT_QUOTES, 'UTF-8') ?></td>
-                        <td><?= htmlspecialchars($bien['marca'] ?: '-', ENT_QUOTES, 'UTF-8') ?></td>
-                        <td><?= htmlspecialchars($bien['modelo'] ?: '-', ENT_QUOTES, 'UTF-8') ?></td>
-                        <td><?= htmlspecialchars($bien['serie'] ?: '-', ENT_QUOTES, 'UTF-8') ?></td>
-                        <td><?= htmlspecialchars($bien['nombre_categoria'] ?: '-', ENT_QUOTES, 'UTF-8') ?></td>
-                        <td><?= htmlspecialchars($bien['nombre_estado'] ?: '-', ENT_QUOTES, 'UTF-8') ?></td>
-                        <td><?= htmlspecialchars($bien['condicion_bien'] ?: '-', ENT_QUOTES, 'UTF-8') ?></td>
-                        <td><?= htmlspecialchars($bien['responsable_actual'] ?: '-', ENT_QUOTES, 'UTF-8') ?></td>
-                        <td><?= htmlspecialchars($bien['ubicacion_actual'] ?: '-', ENT_QUOTES, 'UTF-8') ?></td>
-                        <td>
-                            <a href="index.php?modulo=bienes&accion=ver&id=<?= (int) $bien['id_bien'] ?>">Ver</a>
-                        </td>
+                        <th>Código interno</th>
+                        <th>Código SICOIN</th>
+                        <th class="col-descripcion">Descripción</th>
+                        <th>Marca</th>
+                        <th>Modelo</th>
+                        <th>Categoría</th>
+                        <th>Estado</th>
+                        <th>Acciones</th>
                     </tr>
-                <?php endforeach; ?>
-            </tbody>
-        </table>
+                </thead>
+                <tbody>
+                    <?php foreach ($bienes as $bien): ?>
+                        <tr>
+                            <td><?= $mostrar($bien['codigo_interno']) ?></td>
+                            <td><?= $mostrar($bien['codigo_sicoin']) ?></td>
+                            <td><?= $mostrar($bien['descripcion']) ?></td>
+                            <td><?= $mostrar($bien['marca']) ?></td>
+                            <td><?= $mostrar($bien['modelo']) ?></td>
+                            <td><?= $mostrar($bien['nombre_categoria']) ?></td>
+                            <td>
+                                <span class="<?= $claseBadgeEstado($bien['nombre_estado']) ?>"><?= $mostrar($bien['nombre_estado']) ?></span>
+                            </td>
+                            <td>
+                                <a class="btn btn-secondary" href="index.php?modulo=bienes&accion=ver&id=<?= (int) $bien['id_bien'] ?>">Ver</a>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
     <?php endif; ?>
+</div>
 
-    <p><a href="index.php?modulo=dashboard">Volver al panel principal</a></p>
-</body>
-</html>
+<script src="<?= url('public/js/app.js') ?>"></script>

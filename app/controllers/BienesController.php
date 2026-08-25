@@ -136,7 +136,8 @@ class BienesController extends Controller
 
         $this->view('bienes/index', [
             'bienes' => $bienes,
-        ]);
+            'tituloPagina' => 'Bienes institucionales',
+        ], 'main');
     }
 
     public function crear(): void

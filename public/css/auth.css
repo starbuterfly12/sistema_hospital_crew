@@ -1,0 +1,220 @@
+/* ==========================================================================
+   Sistema de Gestión de Bienes — Hospital General de Chiquimula
+   auth.css — estilos exclusivos de la pantalla de Login (layouts/auth.php)
+
+   Depende de las variables de paleta/tipografía ya definidas en app.css
+   (cargado antes en el <head> de layouts/auth.php) — no las redefine aquí.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1. Estructura de página / fondo decorativo
+   -------------------------------------------------------------------------- */
+.auth-shell {
+    position: relative;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--sgb-superficie);
+    overflow: hidden;
+    padding: 60px 20px;
+}
+
+/* Círculos decorativos pastel distribuidos alrededor de la tarjeta (referencia: prototipo de
+   Canva aprobado). Cada uno es un círculo definido (radio sólido + borde suave hasta transparent),
+   no solo un resplandor difuso — repartidos hacia esquinas/laterales, evitando la franja central
+   donde se ubica la tarjeta. position:absolute + z-index:0 + pointer-events:none (heredado de
+   .auth-fondo) garantizan que quedan detrás de la tarjeta y nunca interceptan clics. */
+.auth-fondo {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background:
+        radial-gradient(170px at 6% 12%, var(--sgb-pastel-azul) 0%, var(--sgb-pastel-azul) 55%, transparent 78%),
+        radial-gradient(150px at 92% 8%, var(--sgb-pastel-lila) 0%, var(--sgb-pastel-lila) 55%, transparent 78%),
+        radial-gradient(110px at 99% 48%, var(--sgb-pastel-menta) 0%, var(--sgb-pastel-menta) 55%, transparent 78%),
+        radial-gradient(180px at 88% 95%, var(--sgb-pastel-rosa) 0%, var(--sgb-pastel-rosa) 55%, transparent 78%),
+        radial-gradient(140px at 10% 92%, var(--sgb-pastel-menta) 0%, var(--sgb-pastel-menta) 55%, transparent 78%),
+        radial-gradient(95px at 1% 52%, var(--sgb-pastel-lila) 0%, var(--sgb-pastel-lila) 55%, transparent 78%),
+        radial-gradient(85px at 34% 2%, var(--sgb-pastel-rosa) 0%, var(--sgb-pastel-rosa) 55%, transparent 78%),
+        radial-gradient(100px at 66% 98%, var(--sgb-pastel-azul) 0%, var(--sgb-pastel-azul) 55%, transparent 78%);
+    background-repeat: no-repeat;
+    opacity: 0.65;
+}
+
+.auth-centro {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+}
+
+/* --------------------------------------------------------------------------
+   2. Tarjeta
+   -------------------------------------------------------------------------- */
+.auth-card {
+    width: 100%;
+    max-width: 440px;
+    background: var(--sgb-superficie);
+    border-radius: 16px;
+    box-shadow: 0 10px 40px rgba(20, 49, 92, 0.12);
+    padding: 40px 36px;
+    text-align: center;
+}
+
+/* --------------------------------------------------------------------------
+   3. Logo
+   -------------------------------------------------------------------------- */
+.auth-logo {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 20px;
+}
+
+.auth-logo-img {
+    display: block;
+    width: 100%;
+    max-width: 200px;
+    height: auto;
+    max-height: 110px;
+    object-fit: contain;
+}
+
+.auth-logo-placeholder {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 72px;
+    height: 72px;
+    border-radius: 14px;
+    background: var(--sgb-pastel-azul);
+    color: var(--sgb-azul-oscuro);
+    font-weight: 700;
+    font-size: 20px;
+    letter-spacing: 0.5px;
+}
+
+/* --------------------------------------------------------------------------
+   4. Título / subtítulo
+   -------------------------------------------------------------------------- */
+.auth-titulo {
+    font-size: 27px;
+    font-weight: 700;
+    color: var(--sgb-azul-oscuro);
+    line-height: 1.3;
+    margin: 0 0 8px;
+}
+
+.auth-subtitulo {
+    font-size: 15px;
+    font-weight: 400;
+    color: var(--sgb-texto-secundario);
+    margin: 0 0 28px;
+}
+
+/* --------------------------------------------------------------------------
+   5. Formulario
+   -------------------------------------------------------------------------- */
+.auth-campo {
+    text-align: left;
+    margin-bottom: 18px;
+}
+
+.auth-campo label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--sgb-texto-secundario);
+    margin-bottom: 6px;
+}
+
+.auth-input {
+    width: 100%;
+    font-family: inherit;
+    font-size: 14.5px;
+    padding: 11px 14px;
+    border: 1px solid var(--sgb-borde);
+    border-radius: 8px;
+    background: var(--sgb-superficie);
+    color: var(--sgb-texto);
+}
+
+.auth-input:focus {
+    outline: none;
+    border-color: var(--sgb-azul);
+    box-shadow: 0 0 0 3px var(--sgb-pastel-azul);
+}
+
+/* --------------------------------------------------------------------------
+   6. Botón
+   -------------------------------------------------------------------------- */
+.auth-boton {
+    width: 100%;
+    margin-top: 6px;
+    padding: 12px 16px;
+    border: none;
+    border-radius: 999px;
+    background: var(--sgb-azul);
+    color: #fff;
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.auth-boton:hover {
+    background: var(--sgb-azul-oscuro);
+}
+
+/* --------------------------------------------------------------------------
+   7. Mensaje de error
+   -------------------------------------------------------------------------- */
+.auth-error {
+    margin: 14px 0 0;
+    font-size: 13px;
+    color: var(--sgb-rojo);
+    text-align: center;
+}
+
+/* --------------------------------------------------------------------------
+   8. Pie
+   -------------------------------------------------------------------------- */
+.auth-pie {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 18px;
+    z-index: 1;
+    margin: 0;
+    font-size: 12px;
+    color: var(--sgb-texto-secundario);
+    text-align: center;
+}
+
+/* --------------------------------------------------------------------------
+   9. Responsive
+   -------------------------------------------------------------------------- */
+@media (max-width: 480px) {
+    .auth-card {
+        max-width: 100%;
+        padding: 32px 24px;
+    }
+
+    .auth-titulo {
+        font-size: 24px;
+    }
+
+    /* Menos círculos y más pequeños en pantallas angostas — evita desorden visual sin quitar el
+       efecto decorativo; .auth-shell ya tiene overflow:hidden, así que nunca generan scroll. */
+    .auth-fondo {
+        background:
+            radial-gradient(110px at 8% 10%, var(--sgb-pastel-azul) 0%, var(--sgb-pastel-azul) 55%, transparent 78%),
+            radial-gradient(100px at 92% 8%, var(--sgb-pastel-lila) 0%, var(--sgb-pastel-lila) 55%, transparent 78%),
+            radial-gradient(110px at 90% 94%, var(--sgb-pastel-rosa) 0%, var(--sgb-pastel-rosa) 55%, transparent 78%),
+            radial-gradient(90px at 10% 92%, var(--sgb-pastel-menta) 0%, var(--sgb-pastel-menta) 55%, transparent 78%);
+        background-repeat: no-repeat;
+    }
+}

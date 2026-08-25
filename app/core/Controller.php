@@ -24,7 +24,7 @@ class Controller
         return new $modelName();
     }
 
-    protected function view(string $view, array $data = []): void
+    protected function view(string $view, array $data = [], ?string $layout = null): void
     {
         $viewFile = __DIR__ . '/../views/' . $view . '.php';
 
@@ -33,6 +33,24 @@ class Controller
         }
 
         extract($data, EXTR_SKIP);
+
+        if ($layout === null) {
+            require $viewFile;
+            return;
+        }
+
+        $layoutFile = __DIR__ . '/../views/layouts/' . $layout . '.php';
+
+        if (!file_exists($layoutFile)) {
+            throw new RuntimeException("Layout no encontrado: {$layout}");
+        }
+
+        // El buffer solo se abre cuando se pide layout: así una vista sin layout (JSON, PDF,
+        // Excel, QR, descargas) conserva exactamente el comportamiento de salida directa de antes.
+        ob_start();
         require $viewFile;
+        $content = ob_get_clean();
+
+        require $layoutFile;
     }
 }

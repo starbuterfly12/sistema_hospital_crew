@@ -7,20 +7,25 @@ class AuthController extends Controller
     public function login(): void
     {
         if ($_SERVER['REQUEST_METHOD'] === 'GET') {
-            $this->view('auth/login');
+            $this->view('auth/login', [], 'auth');
             return;
         }
 
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $this->view('auth/login', ['error' => 'No se pudo procesar la solicitud.']);
+            $this->view('auth/login', ['error' => 'No se pudo procesar la solicitud.'], 'auth');
             return;
         }
+
+        // Mismo mecanismo CSRF ya usado en el resto del sistema (BienesController, BajasController,
+        // etc.): se verifica justo después de confirmar que es POST y antes de tocar cualquier otro
+        // campo de $_POST. Login era el único formulario del sistema sin esta validación.
+        verifyCsrf();
 
         $usuarioInput = trim($_POST['usuario'] ?? '');
         $passwordInput = $_POST['password'] ?? '';
 
         if ($usuarioInput === '' || $passwordInput === '') {
-            $this->view('auth/login', ['error' => 'Debe completar usuario y contraseña.']);
+            $this->view('auth/login', ['error' => 'Debe completar usuario y contraseña.'], 'auth');
             return;
         }
 
@@ -29,25 +34,25 @@ class AuthController extends Controller
 
         if (!$usuario) {
             $this->registrarIntentoLogin(null, $usuarioInput, 'Intento de inicio de sesión con usuario inexistente.');
-            $this->view('auth/login', ['error' => 'Usuario o contraseña incorrectos.']);
+            $this->view('auth/login', ['error' => 'Usuario o contraseña incorrectos.'], 'auth');
             return;
         }
 
         if (($usuario['estado_usuario'] ?? '') !== 'activo') {
             $this->registrarIntentoLogin((int) $usuario['id_usuario'], $usuarioInput, 'Intento de inicio de sesión con usuario inactivo.');
-            $this->view('auth/login', ['error' => 'Usuario o contraseña incorrectos.']);
+            $this->view('auth/login', ['error' => 'Usuario o contraseña incorrectos.'], 'auth');
             return;
         }
 
         if (($usuario['estado_rol'] ?? '') !== 'activo') {
             $this->registrarIntentoLogin((int) $usuario['id_usuario'], $usuarioInput, 'Intento de inicio de sesión con rol inactivo.');
-            $this->view('auth/login', ['error' => 'Usuario o contraseña incorrectos.']);
+            $this->view('auth/login', ['error' => 'Usuario o contraseña incorrectos.'], 'auth');
             return;
         }
 
         if (!password_verify($passwordInput, $usuario['password_hash'])) {
             $this->registrarIntentoLogin((int) $usuario['id_usuario'], $usuarioInput, 'Intento de inicio de sesión con contraseña incorrecta.');
-            $this->view('auth/login', ['error' => 'Usuario o contraseña incorrectos.']);
+            $this->view('auth/login', ['error' => 'Usuario o contraseña incorrectos.'], 'auth');
             return;
         }
 
