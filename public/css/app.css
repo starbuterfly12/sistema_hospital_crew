@@ -226,9 +226,6 @@ img {
     align-items: center;
     justify-content: space-between;
     padding: 0 28px;
-    position: sticky;
-    top: 0;
-    z-index: 5;
 }
 
 .topbar-saludo {
@@ -320,6 +317,12 @@ img {
     padding: 18px 20px;
 }
 
+/* Un poco más de aire que .card por defecto — aprovecha el lateral de 280px en Detalle del bien
+   (QR, Estado del bien, Acciones) sin tocar .card global, usado también en Registrar/Editar bien. */
+.card-detalle {
+    padding: 20px 22px;
+}
+
 .page-header {
     margin-bottom: 22px;
 }
@@ -401,38 +404,579 @@ img {
     color: #fff;
 }
 
+/* Variante secundaria con acento azul suave (ej. "Descargar QR" junto a Imprimir/Cerrar) — mismo
+   tono pastel que .action-tile-azul/.table-action-ver, para acciones secundarias que no deben
+   competir visualmente con .btn-primary. */
+.btn-azul-suave {
+    background: var(--sgb-pastel-azul);
+    border-color: #b7d4ff;
+    color: var(--sgb-azul-oscuro);
+}
+.btn-azul-suave:hover {
+    background: #c2ddff;
+    border-color: var(--sgb-azul);
+}
+
 /* --------------------------------------------------------------------------
    9. Formularios
+   Patrón reutilizable para formularios complejos (Registrar bien es el primer
+   caso migrado): .form-card > .form-section(es) > .form-grid > .form-group.
+   Pensado para reusarse tal cual en Responsables, Ubicaciones, Usuarios,
+   Requisiciones y Movimientos cuando se migren.
    -------------------------------------------------------------------------- */
-.form-grupo {
+.form-card {
+    background: var(--sgb-superficie);
+    border: 1px solid var(--sgb-borde);
+    border-radius: var(--sgb-radio);
+    box-shadow: var(--sgb-sombra);
+    padding: 20px 24px;
+}
+
+.form-section {
+    margin-bottom: 20px;
+}
+
+.form-section:last-child {
+    margin-bottom: 0;
+}
+
+.form-section-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--sgb-azul-oscuro);
+    margin: 0;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--sgb-borde);
+}
+
+/* Variante de .form-section para un <fieldset> real (grupo semántico de radios, ej. "¿Bien
+   localizado?" en Registrar verificación física) — mismo look que .form-section/.form-section-title
+   pero sobre las etiquetas nativas fieldset/legend, sin reset extra en cada vista que lo use. */
+.form-section-fieldset {
+    border: none;
+    padding: 0;
+    margin: 0 0 20px;
+}
+.form-section-fieldset:last-child {
+    margin-bottom: 0;
+}
+.form-section-fieldset > legend {
+    width: 100%;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--sgb-azul-oscuro);
+    padding: 0 0 8px;
+    margin: 0 0 12px;
+    border-bottom: 1px solid var(--sgb-borde);
+}
+
+/* Grupo de opciones de radio en línea (ej. Sí/No de Registrar verificación física). Genérico y
+   reutilizable en cualquier formulario del sistema que necesite el mismo patrón. */
+.radio-opciones {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 24px;
+}
+.radio-opciones label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--sgb-texto);
+    cursor: pointer;
+}
+
+/* Título de tarjeta lateral (sin el borde inferior de .form-section-title) — reutilizable en
+   cualquier tarjeta secundaria/lateral que acompañe a un formulario. */
+.card-titulo {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--sgb-azul-oscuro);
+    margin: 0 0 12px;
+}
+
+/* Subtítulo corto usado dentro de una sección que agrupa varios bloques condicionales (ej. "Datos
+   del ingreso" con Compra/Donación/Traslado) para identificar cuál bloque es cuál. */
+.form-section-subtitulo {
+    grid-column: 1 / -1;
+    margin: 4px 0 -4px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--sgb-azul-oscuro);
+}
+
+.form-grid {
+    display: grid;
+    /* minmax(0, 1fr) en vez de 1fr: sin el minmax(0, ...), una columna de grid nunca se encoge por
+       debajo del ancho mínimo de contenido de sus celdas (regla "automatic minimum size" de grid),
+       así que un campo con contenido que no se ajusta (ej. el botón "Seleccionar nuevo archivo" de
+       Editar bien) empuja esa columna — y con ella el formulario entero — más allá de la tarjeta
+       blanca. Con minmax(0, 1fr) la columna respeta su fracción real y el contenido se ajusta/trunca
+       dentro de ella en vez de desbordar. */
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 13px 20px;
+    margin-top: 12px;
+}
+
+.form-grid-full {
+    grid-column: 1 / -1;
+}
+
+/* Fila "Documento actual" + "Nuevo documento de respaldo" (Editar bien): ocupa el ancho completo
+   de la tarjeta en vez de quedar apretada dentro de una sola columna del grid alternado — el
+   selector de archivo necesita más espacio del que le da media columna. */
+.form-grid-documento {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 13px 20px;
+}
+
+.form-group {
     display: flex;
     flex-direction: column;
     gap: 4px;
-    margin-bottom: 14px;
+    min-width: 0;
 }
 
-.form-grupo label {
+.form-label {
     font-size: 13px;
     font-weight: 600;
     color: var(--sgb-texto-secundario);
 }
 
-.form-grupo input,
-.form-grupo select,
-.form-grupo textarea {
+.required-mark {
+    color: var(--sgb-rojo);
+    font-weight: 700;
+}
+
+.form-control {
+    width: 100%;
     font-family: inherit;
     font-size: 14px;
-    padding: 8px 10px;
+    padding: 10px 12px;
     border: 1px solid var(--sgb-borde);
     border-radius: 8px;
     background: var(--sgb-superficie);
     color: var(--sgb-texto);
 }
 
-.form-grupo input:focus,
-.form-grupo select:focus,
-.form-grupo textarea:focus {
-    outline: 2px solid var(--sgb-pastel-azul);
+.form-control:focus {
+    outline: none;
+    border-color: var(--sgb-azul);
+    box-shadow: 0 0 0 3px var(--sgb-pastel-azul);
+}
+
+.form-control:disabled {
+    background: var(--sgb-fondo);
+    color: var(--sgb-texto-secundario);
+}
+
+textarea.form-control {
+    resize: vertical;
+    min-height: 84px;
+}
+
+.form-hint {
+    font-size: 12px;
+    color: var(--sgb-texto-secundario);
+    margin: 0;
+}
+
+.form-hint-centrado {
+    text-align: center;
+}
+
+.form-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid var(--sgb-borde);
+}
+
+/* Campo de fecha (input + botón de calendario Flatpickr) usado en varios formularios. */
+.campo-fecha {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.campo-fecha .form-control {
+    flex: 1;
+}
+
+.btn-calendario {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+    border: 1px solid var(--sgb-borde);
+    border-radius: 8px;
+    background: var(--sgb-superficie);
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+/* Input/select acompañado de un botón de acción a la derecha (ej. Categoría + "Nueva categoría").
+   Reutilizable en cualquier formulario con el mismo patrón. */
+.input-with-action {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.input-with-action .form-control {
+    flex: 1;
+    min-width: 0;
+}
+
+.input-with-action .btn {
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+.btn-calendario:hover {
+    background: var(--sgb-fondo);
+}
+
+/* Oculta visualmente un elemento sin quitarlo del flujo accesible: sigue siendo enfocable por
+   teclado y activable por lectores de pantalla (a diferencia de display:none). Usado para el
+   <input type="file"> real detrás de .file-picker-button. */
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* Selector de archivo con estilo del sistema (input real oculto + botón + nombre visible).
+   Reutilizable en cualquier <input type="file"> del sistema. */
+.file-picker {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.file-picker-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+    height: 38px;
+    padding: 0 14px;
+    border: 1px solid var(--sgb-borde);
+    border-radius: 8px;
+    background: var(--sgb-superficie);
+    color: var(--sgb-azul-oscuro);
+    font-family: inherit;
+    font-size: 13.5px;
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.file-picker-button svg {
+    width: 15px;
+    height: 15px;
+    flex-shrink: 0;
+}
+
+.file-picker-button:hover {
+    background: var(--sgb-fondo);
+}
+
+/* El input real está oculto visualmente, pero sigue siendo el elemento que recibe el foco de
+   teclado — se refleja aquí en el botón visible para que quien navega con teclado vea dónde está
+   parado (equivalente a un :focus normal, ya que el input en sí no se ve). */
+.file-picker:focus-within .file-picker-button {
+    outline: none;
+    border-color: var(--sgb-azul);
+    box-shadow: 0 0 0 3px var(--sgb-pastel-azul);
+}
+
+.file-picker-name {
+    flex: 1;
+    min-width: 0;
+    height: 38px;
+    display: flex;
+    align-items: center;
+    padding: 0 12px;
+    border: 1px solid var(--sgb-borde);
+    border-radius: 8px;
+    background: var(--sgb-superficie);
+    color: var(--sgb-texto-secundario);
+    font-size: 13.5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.file-picker-name-activo {
+    color: var(--sgb-texto);
+}
+
+/* Composición formulario principal + columna lateral angosta (ej. Registrar bien: QR + estado del
+   registro). Reutilizable en cualquier formulario que necesite este mismo acompañamiento lateral. */
+.form-layout-con-lateral {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 220px;
+    gap: 20px;
+    align-items: start;
+}
+
+/* Variante de .form-layout-con-lateral con lateral más ancho (280px en vez de 220px), solo para
+   Detalle del bien — una ficha de consulta con más contenido lateral (QR, estado, acciones) que
+   Registrar/Editar bien. No se toca .form-layout-con-lateral: sus 220px ya están aprobados ahí. */
+.detail-layout-con-lateral {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 280px;
+    gap: 20px;
+    align-items: start;
+}
+
+.form-layout-lateral {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.qr-preview {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    max-width: 120px;
+    aspect-ratio: 1 / 1;
+    margin: 0 auto 12px;
+    border: 1px dashed var(--sgb-borde);
+    border-radius: var(--sgb-radio);
+    background: var(--sgb-fondo);
+    color: var(--sgb-texto-secundario);
+}
+
+.qr-preview svg {
+    width: 52px;
+    height: 52px;
+}
+
+/* Variante con QR real ya generado (Editar bien): borde sólido en vez de discontinuo, la imagen
+   ocupa el recuadro completo. El estado placeholder (dashed, ícono) se mantiene sin cambios. */
+.qr-preview-real {
+    border-style: solid;
+}
+
+/* QR más grande, solo para Detalle del bien (ficha de consulta, más aire que el QR de Editar). */
+.qr-preview-grande {
+    max-width: 160px;
+    margin-bottom: 16px;
+}
+
+.qr-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    border-radius: 4px;
+}
+
+.qr-estado-texto {
+    text-align: center;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--sgb-texto-secundario);
+    margin: 0 0 6px;
+}
+
+/* --------------------------------------------------------------------------
+   9b. Fichas de detalle (consulta de solo lectura, ej. Detalle del bien)
+   Mismo lenguaje visual que .form-card/.form-section/.form-label — .detail-card
+   y .detail-section reutilizan esas reglas en vez de duplicarlas. .detail-grid
+   es la variante compacta de .form-grid (sin altura de input, valor con fondo
+   suave en vez de borde) para una pantalla de consulta, no de formulario.
+   -------------------------------------------------------------------------- */
+.detail-card {
+    background: var(--sgb-superficie);
+    border: 1px solid var(--sgb-borde);
+    border-radius: var(--sgb-radio);
+    box-shadow: var(--sgb-sombra);
+    padding: 20px 24px;
+}
+
+.detail-section {
+    margin-bottom: 20px;
+}
+
+.detail-section:last-child {
+    margin-bottom: 0;
+}
+
+.detail-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 10px 20px;
+    margin-top: 12px;
+}
+
+.detail-full {
+    grid-column: 1 / -1;
+}
+
+.detail-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+.detail-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--sgb-texto-secundario);
+}
+
+.detail-value {
+    display: flex;
+    align-items: center;
+    min-height: 32px;
+    padding: 6px 10px;
+    border-radius: 8px;
+    background: var(--sgb-fondo);
+    color: var(--sgb-texto);
+    font-size: 14px;
+    word-break: break-word;
+}
+
+.detail-value .badge {
+    align-self: center;
+}
+
+/* Varios .detail-item apilados dentro de una misma tarjeta lateral sin pasar por .detail-grid
+   (ej. "Estado del bien": badge de estado + condición uno debajo del otro). */
+.card .detail-item + .detail-item {
+    margin-top: 10px;
+}
+
+/* Resumen de identificación arriba de la ficha (código + descripción). El estado ya se muestra en
+   "Información del bien" y en la tarjeta lateral "Estado del bien" — no se repite aquí una tercera
+   vez, por eso ya no necesita layout de fila (solo un bloque de texto). */
+.detail-identidad {
+    background: var(--sgb-superficie);
+    border: 1px solid var(--sgb-borde);
+    border-radius: var(--sgb-radio);
+    box-shadow: var(--sgb-sombra);
+    padding: 16px 20px;
+    margin-bottom: 20px;
+}
+
+.detail-identidad-codigo {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--sgb-azul-oscuro);
+    margin: 0;
+}
+
+.detail-identidad-descripcion {
+    font-size: 14px;
+    color: var(--sgb-texto-secundario);
+    margin: 4px 0 0;
+}
+
+/* Lista de acciones reales de la tarjeta lateral "Acciones" (Detalle del bien). */
+.detail-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.detail-actions form {
+    display: flex;
+}
+
+/* Botón de acción tipo tarjeta (ícono + texto), usado en .detail-actions. Genérico y reutilizable
+   fuera de Bienes: solo define forma/comportamiento, el color lo pone el modificador -azul/-lila/
+   -ambar/-menta/-celeste de abajo (mismos tonos pastel que .dashboard-acceso-* del Panel principal,
+   para que se sientan parte del mismo sistema). */
+.action-tile {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid transparent;
+    border-radius: var(--sgb-radio);
+    background: var(--sgb-fondo);
+    color: var(--sgb-azul-oscuro);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.3;
+    text-align: left;
+    cursor: pointer;
+    transition: transform 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.action-tile:hover {
+    text-decoration: none;
+    transform: translateY(-1px);
+}
+
+.action-tile-icono {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+}
+
+.action-tile-icono svg {
+    width: 100%;
+    height: 100%;
+}
+
+.action-tile-azul {
+    background: var(--sgb-pastel-azul);
+    border-color: #b7d4ff;
+}
+.action-tile-azul:hover {
+    background: #c2ddff;
+    border-color: var(--sgb-azul);
+}
+
+.action-tile-lila {
+    background: var(--sgb-pastel-lila);
+    border-color: #d3c5fb;
+}
+.action-tile-lila:hover {
+    background: #ddd1fc;
+    border-color: #9a7fe0;
+}
+
+.action-tile-menta {
+    background: var(--sgb-pastel-menta);
+    border-color: #b7e8cf;
+}
+.action-tile-menta:hover {
+    background: #c3f0dc;
+    border-color: var(--sgb-verde);
+}
+
+.action-tile-celeste {
+    background: var(--sgb-azul-sidebar);
+    border-color: #cfe1fb;
+}
+.action-tile-celeste:hover {
+    background: #ddebfd;
     border-color: var(--sgb-azul);
 }
 
@@ -449,6 +993,20 @@ img {
     border-radius: var(--sgb-radio);
     padding: 14px 18px;
     margin-bottom: 18px;
+}
+
+/* .form-group dentro de .filters (primer consumidor real de esta clase): cada campo crece/decrece
+   como celda de un formulario de filtros en vez de encogerse al ancho de su contenido. */
+.filters .form-group {
+    flex: 1 1 170px;
+    min-width: 150px;
+    gap: 4px;
+}
+
+.filters .form-actions-inline {
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
 
 /* --------------------------------------------------------------------------
@@ -554,15 +1112,84 @@ img {
 .table-resizable thead th:nth-child(5) { width: 150px; min-width: 110px; } /* Modelo */
 .table-resizable thead th:nth-child(6) { width: 160px; min-width: 120px; } /* Categoría */
 .table-resizable thead th:nth-child(7) { width: 105px; min-width: 85px;  } /* Estado */
-.table-resizable thead th:nth-child(8) { width: 100px; min-width: 90px;  } /* Acciones */
+.table-resizable thead th:nth-child(8) { width: 150px; min-width: 145px; } /* Acciones: Ver + Editar */
 
 .table-resizable tbody td {
     font-size: 13px;
 }
 
-/* "Ver" y el badge de Estado nunca deben partirse aunque la columna se reduzca hasta su mínimo. */
-.table-resizable td .btn {
+/* La celda de Acciones necesita todo el ancho posible para que "Ver" y "Editar" convivan en una
+   sola línea a 150px de columna — únicamente esta celda (última columna) reduce su padding
+   horizontal; las otras 7 columnas conservan el padding estándar de .table-app. */
+.table-resizable tbody td:last-child {
+    padding-left: 8px;
+    padding-right: 8px;
+}
+
+/* "Ver"/"Editar" y el badge de Estado nunca deben partirse aunque la columna se reduzca hasta su
+   mínimo. */
+.table-resizable td .btn,
+.table-resizable td .table-action-btn {
     white-space: nowrap;
+}
+
+/* Acciones compactas de fila (Ver/Editar en el listado de Bienes) — icono + texto corto, mucho más
+   chicas que .btn, pensadas para convivir dos en la misma línea dentro de la celda sin ensanchar la
+   tabla. Genérico y reutilizable en cualquier listado con .table-resizable. En escritorio se
+   mantienen siempre en una sola fila (flex-wrap: nowrap); solo se permite envolver en pantallas
+   realmente angostas (ver media query al final del archivo). */
+.table-actions {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 5px;
+    flex-wrap: nowrap;
+}
+
+.table-action-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    height: 29px;
+    padding: 0 9px;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.table-action-btn:hover {
+    text-decoration: none;
+}
+
+.table-action-btn svg {
+    width: 12px;
+    height: 12px;
+    flex-shrink: 0;
+}
+
+.table-action-ver {
+    background: var(--sgb-pastel-azul);
+    border-color: #b7d4ff;
+    color: var(--sgb-azul-oscuro);
+}
+.table-action-ver:hover {
+    background: #c2ddff;
+    border-color: var(--sgb-azul);
+}
+
+.table-action-editar {
+    background: var(--sgb-pastel-lila);
+    border-color: #d3c5fb;
+    color: var(--sgb-azul-oscuro);
+}
+.table-action-editar:hover {
+    background: #ddd1fc;
+    border-color: #9a7fe0;
 }
 
 .table-resize-handle {
@@ -575,6 +1202,44 @@ img {
     background: transparent;
     user-select: none;
 }
+
+/* --------------------------------------------------------------------------
+   Verificaciones físicas / Historial de verificaciones (9 columnas) — misma tabla redimensionable
+   que Bienes (.table-resizable ya aporta table-layout:fixed, centrado y wrap por palabra), pero con
+   tipografía/padding/anchos propios para que las 9 columnas quepan sin scroll horizontal inicial en
+   escritorio. El selector compuesto (.table-resizable.table-verificaciones, dos clases) tiene más
+   especificidad que las reglas de ancho de Bienes de arriba — aunque ambas tablas comparten
+   .table-resizable, no colisionan entre sí.
+   -------------------------------------------------------------------------- */
+.table-resizable.table-verificaciones {
+    font-size: 12px;
+}
+
+.table-resizable.table-verificaciones thead th {
+    font-size: 12px;
+}
+
+.table-resizable.table-verificaciones th,
+.table-resizable.table-verificaciones td {
+    padding: 10px 7px;
+}
+
+.table-resizable.table-verificaciones tbody td {
+    font-size: 12px;
+}
+
+/* Anchos iniciales — trasladados un poco por debajo de la referencia visual para que la suma quepa
+   dentro de la tarjeta a 1366px (resolución de escritorio objetivo más angosta); la usuaria puede
+   ampliar cualquiera arrastrando el handle, igual que en Bienes. */
+.table-resizable.table-verificaciones thead th:nth-child(1) { width: 110px; min-width: 100px; } /* Fecha y hora */
+.table-resizable.table-verificaciones thead th:nth-child(2) { width: 100px; min-width: 90px;  } /* Código interno */
+.table-resizable.table-verificaciones thead th:nth-child(3) { width: 75px;  min-width: 70px;  } /* SICOIN */
+.table-resizable.table-verificaciones thead th:nth-child(4) { width: 145px; min-width: 130px; } /* Descripción */
+.table-resizable.table-verificaciones thead th:nth-child(5) { width: 150px; min-width: 130px; } /* Responsable registrado */
+.table-resizable.table-verificaciones thead th:nth-child(6) { width: 125px; min-width: 110px; } /* Ubicación registrada */
+.table-resizable.table-verificaciones thead th:nth-child(7) { width: 85px;  min-width: 80px;  } /* Localizado */
+.table-resizable.table-verificaciones thead th:nth-child(8) { width: 110px; min-width: 105px; } /* Resultado */
+.table-resizable.table-verificaciones thead th:nth-child(9) { width: 80px;  min-width: 75px;  } /* Acciones */
 
 .table-resize-handle:hover,
 .table-resize-handle.resize-activo {
@@ -598,6 +1263,7 @@ img {
 .badge {
     display: inline-flex;
     align-items: center;
+    align-self: flex-start;
     padding: 3px 10px;
     border-radius: 999px;
     font-size: 12px;
@@ -694,6 +1360,78 @@ img {
     color: var(--sgb-rojo);
 }
 
+/* Variante de .modal-caja para contenido más amplio (ej. QR ampliado en Detalle del bien) — el
+   ancho fijo de .modal-caja (420px) se queda corto para un QR de 240px con aire alrededor. */
+.modal-caja-qr {
+    max-width: 480px;
+    padding: 1.75rem;
+}
+
+.modal-qr-titulo {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--sgb-azul-oscuro);
+    margin: 0 0 16px;
+    text-align: center;
+}
+
+.modal-qr-contenido {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+}
+
+.modal-qr-imagen {
+    width: 100%;
+    max-width: 240px;
+    height: auto;
+    border: 1px solid var(--sgb-borde);
+    border-radius: var(--sgb-radio);
+    padding: 12px;
+    background: var(--sgb-superficie);
+    margin-bottom: 8px;
+}
+
+.modal-qr-dato {
+    margin: 0;
+    font-size: 14px;
+    color: var(--sgb-texto);
+    text-align: center;
+}
+
+/* Impresión limpia del QR desde el modal: oculta todo lo demás (sidebar, topbar, ficha completa,
+   overlay, botones) y deja únicamente #qr-imprimible (imagen + código interno/SICOIN) centrado en
+   la página. visibility (no display:none) preserva el cálculo de layout del elemento a imprimir
+   mientras el resto desaparece del papel. */
+@media print {
+    body * {
+        visibility: hidden;
+    }
+
+    #qr-imprimible,
+    #qr-imprimible * {
+        visibility: visible;
+    }
+
+    #qr-imprimible {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 40px 0;
+    }
+
+    .modal-qr-imagen {
+        border: none;
+        padding: 0;
+    }
+}
+
 /* --------------------------------------------------------------------------
    16. Responsive
    -------------------------------------------------------------------------- */
@@ -708,6 +1446,63 @@ img {
        en esta fase no se quiere colapso automático a solo-íconos en escritorio. */
     .topbar {
         padding: 0 18px;
+    }
+}
+
+/* Formularios complejos (Registrar bien y siguientes): 1366px sigue siendo una resolución de
+   escritorio objetivo (junto con 1920x1080) y debe conservar el grid de 2 columnas — el colapso a
+   1 columna se reserva para ventanas realmente angostas. */
+@media (max-width: 860px) {
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .form-grid-documento {
+        grid-template-columns: 1fr;
+    }
+
+    .form-card {
+        padding: 18px 16px;
+    }
+
+    .detail-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .detail-card {
+        padding: 18px 16px;
+    }
+
+    .form-layout-con-lateral {
+        grid-template-columns: 1fr;
+    }
+
+    .detail-layout-con-lateral {
+        grid-template-columns: 1fr;
+    }
+
+    .input-with-action {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .file-picker {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .file-picker-button {
+        justify-content: center;
+    }
+}
+
+/* Red de seguridad solo para pantallas realmente angostas (móvil): en escritorio/tablet normal
+   .table-actions se mantiene siempre en una sola fila (flex-wrap: nowrap definido arriba); la
+   tabla ya tiene scroll horizontal propio (.table-responsive) para esos anchos, así que este wrap
+   es el último recurso, no el comportamiento por defecto. */
+@media (max-width: 480px) {
+    .table-actions {
+        flex-wrap: wrap;
     }
 }
 

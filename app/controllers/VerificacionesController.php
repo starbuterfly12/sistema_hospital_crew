@@ -29,12 +29,21 @@ class VerificacionesController extends Controller
             'con_diferencias' => (string) ($_GET['con_diferencias'] ?? ''),
         ];
 
+        // Únicamente para la tarjeta de identificación cuando la pantalla se usa como historial de
+        // un bien puntual (id_bien en el filtro) — de lo contrario la lista de verificaciones podría
+        // venir vacía (bien sin verificaciones aún) y no habría ninguna fila de la que tomar código
+        // interno/descripción. No afecta la consulta principal ni el resultado filtrado.
+        $bienModel = $filtros['id_bien'] > 0 ? $this->model('Bien') : null;
+        $bienFiltro = $bienModel !== null ? $bienModel->findById($filtros['id_bien']) : false;
+
         $this->view('verificaciones/index', [
             'verificaciones' => $verificacionModel->getAll($filtros),
             'responsables' => $responsableModel->getActivos(),
             'ubicaciones' => $ubicacionModel->getActivas(),
             'filtros' => $filtros,
-        ]);
+            'bienFiltro' => $bienFiltro !== false ? $bienFiltro : null,
+            'tituloPagina' => $filtros['id_bien'] > 0 ? 'Historial de verificaciones' : 'Verificaciones físicas',
+        ], 'main');
     }
 
     public function ver(): void
@@ -61,7 +70,8 @@ class VerificacionesController extends Controller
 
         $this->view('verificaciones/ver', [
             'verificacion' => $verificacion,
-        ]);
+            'tituloPagina' => 'Detalle de verificación física',
+        ], 'main');
     }
 
     public function crear(): void
@@ -100,7 +110,8 @@ class VerificacionesController extends Controller
                 'errorBien' => $errorBien,
                 'error' => null,
                 'datosFormulario' => [],
-            ]);
+                'tituloPagina' => 'Registrar verificación física',
+            ], 'main');
             return;
         }
 
@@ -134,7 +145,8 @@ class VerificacionesController extends Controller
                 'errorBien' => 'Debe seleccionar un bien válido.',
                 'error' => null,
                 'datosFormulario' => $datosFormulario,
-            ]);
+                'tituloPagina' => 'Registrar verificación física',
+            ], 'main');
             return;
         }
 
@@ -204,7 +216,8 @@ class VerificacionesController extends Controller
                 'errorBien' => null,
                 'error' => $error,
                 'datosFormulario' => $datosFormulario,
-            ]);
+                'tituloPagina' => 'Registrar verificación física',
+            ], 'main');
             return;
         }
 

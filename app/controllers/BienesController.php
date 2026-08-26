@@ -165,7 +165,8 @@ class BienesController extends Controller
                 'datos' => [],
                 'error' => null,
                 'bodegaConfigurada' => $this->resolverBodegaAlmacen() !== false,
-            ]);
+                'tituloPagina' => 'Registrar bien',
+            ], 'main');
             return;
         }
 
@@ -439,7 +440,8 @@ class BienesController extends Controller
                 'categorias' => $categorias,
                 'estados' => $estados,
                 'bodegaConfigurada' => $bodegaAlmacen !== false,
-            ]);
+                'tituloPagina' => 'Registrar bien',
+            ], 'main');
             return;
         }
 
@@ -579,7 +581,8 @@ class BienesController extends Controller
                 'categorias' => $categorias,
                 'estados' => $estados,
                 'bodegaConfigurada' => $bodegaAlmacen !== false,
-            ]);
+                'tituloPagina' => 'Registrar bien',
+            ], 'main');
             return;
         }
     }
@@ -626,7 +629,8 @@ class BienesController extends Controller
             'bien' => $bien,
             'formaNombre' => $formaNombre,
             'datosIngreso' => $datosIngreso !== false ? $datosIngreso : [],
-        ]);
+            'tituloPagina' => 'Detalle del bien',
+        ], 'main');
     }
 
     public function editar(): void
@@ -731,7 +735,8 @@ class BienesController extends Controller
                 'estados' => $estados,
                 'documentoActual' => $rutaDocumentoActual,
                 'error' => null,
-            ]);
+                'tituloPagina' => 'Modificar bien',
+            ], 'main');
 
             return;
         }
@@ -790,6 +795,13 @@ class BienesController extends Controller
         $sicoinAnteriorNormalizado = $sicoinAnteriorNormalizado !== '' ? $sicoinAnteriorNormalizado : null;
         $sicoinNuevoNormalizado = $datos['codigo_sicoin'];
         $huboCambioSicoin = $sicoinAnteriorNormalizado !== $sicoinNuevoNormalizado;
+
+        // Mismo criterio que el SICOIN: la bitácora genérica de MODIFICAR_BIEN no distingue qué
+        // campo cambió, así que un cambio de condición necesita su propia entrada dedicada con
+        // valor anterior→nuevo explícito (reemplaza la trazabilidad que daba la extinta acción
+        // independiente "Cambiar condición").
+        $condicionAnterior = (string) ($bien['condicion_bien'] ?? '');
+        $huboCambioCondicion = $condicionAnterior !== $condicionBien;
 
         $datosIngresoCompra = [
             'proveedor' => $proveedor !== '' ? $proveedor : null,
@@ -977,7 +989,8 @@ class BienesController extends Controller
                 'categorias' => $categorias,
                 'estados' => $estados,
                 'documentoActual' => $rutaDocumentoActual,
-            ]);
+                'tituloPagina' => 'Modificar bien',
+            ], 'main');
 
             return;
         }
@@ -1015,6 +1028,21 @@ class BienesController extends Controller
                     resultado: 'exitoso',
                     descripcion: 'Se actualizó el código SICOIN del bien con código interno ' . $datos['codigo_interno']
                         . ': ' . ($sicoinAnteriorNormalizado ?? 'Sin SICOIN') . ' → ' . $sicoinNuevoNormalizado . '.',
+                    tablaAfectada: 'bienes',
+                    idRegistroAfectado: $idBien,
+                    ipOrigen: $_SERVER['REMOTE_ADDR'] ?? null,
+                    usuarioIntentado: null
+                );
+            }
+
+            if ($huboCambioCondicion) {
+                $bitacoraModel->registrar(
+                    idUsuario: (int) $_SESSION['id_usuario'],
+                    accion: 'CAMBIAR_CONDICION_BIEN',
+                    modulo: 'Bienes',
+                    resultado: 'exitoso',
+                    descripcion: 'Se actualizó la condición del bien con código interno ' . $datos['codigo_interno']
+                        . ': ' . $condicionAnterior . ' → ' . $condicionBien . '.',
                     tablaAfectada: 'bienes',
                     idRegistroAfectado: $idBien,
                     ipOrigen: $_SERVER['REMOTE_ADDR'] ?? null,
@@ -1085,92 +1113,11 @@ class BienesController extends Controller
                 'categorias' => $categorias,
                 'estados' => $estados,
                 'documentoActual' => $rutaDocumentoActual,
-            ]);
+                'tituloPagina' => 'Modificar bien',
+            ], 'main');
 
             return;
         }
-    }
-
-    public function cambiarCondicion(): void
-    {
-        if (!isset($_SESSION['id_usuario'])) {
-            header('Location: index.php');
-            exit;
-        }
-
-        requireRole(['Administrador', 'Operativo']);
-
-        $idBien = (int) ($_GET['id'] ?? 0);
-
-        if ($idBien <= 0) {
-            echo 'Bien no válido.';
-            return;
-        }
-
-        $bienModel = $this->model('Bien');
-        $bitacoraModel = $this->model('Bitacora');
-        $bien = $bienModel->findById($idBien);
-
-        if ($bien === false) {
-            echo 'Bien no encontrado.';
-            return;
-        }
-
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $this->view('bienes/cambiar_condicion', [
-                'bien' => $bien,
-                'error' => null,
-            ]);
-            return;
-        }
-
-        verifyCsrf();
-
-        $condicion = trim($_POST['condicion_bien'] ?? '');
-        $condicionesValidas = ['Bueno', 'Regular', 'Malo'];
-
-        if (!in_array($condicion, $condicionesValidas, true)) {
-            $this->view('bienes/cambiar_condicion', [
-                'bien' => $bien,
-                'error' => 'La condición seleccionada no es válida.',
-            ]);
-            return;
-        }
-
-        $condicionAnterior = $bien['condicion_bien'] ?? '';
-
-        try {
-            $bienModel->beginTransaction();
-
-            $bienModel->cambiarCondicion($idBien, $condicion);
-
-            $bitacoraModel->registrar(
-                idUsuario: (int) $_SESSION['id_usuario'],
-                accion: 'CAMBIAR_CONDICION_BIEN',
-                modulo: 'Bienes',
-                resultado: 'exitoso',
-                descripcion: 'Cambio de condición: ' . $condicionAnterior . ' → ' . $condicion . '.',
-                tablaAfectada: 'bienes',
-                idRegistroAfectado: $idBien,
-                ipOrigen: $_SERVER['REMOTE_ADDR'] ?? null,
-                usuarioIntentado: null
-            );
-
-            $bienModel->commit();
-        } catch (Throwable $e) {
-            if ($bienModel->inTransaction()) {
-                $bienModel->rollBack();
-            }
-
-            $this->view('bienes/cambiar_condicion', [
-                'bien' => $bien,
-                'error' => 'No fue posible cambiar la condición del bien. Intente nuevamente.',
-            ]);
-            return;
-        }
-
-        header('Location: index.php?modulo=bienes&accion=ver&id=' . $idBien);
-        exit;
     }
 
     public function generarQr(): void

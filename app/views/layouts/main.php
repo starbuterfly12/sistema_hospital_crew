@@ -54,15 +54,10 @@ $inicialAvatar = mb_strtoupper(mb_substr(trim($nombreCompletoSesion) !== '' ? tr
 $moduloUrlActual = strtolower((string) ($_GET['modulo'] ?? ''));
 $moduloActivo = sgbModuloActivo($moduloUrlActual);
 
-// Estructura preparada para public/img/logo-institucional.{svg,png}: mientras ese archivo
-// institucional no exista, el sidebar usa un bloque de texto discreto que no aparenta ser el logo final.
-$logoInstitucionalUrl = null;
-foreach (['svg', 'png'] as $extensionLogo) {
-    if (is_file(__DIR__ . '/../../../public/img/logo-institucional.' . $extensionLogo)) {
-        $logoInstitucionalUrl = 'public/img/logo-institucional.' . $extensionLogo;
-        break;
-    }
-}
+// Mientras ese archivo institucional no exista, el sidebar usa un bloque de texto discreto que no
+// aparenta ser el logo final. logoInstitucionalUrl() (app/helpers/url.php) ya incluye cache-busting
+// por filemtime(), así que $logoInstitucionalUrl aquí es una URL completa, no una ruta relativa.
+$logoInstitucionalUrl = logoInstitucionalUrl();
 
 $itemsSidebar = [
     ['id' => 'dashboard', 'etiqueta' => 'Panel principal', 'href' => 'index.php?modulo=dashboard', 'icono' => 'dashboard', 'roles' => null],
@@ -84,14 +79,14 @@ $itemsSidebar = [
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= htmlspecialchars($tituloPagina, ENT_QUOTES, 'UTF-8') ?></title>
-    <link rel="stylesheet" href="<?= url('public/css/app.css') ?>">
+    <link rel="stylesheet" href="<?= assetUrl('public/css/app.css') ?>">
 </head>
 <body>
     <div class="app-shell">
         <aside class="sidebar">
             <div class="sidebar-brand">
                 <?php if ($logoInstitucionalUrl !== null): ?>
-                    <img src="<?= htmlspecialchars(url($logoInstitucionalUrl), ENT_QUOTES, 'UTF-8') ?>" alt="Logo institucional" class="sidebar-brand-logo">
+                    <img src="<?= htmlspecialchars($logoInstitucionalUrl, ENT_QUOTES, 'UTF-8') ?>" alt="Logo institucional" class="sidebar-brand-logo">
                 <?php else: ?>
                     <span class="sidebar-brand-placeholder" aria-hidden="true">SGB</span>
                 <?php endif; ?>

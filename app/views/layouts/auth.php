@@ -10,8 +10,8 @@ if ($tituloPagina === '') {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= htmlspecialchars($tituloPagina, ENT_QUOTES, 'UTF-8') ?></title>
-    <link rel="stylesheet" href="<?= url('public/css/app.css') ?>">
-    <link rel="stylesheet" href="<?= url('public/css/auth.css') ?>">
+    <link rel="stylesheet" href="<?= assetUrl('public/css/app.css') ?>">
+    <link rel="stylesheet" href="<?= assetUrl('public/css/auth.css') ?>">
 </head>
 <body>
     <div class="auth-shell">

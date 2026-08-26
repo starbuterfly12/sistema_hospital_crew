@@ -67,7 +67,18 @@ $claseBadgeEstado = static function (?string $nombreEstado): string {
                                 <span class="<?= $claseBadgeEstado($bien['nombre_estado']) ?>"><?= $mostrar($bien['nombre_estado']) ?></span>
                             </td>
                             <td>
-                                <a class="btn btn-secondary" href="index.php?modulo=bienes&accion=ver&id=<?= (int) $bien['id_bien'] ?>">Ver</a>
+                                <div class="table-actions">
+                                    <a class="table-action-btn table-action-ver" href="index.php?modulo=bienes&accion=ver&id=<?= (int) $bien['id_bien'] ?>">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.5 12S5 5 12 5s10.5 7 10.5 7-3.5 7-10.5 7S1.5 12 1.5 12Z"/><circle cx="12" cy="12" r="3"/></svg>
+                                        Ver
+                                    </a>
+                                    <?php if ($puedeRegistrar): ?>
+                                        <a class="table-action-btn table-action-editar" href="index.php?modulo=bienes&accion=editar&id=<?= (int) $bien['id_bien'] ?>">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                                            Editar
+                                        </a>
+                                    <?php endif; ?>
+                                </div>
                             </td>
                         </tr>
                     <?php endforeach; ?>

@@ -1,21 +1,16 @@
 <?php
 // Fragmento de contenido: se renderiza dentro de layouts/auth.php (ver AuthController::login()).
-// Misma resolución de logo institucional que usa layouts/main.php: si el archivo todavía no
-// existiera en public/img/, se cae a un placeholder discreto en vez de romper la vista.
-$logoInstitucionalUrl = null;
-foreach (['svg', 'png'] as $extensionLogo) {
-    if (is_file(__DIR__ . '/../../../public/img/logo-institucional.' . $extensionLogo)) {
-        $logoInstitucionalUrl = 'public/img/logo-institucional.' . $extensionLogo;
-        break;
-    }
-}
+// Misma resolución de logo institucional que usa layouts/main.php (logoInstitucionalUrl() en
+// app/helpers/url.php, con cache-busting por filemtime()): si el archivo todavía no existiera en
+// public/img/, se cae a un placeholder discreto en vez de romper la vista.
+$logoInstitucionalUrl = logoInstitucionalUrl();
 
 $error = $error ?? null;
 ?>
 <div class="auth-card">
     <div class="auth-logo">
         <?php if ($logoInstitucionalUrl !== null): ?>
-            <img src="<?= htmlspecialchars(url($logoInstitucionalUrl), ENT_QUOTES, 'UTF-8') ?>" alt="Logo institucional" class="auth-logo-img">
+            <img src="<?= htmlspecialchars($logoInstitucionalUrl, ENT_QUOTES, 'UTF-8') ?>" alt="Logo institucional" class="auth-logo-img">
         <?php else: ?>
             <span class="auth-logo-placeholder" aria-hidden="true">SGB</span>
         <?php endif; ?>

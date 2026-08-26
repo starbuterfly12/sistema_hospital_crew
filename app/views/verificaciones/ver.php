@@ -1,114 +1,170 @@
-<!DOCTYPE html>
-<html lang="es-GT">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Detalle de verificación física</title>
-</head>
-<body>
-    <?php
-        $mostrar = static function ($value): string {
-            if ($value === null || $value === '') {
-                return '-';
-            }
+<?php
+// Fragmento de contenido: se renderiza dentro de layouts/main.php (ver VerificacionesController::ver()).
+// Ficha de solo lectura de una verificación ya registrada — mismos datos que ya recibía la vista
+// anterior ($verificacion), solo cambió el marcado visual.
+$verificacion = $verificacion ?? [];
 
-            return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
-        };
+$mostrar = static function ($value): string {
+    if ($value === null || $value === '') {
+        return '—';
+    }
 
-        $mostrarSiNo = static function (?int $valor): string {
-            if ($valor === null) {
-                return 'No aplica';
-            }
+    return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
+};
 
-            return $valor === 1 ? 'Sí' : 'No';
-        };
+$mostrarSiNo = static function (?int $valor): string {
+    if ($valor === null) {
+        return 'No aplica';
+    }
 
-        $verificacion = $verificacion ?? [];
+    return $valor === 1 ? 'Sí' : 'No';
+};
 
-        $localizado = (int) ($verificacion['bien_localizado'] ?? 0);
-        $tieneDiferencias = (int) ($verificacion['tiene_diferencias'] ?? 0);
+$localizado = (int) ($verificacion['bien_localizado'] ?? 0);
+$tieneDiferencias = (int) ($verificacion['tiene_diferencias'] ?? 0);
 
-        $responsableCorrecto = $verificacion['responsable_correcto'] ?? null;
-        $responsableCorrecto = $responsableCorrecto === null ? null : (int) $responsableCorrecto;
+$responsableCorrecto = $verificacion['responsable_correcto'] ?? null;
+$responsableCorrecto = $responsableCorrecto === null ? null : (int) $responsableCorrecto;
 
-        $ubicacionCorrecta = $verificacion['ubicacion_correcta'] ?? null;
-        $ubicacionCorrecta = $ubicacionCorrecta === null ? null : (int) $ubicacionCorrecta;
+$ubicacionCorrecta = $verificacion['ubicacion_correcta'] ?? null;
+$ubicacionCorrecta = $ubicacionCorrecta === null ? null : (int) $ubicacionCorrecta;
 
-        $condicionObservada = $verificacion['condicion_observada'] ?? null;
-    ?>
+$condicionObservada = $verificacion['condicion_observada'] ?? null;
 
-    <h1>Detalle de verificación física</h1>
+$claseBadgeResultado = $tieneDiferencias === 1 ? 'badge badge-pendiente' : 'badge badge-exito';
+$claseBadgeLocalizado = $localizado === 1 ? 'badge badge-exito' : 'badge badge-error';
+?>
+<div class="page-header">
+    <div class="page-header-fila">
+        <div>
+            <h1 class="page-title">Detalle de verificación física</h1>
+            <p class="page-subtitle">Consulta el resultado registrado de esta verificación física.</p>
+        </div>
 
-    <h2>Datos generales</h2>
-    <dl>
-        <dt>Fecha y hora</dt>
-        <dd><?= $mostrar(formatDateTime($verificacion['fecha_hora'] ?? null)) ?></dd>
+        <div class="page-actions">
+            <a href="index.php?modulo=verificaciones" class="btn btn-secondary">Volver</a>
+        </div>
+    </div>
+</div>
 
-        <dt>Verificado por</dt>
-        <dd><?= $mostrar($verificacion['usuario_verifica_nombre'] ?? null) ?></dd>
+<div class="detail-identidad">
+    <p class="detail-identidad-codigo"><?= $mostrar($verificacion['codigo_interno'] ?? null) ?></p>
+    <p class="detail-identidad-descripcion"><?= $mostrar($verificacion['descripcion'] ?? null) ?></p>
+</div>
 
-        <dt>Resultado</dt>
-        <dd><?= $tieneDiferencias === 1 ? 'Con diferencias' : 'Sin diferencias' ?></dd>
-    </dl>
+<div class="detail-card">
+    <div class="detail-section">
+        <h2 class="form-section-title">Datos generales</h2>
+        <div class="detail-grid">
+            <div class="detail-item">
+                <span class="detail-label">Fecha y hora</span>
+                <span class="detail-value"><?= $mostrar(formatDateTime($verificacion['fecha_hora'] ?? null)) ?></span>
+            </div>
 
-    <h2>Bien</h2>
-    <dl>
-        <dt>No. de Bien</dt>
-        <dd><?= $mostrar($verificacion['codigo_interno'] ?? null) ?></dd>
+            <div class="detail-item">
+                <span class="detail-label">Verificado por</span>
+                <span class="detail-value"><?= $mostrar($verificacion['usuario_verifica_nombre'] ?? null) ?></span>
+            </div>
 
-        <dt>SICOIN</dt>
-        <dd><?= $mostrar($verificacion['codigo_sicoin'] ?? null) ?></dd>
+            <div class="detail-item">
+                <span class="detail-label">Resultado</span>
+                <span class="detail-value"><span class="<?= $claseBadgeResultado ?>"><?= $tieneDiferencias === 1 ? 'Con diferencias' : 'Sin diferencias' ?></span></span>
+            </div>
+        </div>
+    </div>
 
-        <dt>Descripción</dt>
-        <dd><?= $mostrar($verificacion['descripcion'] ?? null) ?></dd>
+    <div class="detail-section">
+        <h2 class="form-section-title">Bien</h2>
+        <div class="detail-grid">
+            <div class="detail-item">
+                <span class="detail-label">Código interno</span>
+                <span class="detail-value"><?= $mostrar($verificacion['codigo_interno'] ?? null) ?></span>
+            </div>
 
-        <dt>Marca</dt>
-        <dd><?= $mostrar($verificacion['marca'] ?? null) ?></dd>
+            <div class="detail-item">
+                <span class="detail-label">Código SICOIN</span>
+                <span class="detail-value"><?= $mostrar($verificacion['codigo_sicoin'] ?? null) ?></span>
+            </div>
 
-        <dt>Modelo</dt>
-        <dd><?= $mostrar($verificacion['modelo'] ?? null) ?></dd>
+            <div class="detail-item">
+                <span class="detail-label">Marca</span>
+                <span class="detail-value"><?= $mostrar($verificacion['marca'] ?? null) ?></span>
+            </div>
 
-        <dt>Serie</dt>
-        <dd><?= $mostrar($verificacion['serie'] ?? null) ?></dd>
-    </dl>
-    <p>
-        <a href="index.php?modulo=bienes&accion=ver&id=<?= (int) ($verificacion['id_bien'] ?? 0) ?>">Ver ficha actual del bien</a>
-    </p>
+            <div class="detail-item">
+                <span class="detail-label">Modelo</span>
+                <span class="detail-value"><?= $mostrar($verificacion['modelo'] ?? null) ?></span>
+            </div>
 
-    <h2>Datos registrados al momento de verificar</h2>
-    <p>Información registrada en el sistema al momento de realizar la verificación.</p>
-    <dl>
-        <dt>Responsable registrado</dt>
-        <dd><?= $mostrar($verificacion['responsable_registrado_nombre'] ?? null) ?></dd>
+            <div class="detail-item">
+                <span class="detail-label">Serie</span>
+                <span class="detail-value"><?= $mostrar($verificacion['serie'] ?? null) ?></span>
+            </div>
 
-        <dt>Ubicación registrada</dt>
-        <dd><?= $mostrar($verificacion['ubicacion_registrada_nombre'] ?? null) ?></dd>
+            <div class="detail-item detail-full">
+                <span class="detail-label">Descripción</span>
+                <span class="detail-value"><?= $mostrar($verificacion['descripcion'] ?? null) ?></span>
+            </div>
 
-        <dt>Condición registrada</dt>
-        <dd><?= $mostrar($verificacion['condicion_registrada'] ?? null) ?></dd>
-    </dl>
+            <div class="detail-item detail-full">
+                <a href="index.php?modulo=bienes&accion=ver&id=<?= (int) ($verificacion['id_bien'] ?? 0) ?>" class="btn btn-secondary">Ver ficha actual del bien</a>
+            </div>
+        </div>
+    </div>
 
-    <h2>Resultado físico</h2>
-    <dl>
-        <dt>Bien localizado</dt>
-        <dd><?= $localizado === 1 ? 'Sí' : 'No' ?></dd>
+    <div class="detail-section">
+        <h2 class="form-section-title">Datos registrados al momento de verificar</h2>
+        <p class="form-hint">Información que el sistema tenía registrada al momento de realizar la verificación.</p>
+        <div class="detail-grid">
+            <div class="detail-item">
+                <span class="detail-label">Responsable registrado</span>
+                <span class="detail-value"><?= $mostrar($verificacion['responsable_registrado_nombre'] ?? null) ?></span>
+            </div>
 
-        <dt>Responsable correcto</dt>
-        <dd><?= $mostrarSiNo($responsableCorrecto) ?></dd>
+            <div class="detail-item">
+                <span class="detail-label">Ubicación registrada</span>
+                <span class="detail-value"><?= $mostrar($verificacion['ubicacion_registrada_nombre'] ?? null) ?></span>
+            </div>
 
-        <dt>Ubicación correcta</dt>
-        <dd><?= $mostrarSiNo($ubicacionCorrecta) ?></dd>
+            <div class="detail-item">
+                <span class="detail-label">Condición registrada</span>
+                <span class="detail-value"><?= $mostrar($verificacion['condicion_registrada'] ?? null) ?></span>
+            </div>
+        </div>
+    </div>
 
-        <dt>Condición observada</dt>
-        <dd><?= $condicionObservada !== null ? $mostrar($condicionObservada) : 'No aplica' ?></dd>
+    <div class="detail-section">
+        <h2 class="form-section-title">Resultado físico</h2>
+        <div class="detail-grid">
+            <div class="detail-item">
+                <span class="detail-label">Bien localizado</span>
+                <span class="detail-value"><span class="<?= $claseBadgeLocalizado ?>"><?= $localizado === 1 ? 'Sí' : 'No' ?></span></span>
+            </div>
 
-        <dt>Resultado</dt>
-        <dd><?= $tieneDiferencias === 1 ? 'Con diferencias' : 'Sin diferencias' ?></dd>
+            <div class="detail-item">
+                <span class="detail-label">Responsable correcto</span>
+                <span class="detail-value"><?= $mostrarSiNo($responsableCorrecto) ?></span>
+            </div>
 
-        <dt>Observaciones</dt>
-        <dd><?= $mostrar($verificacion['observaciones'] ?? null) ?></dd>
-    </dl>
+            <div class="detail-item">
+                <span class="detail-label">Ubicación correcta</span>
+                <span class="detail-value"><?= $mostrarSiNo($ubicacionCorrecta) ?></span>
+            </div>
 
-    <p><a href="index.php?modulo=verificaciones">Volver al listado</a></p>
-</body>
-</html>
+            <div class="detail-item">
+                <span class="detail-label">Condición observada</span>
+                <span class="detail-value"><?= $condicionObservada !== null ? $mostrar($condicionObservada) : 'No aplica' ?></span>
+            </div>
+
+            <div class="detail-item">
+                <span class="detail-label">Resultado</span>
+                <span class="detail-value"><span class="<?= $claseBadgeResultado ?>"><?= $tieneDiferencias === 1 ? 'Con diferencias' : 'Sin diferencias' ?></span></span>
+            </div>
+
+            <div class="detail-item detail-full">
+                <span class="detail-label">Observaciones</span>
+                <span class="detail-value"><?= $mostrar($verificacion['observaciones'] ?? null) ?></span>
+            </div>
+        </div>
+    </div>
+</div>

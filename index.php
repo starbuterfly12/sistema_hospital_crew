@@ -58,8 +58,6 @@ switch ($modulo) {
             $bienesController->ver();
         } elseif ($accion === 'editar') {
             $bienesController->editar();
-        } elseif ($accion === 'cambiar_condicion') {
-            $bienesController->cambiarCondicion();
         } elseif ($accion === 'generar_qr') {
             $bienesController->generarQr();
         } elseif ($accion === 'imprimir_qr') {

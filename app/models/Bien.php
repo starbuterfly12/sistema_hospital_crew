@@ -6,9 +6,9 @@ class Bien extends Model
 {
     protected string $table = 'bienes';
 
-    // Catálogo real de `bienes.condicion_bien` (confirmado en BienesController::crear()/actualizar()/
-    // cambiarCondicion(), donde hoy sigue duplicado como array literal en 3 sitios más las 3 vistas
-    // de Bienes — no se tocan esos 6 usos ya existentes para no rehacer un módulo cerrado). Punto único
+    // Catálogo real de `bienes.condicion_bien` (confirmado en BienesController::crear()/editar(),
+    // donde hoy sigue duplicado como array literal en 2 sitios más las 2 vistas de Bienes — no se
+    // tocan esos 4 usos ya existentes para no rehacer un módulo cerrado). Punto único
     // de reutilización para módulos nuevos que necesiten el mismo catálogo (Préstamos: condición de
     // entrega; Devoluciones: condición de devolución) en vez de que cada uno defina su propia lista.
     public const CONDICIONES_VALIDAS = ['Bueno', 'Regular', 'Malo'];
@@ -191,26 +191,6 @@ class Bien extends Model
             ':costo' => $datos['costo'] ?? null,
             ':valor_estimado' => $datos['valor_estimado'] ?? null,
             ':observaciones' => $datos['observaciones'] ?? null,
-            ':id_bien' => $idBien,
-        ];
-
-        $this->query($sql, $params);
-
-        return true;
-    }
-
-    public function cambiarCondicion(int $idBien, string $condicion): bool
-    {
-        $sql = "
-            UPDATE bienes
-            SET
-                condicion_bien = :condicion_bien,
-                updated_at = NOW()
-            WHERE id_bien = :id_bien
-        ";
-
-        $params = [
-            ':condicion_bien' => $condicion,
             ':id_bien' => $idBien,
         ];
 
