@@ -1,69 +1,122 @@
-<!DOCTYPE html>
-<html lang="es-GT">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Detalle del responsable</title>
-</head>
-<body>
-    <?php
-        $mostrar = static function ($value): string {
-            if ($value === null || $value === '') {
-                return '-';
-            }
+<?php
+// Fragmento de contenido: se renderiza dentro de layouts/main.php (ver ResponsablesController::ver()).
+// Ficha de solo lectura — mismos datos que ya recibía la vista anterior ($responsable), mismo endpoint
+// POST de cambio de estado (cambiar_estado) con su csrfField(); solo cambió el marcado visual.
+// El detalle actual no muestra bienes asignados ni enlace a Tarjeta de responsabilidad — no se inventan.
+$responsable = $responsable ?? [];
 
-            return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
-        };
+$mostrar = static function ($valor): string {
+    return ($valor !== null && trim((string) $valor) !== '') ? htmlspecialchars((string) $valor, ENT_QUOTES, 'UTF-8') : '—';
+};
 
-        $responsable = $responsable ?? [];
-    ?>
+$idResponsable = (int) ($responsable['id_responsable'] ?? 0);
+$estado = $responsable['estado_responsable'] ?? null;
+$puedeGestionar = tieneRol(['Administrador', 'Operativo']);
 
-    <h1>Detalle del responsable</h1>
+$claseBadgeEstado = match ($estado) {
+    'activo' => 'badge badge-exito',
+    'inactivo' => 'badge badge-error',
+    default => 'badge',
+};
 
-    <dl>
-        <dt>Nombre completo</dt>
-        <dd><?= $mostrar($responsable['nombre_completo'] ?? null) ?></dd>
+$etiquetaEstado = match ($estado) {
+    'activo' => 'Activo',
+    'inactivo' => 'Inactivo',
+    default => (string) ($estado ?? '—'),
+};
+?>
+<div class="page-header">
+    <div class="page-header-fila">
+        <div>
+            <h1 class="page-title">Detalle del responsable</h1>
+            <p class="page-subtitle">Consulta de la información registrada del responsable.</p>
+        </div>
 
-        <dt>NIT</dt>
-        <dd><?= $mostrar($responsable['nit'] ?? null) ?></dd>
+        <div class="page-actions">
+            <a href="index.php?modulo=responsables" class="btn btn-secondary">Volver</a>
+            <?php if ($puedeGestionar): ?>
+                <a href="index.php?modulo=responsables&accion=editar&id=<?= $idResponsable ?>" class="btn btn-primary">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                    Modificar
+                </a>
+            <?php endif; ?>
+        </div>
+    </div>
+</div>
 
-        <dt>Cargo</dt>
-        <dd><?= $mostrar($responsable['cargo'] ?? null) ?></dd>
+<div class="detail-identidad">
+    <p class="detail-identidad-codigo"><?= $mostrar($responsable['nombre_completo'] ?? null) ?></p>
+    <p class="detail-identidad-descripcion">NIT: <?= $mostrar($responsable['nit'] ?? null) ?></p>
+</div>
 
-        <dt>Profesión</dt>
-        <dd><?= $mostrar($responsable['profesion'] ?? null) ?></dd>
+<div class="detail-card">
+    <div class="detail-section">
+        <h2 class="form-section-title">Información del responsable</h2>
+        <div class="detail-grid">
+            <div class="detail-item">
+                <span class="detail-label">Nombre completo</span>
+                <span class="detail-value"><?= $mostrar($responsable['nombre_completo'] ?? null) ?></span>
+            </div>
 
-        <dt>Teléfono</dt>
-        <dd><?= $mostrar($responsable['telefono'] ?? null) ?></dd>
+            <div class="detail-item">
+                <span class="detail-label">NIT</span>
+                <span class="detail-value"><?= $mostrar($responsable['nit'] ?? null) ?></span>
+            </div>
 
-        <dt>Ubicación</dt>
-        <dd><?= $mostrar($responsable['nombre_ubicacion'] ?? null) ?></dd>
+            <div class="detail-item">
+                <span class="detail-label">Cargo</span>
+                <span class="detail-value"><?= $mostrar($responsable['cargo'] ?? null) ?></span>
+            </div>
 
-        <dt>Tipo de ubicación</dt>
-        <dd><?= $mostrar($responsable['tipo_ubicacion'] ?? null) ?></dd>
+            <div class="detail-item">
+                <span class="detail-label">Profesión</span>
+                <span class="detail-value"><?= $mostrar($responsable['profesion'] ?? null) ?></span>
+            </div>
 
-        <dt>Estado</dt>
-        <dd><?= $mostrar($responsable['estado_responsable'] ?? null) ?></dd>
-    </dl>
+            <div class="detail-item">
+                <span class="detail-label">Teléfono</span>
+                <span class="detail-value"><?= $mostrar($responsable['telefono'] ?? null) ?></span>
+            </div>
 
-    <?php if (tieneRol(['Administrador', 'Operativo'])): ?>
-        <p>
-            <a href="index.php?modulo=responsables&accion=editar&id=<?= (int) ($responsable['id_responsable'] ?? 0) ?>">Editar</a>
-        </p>
+            <div class="detail-item">
+                <span class="detail-label">Área / ubicación</span>
+                <span class="detail-value"><?= $mostrar($responsable['nombre_ubicacion'] ?? null) ?></span>
+            </div>
 
-        <?php if (($responsable['estado_responsable'] ?? null) === 'activo'): ?>
-            <form method="POST" action="index.php?modulo=responsables&accion=cambiar_estado&id=<?= (int) ($responsable['id_responsable'] ?? 0) ?>">
-                <?= csrfField() ?>
-                <button type="submit">Inactivar responsable</button>
-            </form>
-        <?php elseif (($responsable['estado_responsable'] ?? null) === 'inactivo'): ?>
-            <form method="POST" action="index.php?modulo=responsables&accion=cambiar_estado&id=<?= (int) ($responsable['id_responsable'] ?? 0) ?>">
-                <?= csrfField() ?>
-                <button type="submit">Activar responsable</button>
-            </form>
-        <?php endif; ?>
-    <?php endif; ?>
+            <div class="detail-item">
+                <span class="detail-label">Tipo de ubicación</span>
+                <span class="detail-value"><?= $mostrar($responsable['tipo_ubicacion'] ?? null) ?></span>
+            </div>
 
-    <p><a href="index.php?modulo=responsables">Volver al listado</a></p>
-</body>
-</html>
+            <div class="detail-item">
+                <span class="detail-label">Estado</span>
+                <span class="detail-value"><span class="<?= $claseBadgeEstado ?>"><?= $mostrar($etiquetaEstado) ?></span></span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<?php if ($puedeGestionar && in_array($estado, ['activo', 'inactivo'], true)): ?>
+    <div class="card">
+        <h2 class="card-titulo">Estado del responsable</h2>
+        <div class="detail-actions">
+            <?php if ($estado === 'activo'): ?>
+                <form method="POST" action="index.php?modulo=responsables&accion=cambiar_estado&id=<?= $idResponsable ?>">
+                    <?= csrfField() ?>
+                    <button type="submit" class="btn btn-danger">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18.36 6.64A9 9 0 1 1 5.64 6.64M12 2v10"/></svg>
+                        Inactivar responsable
+                    </button>
+                </form>
+            <?php else: ?>
+                <form method="POST" action="index.php?modulo=responsables&accion=cambiar_estado&id=<?= $idResponsable ?>">
+                    <?= csrfField() ?>
+                    <button type="submit" class="btn btn-success">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>
+                        Activar responsable
+                    </button>
+                </form>
+            <?php endif; ?>
+        </div>
+    </div>
+<?php endif; ?>

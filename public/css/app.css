@@ -1065,6 +1065,22 @@ textarea.form-control {
     text-overflow: ellipsis;
 }
 
+/* Tablas .table-app compactas con encabezados y contenido centrados (fichas de detalle y listados
+   sin resize) — ej. las dos tablas del Detalle de requisición ("Requisiciones institucionales" y
+   "Bienes") y el listado de Responsables. Centra también el badge de estado y la fila Total, con el
+   mismo criterio visual que Bienes/Verificaciones, sin tocar .table-app globalmente. Cuerpo un punto
+   más compacto; encabezados y padding sin cambios. Reutilizable en cualquier .table-app. */
+.table-detail-centered th,
+.table-detail-centered td {
+    text-align: center;
+    vertical-align: middle;
+}
+
+.table-detail-centered tbody td,
+.table-detail-centered tfoot td {
+    font-size: 13px;
+}
+
 /* --------------------------------------------------------------------------
    Tabla con columnas redimensionables manualmente (public/js/app.js inicializa el arrastre solo
    en tablas con esta clase — ver esa nota en app.js). Se prueba primero en Bienes; NO se aplica
@@ -1241,6 +1257,79 @@ textarea.form-control {
 .table-resizable.table-verificaciones thead th:nth-child(8) { width: 110px; min-width: 105px; } /* Resultado */
 .table-resizable.table-verificaciones thead th:nth-child(9) { width: 80px;  min-width: 75px;  } /* Acciones */
 
+/* --------------------------------------------------------------------------
+   Requisiciones (listado, 9 columnas) — misma mecánica que .table-verificaciones: el selector
+   compuesto (.table-resizable.table-requisiciones) gana en especificidad a los anchos por
+   nth-child de Bienes, así ambas tablas comparten .table-resizable sin colisionar. Anchos
+   iniciales pensados para caber sin scroll horizontal a 1366px; la usuaria puede ampliar
+   cualquiera arrastrando el handle.
+   -------------------------------------------------------------------------- */
+.table-resizable.table-requisiciones {
+    font-size: 12.5px;
+}
+
+.table-resizable.table-requisiciones thead th {
+    font-size: 12px;
+}
+
+.table-resizable.table-requisiciones th,
+.table-resizable.table-requisiciones td {
+    padding: 10px 8px;
+}
+
+.table-resizable.table-requisiciones thead th:nth-child(1) { width: 115px; min-width: 100px; } /* No. sistema */
+.table-resizable.table-requisiciones thead th:nth-child(2) { width: 140px; min-width: 115px; } /* Requisiciones institucionales */
+.table-resizable.table-requisiciones thead th:nth-child(3) { width: 95px;  min-width: 80px;  } /* Oficio No. */
+.table-resizable.table-requisiciones thead th:nth-child(4) { width: 160px; min-width: 130px; } /* Responsable solicitante */
+.table-resizable.table-requisiciones thead th:nth-child(5) { width: 140px; min-width: 115px; } /* Área / Servicio */
+.table-resizable.table-requisiciones thead th:nth-child(6) { width: 70px;  min-width: 60px;  } /* Bienes */
+.table-resizable.table-requisiciones thead th:nth-child(7) { width: 105px; min-width: 95px;  } /* Estado */
+.table-resizable.table-requisiciones thead th:nth-child(8) { width: 120px; min-width: 110px; } /* Fecha de creación */
+.table-resizable.table-requisiciones thead th:nth-child(9) { width: 80px;  min-width: 70px;  } /* Acciones */
+
+/* --------------------------------------------------------------------------
+   Responsables (listado, 6 columnas) — mismo mecanismo que .table-verificaciones/.table-requisiciones:
+   el selector compuesto (.table-resizable.table-responsables) gana en especificidad a los anchos por
+   nth-child de Bienes, así las tablas comparten .table-resizable sin colisionar. Anchos iniciales
+   pensados para caber sin scroll horizontal a resolución de escritorio; la usuaria puede ampliar
+   cualquier columna arrastrando el handle. El wrap por palabra y el centrado ya los aporta
+   .table-resizable (+ .table-detail-centered).
+   -------------------------------------------------------------------------- */
+.table-resizable.table-responsables thead th:nth-child(1) { width: 130px; min-width: 100px; } /* NIT */
+.table-resizable.table-responsables thead th:nth-child(2) { width: 260px; min-width: 180px; } /* Nombre completo */
+.table-resizable.table-responsables thead th:nth-child(3) { width: 160px; min-width: 120px; } /* Cargo */
+.table-resizable.table-responsables thead th:nth-child(4) { width: 220px; min-width: 150px; } /* Área / ubicación */
+.table-resizable.table-responsables thead th:nth-child(5) { width: 110px; min-width: 90px;  } /* Estado */
+.table-resizable.table-responsables thead th:nth-child(6) { width: 150px; min-width: 130px; } /* Acciones: Ver + Editar */
+
+/* --------------------------------------------------------------------------
+   Áreas / ubicaciones (listado, 5 columnas) — mismo mecanismo que las tablas resizables anteriores:
+   el selector compuesto (.table-resizable.table-ubicaciones) gana en especificidad a los anchos por
+   nth-child de Bienes. Anchos iniciales pensados para caber sin scroll horizontal en escritorio; la
+   usuaria puede ampliar cualquier columna. Wrap por palabra y centrado los aportan .table-resizable
+   (+ .table-detail-centered).
+   -------------------------------------------------------------------------- */
+.table-resizable.table-ubicaciones thead th:nth-child(1) { width: 220px; min-width: 150px; } /* Nombre */
+.table-resizable.table-ubicaciones thead th:nth-child(2) { width: 130px; min-width: 100px; } /* Tipo */
+.table-resizable.table-ubicaciones thead th:nth-child(3) { width: 300px; min-width: 160px; } /* Descripción */
+.table-resizable.table-ubicaciones thead th:nth-child(4) { width: 110px; min-width: 90px;  } /* Estado */
+.table-resizable.table-ubicaciones thead th:nth-child(5) { width: 150px; min-width: 130px; } /* Acciones: Ver + Editar */
+
+/* --------------------------------------------------------------------------
+   Asignaciones (listado de consulta, 7 columnas) — mismo mecanismo que las tablas resizables
+   anteriores: el selector compuesto (.table-resizable.table-asignaciones) gana en especificidad a
+   los anchos por nth-child de Bienes. Anchos iniciales pensados para caber sin scroll horizontal en
+   escritorio; la usuaria puede ampliar cualquier columna. Wrap por palabra y centrado los aportan
+   .table-resizable (+ .table-detail-centered).
+   -------------------------------------------------------------------------- */
+.table-resizable.table-asignaciones thead th:nth-child(1) { width: 140px; min-width: 110px; } /* Número */
+.table-resizable.table-asignaciones thead th:nth-child(2) { width: 110px; min-width: 95px;  } /* Fecha */
+.table-resizable.table-asignaciones thead th:nth-child(3) { width: 190px; min-width: 140px; } /* Responsable */
+.table-resizable.table-asignaciones thead th:nth-child(4) { width: 210px; min-width: 150px; } /* Ubicación */
+.table-resizable.table-asignaciones thead th:nth-child(5) { width: 75px;  min-width: 60px;  } /* Bienes */
+.table-resizable.table-asignaciones thead th:nth-child(6) { width: 110px; min-width: 95px;  } /* Estado */
+.table-resizable.table-asignaciones thead th:nth-child(7) { width: 90px;  min-width: 75px;  } /* Acciones: Ver */
+
 .table-resize-handle:hover,
 .table-resize-handle.resize-activo {
     background: rgba(47, 111, 237, 0.35);
@@ -1288,6 +1377,14 @@ textarea.form-control {
     color: var(--sgb-rojo);
 }
 
+/* Estado intermedio "en curso / autorizado" (ej. Requisición Autorizada, detalle Reservado) — azul
+   suave institucional, para distinguirlo del ámbar de "pendiente" y del verde de "completado".
+   Genérico y reutilizable en cualquier módulo con un estado de este tipo. */
+.badge-info {
+    background: var(--sgb-pastel-azul);
+    color: var(--sgb-azul-oscuro);
+}
+
 /* --------------------------------------------------------------------------
    13. Alertas
    -------------------------------------------------------------------------- */
@@ -1321,6 +1418,106 @@ textarea.form-control {
     margin-top: 14px;
     font-size: 13.5px;
     color: var(--sgb-texto-secundario);
+}
+
+/* --------------------------------------------------------------------------
+   14b. Panel/hub de módulo (menú visual de tarjetas de acceso, ej. Movimientos).
+   Genérico y reutilizable en cualquier pantalla que agrupe accesos a submódulos.
+   El acento pastel solo tiñe la burbuja del icono; la tarjeta se mantiene blanca
+   y sin saturar. Toda la tarjeta es el <a>.
+   -------------------------------------------------------------------------- */
+.module-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.module-card {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 18px;
+    background: var(--sgb-superficie);
+    border: 1px solid var(--sgb-borde);
+    border-radius: var(--sgb-radio);
+    box-shadow: var(--sgb-sombra);
+    color: var(--sgb-texto);
+    text-decoration: none;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.module-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 14px rgba(20, 49, 92, 0.12);
+    border-color: #cbd5e1;
+    text-decoration: none;
+}
+
+.module-card-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: var(--sgb-pastel-azul);
+    color: var(--sgb-azul-oscuro);
+}
+
+.module-card-icon svg {
+    width: 22px;
+    height: 22px;
+}
+
+.module-card-title {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 0;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--sgb-azul-oscuro);
+}
+
+.module-card-text {
+    flex: 1;
+    margin: 0;
+    font-size: 13px;
+    color: var(--sgb-texto-secundario);
+}
+
+.module-card-arrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--sgb-azul);
+}
+
+.module-card-arrow svg {
+    width: 14px;
+    height: 14px;
+}
+
+.module-card-azul     .module-card-icon { background: var(--sgb-pastel-azul); }
+.module-card-lila     .module-card-icon { background: var(--sgb-pastel-lila); }
+.module-card-menta    .module-card-icon { background: var(--sgb-pastel-menta); }
+.module-card-rosa     .module-card-icon { background: var(--sgb-pastel-rosa); }
+.module-card-turquesa .module-card-icon { background: var(--sgb-pastel-turquesa); }
+.module-card-ambar    .module-card-icon { background: var(--sgb-naranja-fondo); }
+
+@media (max-width: 900px) {
+    .module-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 560px) {
+    .module-grid {
+        grid-template-columns: 1fr;
+    }
 }
 
 /* --------------------------------------------------------------------------

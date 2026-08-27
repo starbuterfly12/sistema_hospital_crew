@@ -129,6 +129,7 @@ class AuthController extends Controller
     // ingresado ni siquiera existe en la tabla; en los demás casos de fallo sí se conoce el id pero el
     // login igual se rechaza. Nunca recibe ni registra la contraseña. Es "best effort": si falla,
     // queda solo en error_log — nunca debe alterar el resultado visible del login.
+    
     private function registrarIntentoLogin(?int $idUsuario, ?string $usuarioIntentado, string $descripcion, string $resultado = 'fallido'): void
     {
         try {

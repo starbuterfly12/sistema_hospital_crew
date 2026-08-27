@@ -44,7 +44,7 @@ class BajasController extends Controller
 
     // Bandeja administrativa de solicitudes de Baja — SOLO Administrador (nunca Operativo ni
     // Visualizador, a diferencia del listado normal de index()). No confía únicamente en que el
-    // menú de Movimientos oculte el enlace: requireRole() bloquea también el acceso directo por URL.
+    // menú de Movimientos oculte el enlace: requireRole().
     // Reutiliza Baja::getAll() (mismo modelo/consulta que index()), solo reordena para priorizar
     // 'pendiente'. La decisión (Aceptar/Rechazar) se toma desde revisar(), no desde aquí.
     public function solicitudes(): void
@@ -328,8 +328,8 @@ class BajasController extends Controller
     // evento BAJA_SALIDA se resuelve más adelante, solo cuando el usuario genere/reimprima la
     // Tarjeta del responsable (ver TarjetasController::resolverSalidaDetalle()).
     // "Finalizar" NO es una decisión administrativa: la Administradora ya terminó su participación
-    // al Aceptar/Rechazar. Finalizar corresponde exclusivamente a quien registró la solicitud
-    // originalmente (id_usuario_registra) — puede ser Operativo o Administrador, pero debe ser LA
+    // al Aceptar/Rechazar, por lo tanto es una accion unicamente de la persona que realizo la solicitud.
+    // (id_usuario_registra) — puede ser Operativo o Administrador, pero debe ser LA
     // MISMA persona, sin importar su rol. Por eso se exige rol de gestión (Administrador u
     // Operativo) Y coincidencia exacta de usuario; ninguna de las dos condiciones basta sola
     // (revisión funcional 2026-08-19).
@@ -498,8 +498,7 @@ class BajasController extends Controller
     // Comprobante de solo lectura: mismos permisos que ver() (solo sesión activa, sin requireRole),
     // porque descargar no modifica nada — "si puede ver() legítimamente esta Baja, puede descargar
     // su comprobante" (regla funcional 2026-08-19). Solo se permite si estado_baja='finalizada': el
-    // documento representa un retiro físico ya ejecutado, nunca una solicitud pendiente/autorizada/
-    // rechazada.
+    // documento representa un retiro físico ya ejecutado.
     public function descargarComprobante(): void
     {
         if (!isset($_SESSION['id_usuario'])) {
@@ -540,7 +539,9 @@ class BajasController extends Controller
 
         // Vo. Bo. jefe de Inventarios: resuelto institucionalmente en el momento de generar, NUNCA
         // desde id_usuario_autoriza (regla funcional 2026-08-19, aunque hoy puedan coincidir en la
-        // misma persona). Mismo par de métodos que ya usa RequisicionesController/PrestamosController
+        // misma persona). En el documento se debe escribir manualmente, porque puede variar, asi que ir
+        //al documento de origen para confirmar cambios en los documentos.
+        //Mismo par de métodos que ya usa RequisicionesController/PrestamosController
         // para su "Autoriza". Si no se resuelve de forma única, se rechaza la generación sin inventar
         // ningún nombre.
         $ubicacionInventarios = $ubicacionModel->findInventariosInstitucional();

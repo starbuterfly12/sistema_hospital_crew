@@ -1434,7 +1434,7 @@ class BienesController extends Controller
         // El QR se copia a escala 1:1 (imagecopy, no imagecopyresampled) — nunca se deforma
         // ni se reduce, y su quiet zone (margen de 10px ya incluido por el builder) queda intacta.
         $offsetXQr = (int) round(($anchoLienzo - $anchoQr) / 2);
-        imagecopy($lienzo, $imagenQr, $offsetXQr, 0, 0, 0, $anchoQr, $altoQr);
+        imagecopy($lienzo, $imagenQr, $offsetXQr, 0, 0, 0, $anchoQr, $altoQr); //no tocar tamaños
 
         $offsetXTexto = (int) round(($anchoLienzo - $anchoTexto) / 2);
         $offsetYTexto = $altoQr + $margenSeparacion;
@@ -1460,7 +1460,8 @@ class BienesController extends Controller
             return null;
         }
 
-        $detalleError = $e->errorInfo[2] ?? '';
+        $detalleError = $e->errorInfo[2] ?? ''; 
+        //unicos datos tomados en consideracion para determinar un bien duplicado
 
         if (str_contains($detalleError, 'uq_bienes_codigo_interno')) {
             return 'El código interno ingresado ya está registrado.';

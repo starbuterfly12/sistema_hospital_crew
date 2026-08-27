@@ -24,7 +24,8 @@ class ResponsablesController extends Controller
         $this->view('responsables/index', [
             'responsables' => $responsables,
             'q' => $q,
-        ]);
+            'tituloPagina' => 'Responsables',
+        ], 'main');
     }
 
     public function ver(): void
@@ -51,7 +52,8 @@ class ResponsablesController extends Controller
 
         $this->view('responsables/ver', [
             'responsable' => $responsable,
-        ]);
+            'tituloPagina' => 'Detalle del responsable',
+        ], 'main');
     }
 
     public function crear(): void
@@ -74,7 +76,8 @@ class ResponsablesController extends Controller
                 'ubicaciones' => $ubicaciones,
                 'error' => null,
                 'datosFormulario' => [],
-            ]);
+                'tituloPagina' => 'Registrar responsable',
+            ], 'main');
             return;
         }
 
@@ -131,7 +134,8 @@ class ResponsablesController extends Controller
                 'ubicaciones' => $ubicaciones,
                 'error' => $error,
                 'datosFormulario' => $datosFormulario,
-            ]);
+                'tituloPagina' => 'Registrar responsable',
+            ], 'main');
             return;
         }
 
@@ -180,7 +184,8 @@ class ResponsablesController extends Controller
                 'ubicaciones' => $ubicaciones,
                 'error' => $error,
                 'datosFormulario' => $datosFormulario,
-            ]);
+                'tituloPagina' => 'Registrar responsable',
+            ], 'main');
             return;
         }
     }
@@ -241,7 +246,8 @@ class ResponsablesController extends Controller
                 'ubicaciones' => $ubicacionesFormulario,
                 'error' => null,
                 'datosFormulario' => $responsable,
-            ]);
+                'tituloPagina' => 'Modificar responsable',
+            ], 'main');
             return;
         }
 
@@ -303,7 +309,8 @@ class ResponsablesController extends Controller
                 'ubicaciones' => $ubicacionesFormulario,
                 'error' => $error,
                 'datosFormulario' => $datosFormulario,
-            ]);
+                'tituloPagina' => 'Modificar responsable',
+            ], 'main');
             return;
         }
 
@@ -353,7 +360,8 @@ class ResponsablesController extends Controller
                 'ubicaciones' => $ubicacionesFormulario,
                 'error' => $error,
                 'datosFormulario' => $datosFormulario,
-            ]);
+                'tituloPagina' => 'Modificar responsable',
+            ], 'main');
             return;
         }
     }

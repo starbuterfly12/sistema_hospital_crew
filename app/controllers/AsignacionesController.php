@@ -24,7 +24,8 @@ class AsignacionesController extends Controller
         $this->view('asignaciones/index', [
             'asignaciones' => $asignaciones,
             'q' => $q,
-        ]);
+            'tituloPagina' => 'Asignaciones',
+        ], 'main');
     }
 
     public function ver(): void
@@ -54,7 +55,8 @@ class AsignacionesController extends Controller
         $this->view('asignaciones/ver', [
             'asignacion' => $asignacion,
             'bienesAsignacion' => $bienesAsignacion,
-        ]);
+            'tituloPagina' => 'Detalle de asignación',
+        ], 'main');
     }
 
     // Las asignaciones ya NO se crean, editan, ni se les agregan/retiran bienes o confirman

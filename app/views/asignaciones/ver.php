@@ -1,106 +1,149 @@
-<!DOCTYPE html>
-<html lang="es-GT">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Detalle de asignación</title>
-</head>
-<body>
-    <?php
-        $mostrar = static function ($value): string {
-            if ($value === null || $value === '') {
-                return '-';
-            }
+<?php
+// Fragmento de contenido: se renderiza dentro de layouts/main.php (ver AsignacionesController::ver()).
+// Ficha de SOLO CONSULTA — mismos datos que ya recibía la vista anterior ($asignacion /
+// $bienesAsignacion). Sin acciones administrativas (el módulo no las tiene), sin enlace a Tarjeta
+// (no existe en esta vista). Solo cambió el marcado visual.
+$asignacion = $asignacion ?? [];
+$bienesAsignacion = $bienesAsignacion ?? [];
 
-            return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
-        };
+$mostrar = static function ($valor): string {
+    return ($valor !== null && trim((string) $valor) !== '') ? htmlspecialchars((string) $valor, ENT_QUOTES, 'UTF-8') : '—';
+};
 
-        $asignacion = $asignacion ?? [];
+$estado = $asignacion['estado_asignacion'] ?? null;
 
-        $nombreUbicacion = $asignacion['nombre_ubicacion'] ?? null;
-        $tipoUbicacion = $asignacion['tipo_ubicacion'] ?? null;
+$claseBadgeEstado = match ($estado) {
+    'Pendiente' => 'badge badge-pendiente',
+    'Asignada' => 'badge badge-exito',
+    default => 'badge',
+};
 
-        if ($nombreUbicacion !== null && $nombreUbicacion !== '') {
-            $ubicacionTexto = $nombreUbicacion . ($tipoUbicacion !== null && $tipoUbicacion !== '' ? ' - ' . $tipoUbicacion : '');
-        } else {
-            $ubicacionTexto = null;
-        }
-    ?>
+$claseBadgeDetalle = static function (?string $estadoDetalle): string {
+    return match ($estadoDetalle) {
+        'activo' => 'badge badge-exito',
+        'retirado' => 'badge',
+        default => 'badge',
+    };
+};
 
-    <h1>Detalle de asignación</h1>
+$etiquetaDetalle = static function (?string $estadoDetalle): string {
+    return match ($estadoDetalle) {
+        'activo' => 'Activo',
+        'retirado' => 'Retirado',
+        default => (string) ($estadoDetalle ?? '—'),
+    };
+};
 
-    <dl>
-        <dt>Número</dt>
-        <dd><?= $mostrar($asignacion['numero_asignacion'] ?? null) ?></dd>
+$nombreUbicacion = $asignacion['nombre_ubicacion'] ?? null;
+$tipoUbicacion = $asignacion['tipo_ubicacion'] ?? null;
+$ubicacionTexto = ($nombreUbicacion !== null && $nombreUbicacion !== '')
+    ? $nombreUbicacion . ($tipoUbicacion !== null && $tipoUbicacion !== '' ? ' - ' . $tipoUbicacion : '')
+    : null;
+?>
+<div class="page-header">
+    <div class="page-header-fila">
+        <div>
+            <h1 class="page-title">Detalle de asignación</h1>
+            <p class="page-subtitle">Consulta de la información registrada de la asignación.</p>
+        </div>
 
-        <dt>Responsable</dt>
-        <dd><?= $mostrar($asignacion['responsable_nombre'] ?? null) ?></dd>
+        <div class="page-actions">
+            <a href="index.php?modulo=asignaciones" class="btn btn-secondary">Volver</a>
+        </div>
+    </div>
+</div>
 
-        <dt>Ubicación</dt>
-        <dd><?= $mostrar($ubicacionTexto) ?></dd>
+<div class="detail-identidad">
+    <p class="detail-identidad-codigo"><?= $mostrar($asignacion['numero_asignacion'] ?? null) ?></p>
+    <p class="detail-identidad-descripcion"><?= $mostrar($asignacion['responsable_nombre'] ?? null) ?></p>
+</div>
 
-        <dt>Fecha de asignación</dt>
-        <dd><?= $mostrar(formatDate($asignacion['fecha_asignacion'] ?? null)) ?></dd>
+<div class="detail-card">
+    <div class="detail-section">
+        <h2 class="form-section-title">Datos generales</h2>
+        <div class="detail-grid">
+            <div class="detail-item">
+                <span class="detail-label">Número de asignación</span>
+                <span class="detail-value"><?= $mostrar($asignacion['numero_asignacion'] ?? null) ?></span>
+            </div>
 
-        <dt>Estado</dt>
-        <dd><?= $mostrar($asignacion['estado_asignacion'] ?? null) ?></dd>
+            <div class="detail-item">
+                <span class="detail-label">Estado</span>
+                <span class="detail-value"><span class="<?= $claseBadgeEstado ?>"><?= $mostrar($estado) ?></span></span>
+            </div>
 
-        <dt>Registrado por</dt>
-        <dd><?= $mostrar($asignacion['usuario_registra_nombre'] ?? null) ?></dd>
+            <div class="detail-item">
+                <span class="detail-label">Responsable</span>
+                <span class="detail-value"><?= $mostrar($asignacion['responsable_nombre'] ?? null) ?></span>
+            </div>
 
-        <dt>Observaciones</dt>
-        <dd><?= $mostrar($asignacion['observaciones'] ?? null) ?></dd>
+            <div class="detail-item">
+                <span class="detail-label">Ubicación</span>
+                <span class="detail-value"><?= $mostrar($ubicacionTexto) ?></span>
+            </div>
 
-        <dt>Fecha de registro</dt>
-        <dd><?= $mostrar(formatDateTime($asignacion['created_at'] ?? null)) ?></dd>
+            <div class="detail-item">
+                <span class="detail-label">Fecha de asignación</span>
+                <span class="detail-value"><?= $mostrar(formatDate($asignacion['fecha_asignacion'] ?? null)) ?></span>
+            </div>
 
-        <dt>Última actualización</dt>
-        <dd><?= $mostrar(formatDateTime($asignacion['updated_at'] ?? null)) ?></dd>
-    </dl>
+            <div class="detail-item">
+                <span class="detail-label">Registrado por</span>
+                <span class="detail-value"><?= $mostrar($asignacion['usuario_registra_nombre'] ?? null) ?></span>
+            </div>
 
-    <h2>Bienes de la asignación</h2>
+            <div class="detail-item">
+                <span class="detail-label">Fecha de registro</span>
+                <span class="detail-value"><?= $mostrar(formatDateTime($asignacion['created_at'] ?? null)) ?></span>
+            </div>
 
-    <?php $bienesAsignacion = $bienesAsignacion ?? []; ?>
+            <div class="detail-item">
+                <span class="detail-label">Última actualización</span>
+                <span class="detail-value"><?= $mostrar(formatDateTime($asignacion['updated_at'] ?? null)) ?></span>
+            </div>
 
-    <?php if (empty($bienesAsignacion)): ?>
-        <p>Esta asignación no contiene bienes.</p>
-    <?php else: ?>
-        <table border="1" cellpadding="5" cellspacing="0">
-            <thead>
-                <tr>
-                    <th>Código</th>
-                    <th>SICOIN</th>
-                    <th>Descripción</th>
-                    <th>Marca</th>
-                    <th>Modelo</th>
-                    <th>Serie</th>
-                    <th>Condición</th>
-                    <th>Fecha agregado</th>
-                    <th>Fecha retirado</th>
-                    <th>Estado</th>
-                    <th>Observaciones</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php foreach ($bienesAsignacion as $detalle): ?>
-                    <tr>
-                        <td><?= $mostrar($detalle['codigo_interno'] ?? null) ?></td>
-                        <td><?= $mostrar($detalle['codigo_sicoin'] ?? null) ?></td>
-                        <td><?= $mostrar($detalle['descripcion'] ?? null) ?></td>
-                        <td><?= $mostrar($detalle['marca'] ?? null) ?></td>
-                        <td><?= $mostrar($detalle['modelo'] ?? null) ?></td>
-                        <td><?= $mostrar($detalle['serie'] ?? null) ?></td>
-                        <td><?= $mostrar($detalle['condicion_bien'] ?? null) ?></td>
-                        <td><?= $mostrar(formatDate($detalle['fecha_agregado'] ?? null)) ?></td>
-                        <td><?= $mostrar(formatDate($detalle['fecha_retirado'] ?? null)) ?></td>
-                        <td><?= $mostrar($detalle['estado_detalle'] ?? null) ?></td>
-                        <td><?= $mostrar($detalle['observaciones_detalle'] ?? null) ?></td>
-                    </tr>
-                <?php endforeach; ?>
-            </tbody>
-        </table>
-    <?php endif; ?>
+            <div class="detail-item detail-full">
+                <span class="detail-label">Observaciones</span>
+                <span class="detail-value"><?= $mostrar($asignacion['observaciones'] ?? null) ?></span>
+            </div>
+        </div>
+    </div>
 
-    <p><a href="index.php?modulo=asignaciones">Volver al listado</a></p>
-</body>
-</html>
+    <div class="detail-section">
+        <h2 class="form-section-title">Bienes de la asignación</h2>
+        <?php if (empty($bienesAsignacion)): ?>
+            <p class="estado-vacio">Esta asignación no contiene bienes.</p>
+        <?php else: ?>
+            <div class="table-responsive">
+                <table class="table-app table-detail-centered">
+                    <thead>
+                        <tr>
+                            <th>Código interno</th>
+                            <th>SICOIN</th>
+                            <th>Descripción</th>
+                            <th>Serie</th>
+                            <th>Fecha agregado</th>
+                            <th>Fecha retirado</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($bienesAsignacion as $detalle): ?>
+                            <tr>
+                                <td><?= $mostrar($detalle['codigo_interno'] ?? null) ?></td>
+                                <td><?= $mostrar($detalle['codigo_sicoin'] ?? null) ?></td>
+                                <td><?= $mostrar($detalle['descripcion'] ?? null) ?></td>
+                                <td><?= $mostrar($detalle['serie'] ?? null) ?></td>
+                                <td><?= $mostrar(formatDate($detalle['fecha_agregado'] ?? null)) ?></td>
+                                <td><?= $mostrar(formatDate($detalle['fecha_retirado'] ?? null)) ?></td>
+                                <td>
+                                    <span class="<?= $claseBadgeDetalle($detalle['estado_detalle'] ?? null) ?>"><?= $mostrar($etiquetaDetalle($detalle['estado_detalle'] ?? null)) ?></span>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        <?php endif; ?>
+    </div>
+</div>

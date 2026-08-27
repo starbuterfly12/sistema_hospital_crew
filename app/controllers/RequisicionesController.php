@@ -36,7 +36,8 @@ class RequisicionesController extends Controller
 
         $this->view('requisiciones/index', [
             'requisiciones' => $requisicionModel->getAll(),
-        ]);
+            'tituloPagina' => 'Requisiciones',
+        ], 'main');
     }
 
     public function ver(): void
@@ -68,7 +69,8 @@ class RequisicionesController extends Controller
             'requisicion' => $requisicion,
             'numeros' => $numeroModel->listarPorRequisicion($idRequisicion),
             'detalles' => $detalleModel->listarPorRequisicion($idRequisicion),
-        ]);
+            'tituloPagina' => 'Detalle de requisición',
+        ], 'main');
     }
 
     public function crear(): void
@@ -94,7 +96,8 @@ class RequisicionesController extends Controller
                 'bienesDisponibles' => $bienesDisponibles,
                 'error' => $errorAlmacen,
                 'datosFormulario' => [],
-            ]);
+                'tituloPagina' => 'Nueva requisición',
+            ], 'main');
             return;
         }
 
@@ -110,7 +113,8 @@ class RequisicionesController extends Controller
                 'bienesDisponibles' => $bienesDisponibles,
                 'error' => $error,
                 'datosFormulario' => $datosFormulario,
-            ]);
+                'tituloPagina' => 'Nueva requisición',
+            ], 'main');
             return;
         }
 
@@ -216,7 +220,8 @@ class RequisicionesController extends Controller
                 'bienesDisponibles' => $bienesDisponibles,
                 'error' => $error,
                 'datosFormulario' => $datosFormulario,
-            ]);
+                'tituloPagina' => 'Nueva requisición',
+            ], 'main');
             return;
         }
     }
@@ -306,7 +311,8 @@ class RequisicionesController extends Controller
                 'bienesDisponibles' => $bienesDisponibles,
                 'error' => $errorAlmacen,
                 'datosFormulario' => $datosFormularioBase,
-            ]);
+                'tituloPagina' => 'Editar requisición',
+            ], 'main');
             return;
         }
 
@@ -323,7 +329,8 @@ class RequisicionesController extends Controller
                 'bienesDisponibles' => $bienesDisponibles,
                 'error' => $error,
                 'datosFormulario' => $datosFormulario,
-            ]);
+                'tituloPagina' => 'Editar requisición',
+            ], 'main');
             return;
         }
 
@@ -441,7 +448,8 @@ class RequisicionesController extends Controller
                 'bienesDisponibles' => $bienesDisponibles,
                 'error' => $error,
                 'datosFormulario' => $datosFormulario,
-            ]);
+                'tituloPagina' => 'Editar requisición',
+            ], 'main');
             return;
         }
     }

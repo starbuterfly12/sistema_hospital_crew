@@ -22,6 +22,7 @@ class MovimientosController extends Controller
 
         $this->view('movimientos/index', [
             'totalBajasPendientes' => $totalBajasPendientes,
-        ]);
+            'tituloPagina' => 'Movimientos',
+        ], 'main');
     }
 }

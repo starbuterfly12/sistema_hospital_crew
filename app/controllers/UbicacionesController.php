@@ -29,7 +29,8 @@ class UbicacionesController extends Controller
         $this->view('ubicaciones/index', [
             'ubicaciones' => $ubicaciones,
             'q' => $q,
-        ]);
+            'tituloPagina' => 'Áreas / ubicaciones',
+        ], 'main');
     }
 
     public function ver(): void
@@ -56,7 +57,8 @@ class UbicacionesController extends Controller
 
         $this->view('ubicaciones/ver', [
             'ubicacion' => $ubicacion,
-        ]);
+            'tituloPagina' => 'Detalle de ubicación',
+        ], 'main');
     }
 
     public function crear(): void
@@ -75,7 +77,8 @@ class UbicacionesController extends Controller
             $this->view('ubicaciones/crear', [
                 'error' => null,
                 'datosFormulario' => [],
-            ]);
+                'tituloPagina' => 'Registrar área / ubicación',
+            ], 'main');
             return;
         }
 
@@ -109,7 +112,8 @@ class UbicacionesController extends Controller
             $this->view('ubicaciones/crear', [
                 'error' => $error,
                 'datosFormulario' => $datosFormulario,
-            ]);
+                'tituloPagina' => 'Registrar área / ubicación',
+            ], 'main');
             return;
         }
 
@@ -154,7 +158,8 @@ class UbicacionesController extends Controller
             $this->view('ubicaciones/crear', [
                 'error' => $error,
                 'datosFormulario' => $datosFormulario,
-            ]);
+                'tituloPagina' => 'Registrar área / ubicación',
+            ], 'main');
             return;
         }
     }
@@ -190,7 +195,8 @@ class UbicacionesController extends Controller
                 'ubicacion' => $ubicacion,
                 'error' => null,
                 'datosFormulario' => $ubicacion,
-            ]);
+                'tituloPagina' => 'Modificar área / ubicación',
+            ], 'main');
             return;
         }
 
@@ -225,7 +231,8 @@ class UbicacionesController extends Controller
                 'ubicacion' => $ubicacion,
                 'error' => $error,
                 'datosFormulario' => $datosFormulario,
-            ]);
+                'tituloPagina' => 'Modificar área / ubicación',
+            ], 'main');
             return;
         }
 
@@ -271,7 +278,8 @@ class UbicacionesController extends Controller
                 'ubicacion' => $ubicacion,
                 'error' => $error,
                 'datosFormulario' => $datosFormulario,
-            ]);
+                'tituloPagina' => 'Modificar área / ubicación',
+            ], 'main');
             return;
         }
     }
