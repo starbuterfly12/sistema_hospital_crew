@@ -442,6 +442,19 @@ img {
     border-color: #9a7fe0;
 }
 
+/* Variante "Descargar Excel" — verde pastel, mismo criterio que .btn-azul-suave (acción de descarga
+   secundaria, no compite con .btn-primary). En Reportes convive con .btn-azul-suave ("Descargar PDF")
+   para que ambos formatos se distingan de un vistazo. */
+.btn-verde-suave {
+    background: var(--sgb-verde-fondo);
+    border-color: #b7e8cf;
+    color: #10692f;
+}
+.btn-verde-suave:hover {
+    background: #d3f3e0;
+    border-color: var(--sgb-verde);
+}
+
 /* --------------------------------------------------------------------------
    9. Formularios
    Patrón reutilizable para formularios complejos (Registrar bien es el primer
@@ -1564,6 +1577,161 @@ textarea.form-control {
 .table-resizable.table-bajas-detalle thead th:nth-child(9)  { width: 120px; min-width: 100px; } /* Ubicación anterior */
 .table-resizable.table-bajas-detalle thead th:nth-child(10) { width: 100px; min-width: 85px;  } /* Estado anterior */
 .table-resizable.table-bajas-detalle thead th:nth-child(11) { width: 95px;  min-width: 85px;  } /* Imagen */
+
+/* --------------------------------------------------------------------------
+   Tarjeta de responsabilidad (listado, 7 columnas) — mismo mecanismo que las tablas resizables
+   anteriores: el selector compuesto (.table-resizable.table-tarjetas) gana en especificidad a los
+   anchos por nth-child de Bienes. Anchos iniciales pensados para caber sin scroll horizontal en
+   escritorio; la persona puede ampliar cualquier columna. Wrap por palabra y centrado los aportan
+   .table-resizable (+ .table-detail-centered).
+   -------------------------------------------------------------------------- */
+.table-resizable.table-tarjetas thead th:nth-child(1) { width: 140px; min-width: 115px; } /* Número de tarjeta */
+.table-resizable.table-tarjetas thead th:nth-child(2) { width: 120px; min-width: 100px; } /* Fecha de emisión */
+.table-resizable.table-tarjetas thead th:nth-child(3) { width: 200px; min-width: 150px; } /* Responsable */
+.table-resizable.table-tarjetas thead th:nth-child(4) { width: 190px; min-width: 140px; } /* Ubicación */
+.table-resizable.table-tarjetas thead th:nth-child(5) { width: 130px; min-width: 105px; } /* Asignación */
+.table-resizable.table-tarjetas thead th:nth-child(6) { width: 105px; min-width: 90px;  } /* Estado */
+.table-resizable.table-tarjetas thead th:nth-child(7) { width: 90px;  min-width: 75px;  } /* Acciones: Ver */
+
+/* --------------------------------------------------------------------------
+   Tarjeta de responsabilidad — tabla de operaciones (tarjetas/ver.php, 8 columnas): registro
+   Debe/Haber/Saldo de la emisión. Importes con formato Q vía formatearQuetzales(). Compacta para
+   caber en escritorio; .table-responsive permite scroll si la persona amplía columnas.
+   -------------------------------------------------------------------------- */
+.table-resizable.table-tarjetas-detalle thead th:nth-child(1) { width: 65px;  min-width: 55px;  } /* Orden */
+.table-resizable.table-tarjetas-detalle thead th:nth-child(2) { width: 105px; min-width: 90px;  } /* Fecha */
+.table-resizable.table-tarjetas-detalle thead th:nth-child(3) { width: 120px; min-width: 95px;  } /* SICOIN */
+.table-resizable.table-tarjetas-detalle thead th:nth-child(4) { width: 80px;  min-width: 65px;  } /* Cantidad */
+.table-resizable.table-tarjetas-detalle thead th:nth-child(5) { width: 240px; min-width: 150px; } /* Descripción */
+.table-resizable.table-tarjetas-detalle thead th:nth-child(6) { width: 115px; min-width: 95px;  } /* Debe */
+.table-resizable.table-tarjetas-detalle thead th:nth-child(7) { width: 115px; min-width: 95px;  } /* Haber */
+.table-resizable.table-tarjetas-detalle thead th:nth-child(8) { width: 120px; min-width: 100px; } /* Saldo */
+
+/* --------------------------------------------------------------------------
+   Reportes — tablas de resultados. Mismo mecanismo que las demás tablas resizables: el selector
+   compuesto (.table-resizable.table-reporte-*) gana en especificidad a los anchos por nth-child de
+   Bienes. font-size 12.5 / padding 10px 8px comunes a todos; anchos por columna pensados para caber
+   en escritorio, y .table-responsive da scroll interno en los reportes naturalmente anchos (Bajas y
+   Verificaciones, 13 columnas). Wrap por palabra y centrado los aportan .table-resizable
+   (+ .table-detail-centered).
+   -------------------------------------------------------------------------- */
+.table-resizable[class*="table-reporte-"] { font-size: 12.5px; }
+.table-resizable[class*="table-reporte-"] thead th { font-size: 12px; }
+.table-resizable[class*="table-reporte-"] th,
+.table-resizable[class*="table-reporte-"] td { padding: 10px 8px; }
+
+/* Movimientos por período (9 col) */
+.table-resizable.table-reporte-movimientos thead th:nth-child(1) { width: 110px; min-width: 95px;  } /* Fecha */
+.table-resizable.table-reporte-movimientos thead th:nth-child(2) { width: 105px; min-width: 90px;  } /* Tipo */
+.table-resizable.table-reporte-movimientos thead th:nth-child(3) { width: 95px;  min-width: 80px;  } /* No. de Bien */
+.table-resizable.table-reporte-movimientos thead th:nth-child(4) { width: 95px;  min-width: 80px;  } /* SICOIN */
+.table-resizable.table-reporte-movimientos thead th:nth-child(5) { width: 200px; min-width: 130px; } /* Descripción */
+.table-resizable.table-reporte-movimientos thead th:nth-child(6) { width: 150px; min-width: 120px; } /* Responsable relacionado */
+.table-resizable.table-reporte-movimientos thead th:nth-child(7) { width: 150px; min-width: 120px; } /* Ubicación relacionada */
+.table-resizable.table-reporte-movimientos thead th:nth-child(8) { width: 120px; min-width: 100px; } /* Usuario */
+.table-resizable.table-reporte-movimientos thead th:nth-child(9) { width: 220px; min-width: 140px; } /* Detalle */
+
+/* Bienes con actividad (7 col) */
+.table-resizable.table-reporte-bienes-actividad thead th:nth-child(1) { width: 110px; min-width: 90px;  } /* No. de Bien */
+.table-resizable.table-reporte-bienes-actividad thead th:nth-child(2) { width: 110px; min-width: 90px;  } /* SICOIN */
+.table-resizable.table-reporte-bienes-actividad thead th:nth-child(3) { width: 240px; min-width: 150px; } /* Descripción */
+.table-resizable.table-reporte-bienes-actividad thead th:nth-child(4) { width: 95px;  min-width: 80px;  } /* Cantidad de eventos */
+.table-resizable.table-reporte-bienes-actividad thead th:nth-child(5) { width: 120px; min-width: 100px; } /* Primer evento */
+.table-resizable.table-reporte-bienes-actividad thead th:nth-child(6) { width: 120px; min-width: 100px; } /* Último evento */
+.table-resizable.table-reporte-bienes-actividad thead th:nth-child(7) { width: 220px; min-width: 140px; } /* Tipos de actividad */
+
+/* Préstamos pendientes o vencidos (8 col) */
+.table-resizable.table-reporte-prestamos thead th:nth-child(1) { width: 130px; min-width: 110px; } /* No. préstamo */
+.table-resizable.table-reporte-prestamos thead th:nth-child(2) { width: 190px; min-width: 140px; } /* Receptor */
+.table-resizable.table-reporte-prestamos thead th:nth-child(3) { width: 115px; min-width: 100px; } /* Fecha préstamo */
+.table-resizable.table-reporte-prestamos thead th:nth-child(4) { width: 130px; min-width: 110px; } /* Fecha prevista */
+.table-resizable.table-reporte-prestamos thead th:nth-child(5) { width: 95px;  min-width: 80px;  } /* Estado */
+.table-resizable.table-reporte-prestamos thead th:nth-child(6) { width: 95px;  min-width: 80px;  } /* Bienes pendientes */
+.table-resizable.table-reporte-prestamos thead th:nth-child(7) { width: 85px;  min-width: 70px;  } /* Vencido */
+.table-resizable.table-reporte-prestamos thead th:nth-child(8) { width: 95px;  min-width: 80px;  } /* Días vencidos */
+
+/* Bajas por período (13 col — naturalmente ancho, scroll interno esperado) */
+.table-resizable.table-reporte-bajas thead th:nth-child(1)  { width: 95px;  min-width: 80px;  } /* No. Baja */
+.table-resizable.table-reporte-bajas thead th:nth-child(2)  { width: 120px; min-width: 100px; } /* Fecha preparación */
+.table-resizable.table-reporte-bajas thead th:nth-child(3)  { width: 120px; min-width: 100px; } /* Fecha autorización */
+.table-resizable.table-reporte-bajas thead th:nth-child(4)  { width: 105px; min-width: 90px;  } /* Fecha baja */
+.table-resizable.table-reporte-bajas thead th:nth-child(5)  { width: 100px; min-width: 85px;  } /* Estado */
+.table-resizable.table-reporte-bajas thead th:nth-child(6)  { width: 95px;  min-width: 80px;  } /* No. de Bien */
+.table-resizable.table-reporte-bajas thead th:nth-child(7)  { width: 95px;  min-width: 80px;  } /* SICOIN */
+.table-resizable.table-reporte-bajas thead th:nth-child(8)  { width: 190px; min-width: 130px; } /* Descripción */
+.table-resizable.table-reporte-bajas thead th:nth-child(9)  { width: 150px; min-width: 120px; } /* Responsable anterior */
+.table-resizable.table-reporte-bajas thead th:nth-child(10) { width: 140px; min-width: 110px; } /* Ubicación anterior */
+.table-resizable.table-reporte-bajas thead th:nth-child(11) { width: 120px; min-width: 100px; } /* Tipo de baja */
+.table-resizable.table-reporte-bajas thead th:nth-child(12) { width: 110px; min-width: 95px;  } /* Valor */
+.table-resizable.table-reporte-bajas thead th:nth-child(13) { width: 140px; min-width: 110px; } /* Bodega destino */
+
+/* Verificaciones con diferencias (13 col — naturalmente ancho, scroll interno esperado) */
+.table-resizable.table-reporte-verificaciones thead th:nth-child(1)  { width: 120px; min-width: 100px; } /* Fecha/hora */
+.table-resizable.table-reporte-verificaciones thead th:nth-child(2)  { width: 95px;  min-width: 80px;  } /* No. de Bien */
+.table-resizable.table-reporte-verificaciones thead th:nth-child(3)  { width: 180px; min-width: 130px; } /* Descripción */
+.table-resizable.table-reporte-verificaciones thead th:nth-child(4)  { width: 150px; min-width: 120px; } /* Responsable registrado */
+.table-resizable.table-reporte-verificaciones thead th:nth-child(5)  { width: 140px; min-width: 110px; } /* Ubicación registrada */
+.table-resizable.table-reporte-verificaciones thead th:nth-child(6)  { width: 120px; min-width: 100px; } /* Condición registrada */
+.table-resizable.table-reporte-verificaciones thead th:nth-child(7)  { width: 90px;  min-width: 75px;  } /* Localizado */
+.table-resizable.table-reporte-verificaciones thead th:nth-child(8)  { width: 105px; min-width: 85px;  } /* Responsable correcto */
+.table-resizable.table-reporte-verificaciones thead th:nth-child(9)  { width: 105px; min-width: 85px;  } /* Ubicación correcta */
+.table-resizable.table-reporte-verificaciones thead th:nth-child(10) { width: 120px; min-width: 100px; } /* Condición observada */
+.table-resizable.table-reporte-verificaciones thead th:nth-child(11) { width: 120px; min-width: 100px; } /* Resultado */
+.table-resizable.table-reporte-verificaciones thead th:nth-child(12) { width: 220px; min-width: 140px; } /* Observaciones */
+.table-resizable.table-reporte-verificaciones thead th:nth-child(13) { width: 140px; min-width: 110px; } /* Verificado por */
+
+/* Ingresos de bienes (9 col) */
+.table-resizable.table-reporte-ingresos thead th:nth-child(1) { width: 110px; min-width: 95px;  } /* Fecha ingreso */
+.table-resizable.table-reporte-ingresos thead th:nth-child(2) { width: 95px;  min-width: 80px;  } /* No. de Bien */
+.table-resizable.table-reporte-ingresos thead th:nth-child(3) { width: 95px;  min-width: 80px;  } /* SICOIN */
+.table-resizable.table-reporte-ingresos thead th:nth-child(4) { width: 220px; min-width: 140px; } /* Descripción */
+.table-resizable.table-reporte-ingresos thead th:nth-child(5) { width: 130px; min-width: 105px; } /* Forma de ingreso */
+.table-resizable.table-reporte-ingresos thead th:nth-child(6) { width: 140px; min-width: 110px; } /* Categoría */
+.table-resizable.table-reporte-ingresos thead th:nth-child(7) { width: 200px; min-width: 130px; } /* Procedencia / Proveedor */
+.table-resizable.table-reporte-ingresos thead th:nth-child(8) { width: 110px; min-width: 95px;  } /* Valor */
+.table-resizable.table-reporte-ingresos thead th:nth-child(9) { width: 110px; min-width: 90px;  } /* Estado actual */
+
+/* Nota discreta bajo una tabla de reporte ("Total de registros: N"). */
+.tabla-nota {
+    margin: 12px 0 0;
+    font-size: 13px;
+    color: var(--sgb-texto-secundario);
+    text-align: right;
+}
+
+/* --------------------------------------------------------------------------
+   Usuarios (listado, 7 columnas) — mismo mecanismo que las demás tablas resizables: el selector
+   compuesto (.table-resizable.table-usuarios) gana en especificidad a los anchos por nth-child de
+   Bienes. Anchos iniciales pensados para caber sin scroll horizontal en escritorio; la persona
+   puede ampliar cualquier columna. Wrap por palabra y centrado los aportan .table-resizable
+   (+ .table-detail-centered).
+   -------------------------------------------------------------------------- */
+.table-resizable.table-usuarios thead th:nth-child(1) { width: 200px; min-width: 150px; } /* Nombre completo */
+.table-resizable.table-usuarios thead th:nth-child(2) { width: 130px; min-width: 105px; } /* Usuario */
+.table-resizable.table-usuarios thead th:nth-child(3) { width: 120px; min-width: 100px; } /* Rol */
+.table-resizable.table-usuarios thead th:nth-child(4) { width: 190px; min-width: 140px; } /* Correo */
+.table-resizable.table-usuarios thead th:nth-child(5) { width: 100px; min-width: 85px;  } /* Estado */
+.table-resizable.table-usuarios thead th:nth-child(6) { width: 140px; min-width: 115px; } /* Último acceso */
+.table-resizable.table-usuarios thead th:nth-child(7) { width: 150px; min-width: 130px; } /* Acciones: Ver + Editar */
+
+/* --------------------------------------------------------------------------
+   Bitácora (listado de consulta, 7 columnas) — mismo mecanismo que las demás tablas resizables.
+   Acción (UPPERCASE_SNAKE) y Descripción pueden ser largas: word-break las parte dentro de su
+   ancho en vez de ensanchar la fila. .table-responsive da scroll interno si se amplían columnas.
+   -------------------------------------------------------------------------- */
+.table-resizable.table-bitacora td { word-break: break-word; }
+.table-resizable.table-bitacora thead th:nth-child(1) { width: 150px; min-width: 125px; } /* Fecha y hora */
+.table-resizable.table-bitacora thead th:nth-child(2) { width: 190px; min-width: 140px; } /* Usuario */
+.table-resizable.table-bitacora thead th:nth-child(3) { width: 150px; min-width: 120px; } /* Acción */
+.table-resizable.table-bitacora thead th:nth-child(4) { width: 110px; min-width: 90px;  } /* Módulo */
+.table-resizable.table-bitacora thead th:nth-child(5) { width: 100px; min-width: 85px;  } /* Resultado */
+.table-resizable.table-bitacora thead th:nth-child(6) { width: 300px; min-width: 160px; } /* Descripción */
+.table-resizable.table-bitacora thead th:nth-child(7) { width: 80px;  min-width: 70px;  } /* Acciones: Ver */
+
+/* Respaldos (listado, 6 columnas) — sin table-resizable (contenido compacto). Solo se permite que el
+   nombre de archivo .sql (largo, con guiones/guiones bajos) haga wrap dentro de su celda en vez de
+   ensanchar la tabla. */
+.table-respaldos td { word-break: break-word; }
 
 /* Ficha de solo lectura del préstamo embebida dentro del formulario de Registrar devolución: mismo
    contenido que .detail-card pero sin sombra ni competir visualmente con la .form-card que la

@@ -17,7 +17,9 @@ class ReportesController extends Controller
             exit;
         }
 
-        $this->view('reportes/index');
+        $this->view('reportes/index', [
+            'tituloPagina' => 'Reportes',
+        ], 'main');
     }
 
     // ---------------------------------------------------------------------------------------
@@ -63,7 +65,8 @@ class ReportesController extends Controller
             'filtros' => $filtros,
             'error' => $error,
             'responsables' => $this->model('Responsable')->getActivos(),
-        ]);
+            'tituloPagina' => 'Reporte: Movimientos por período',
+        ], 'main');
     }
 
     private function exportarMovimientos(array $filas, array $filtros): void
@@ -175,7 +178,8 @@ class ReportesController extends Controller
             'filas' => $filas,
             'filtros' => $filtros,
             'error' => $error,
-        ]);
+            'tituloPagina' => 'Reporte: Bienes con actividad',
+        ], 'main');
     }
 
     private function exportarBienesActividad(array $filas, array $filtros): void
@@ -282,7 +286,8 @@ class ReportesController extends Controller
             'filtros' => $filtros,
             'error' => $error,
             'responsables' => $this->model('Responsable')->getActivos(),
-        ]);
+            'tituloPagina' => 'Reporte: Préstamos pendientes o vencidos',
+        ], 'main');
     }
 
     private function exportarPrestamos(array $filas, array $filtros): void
@@ -413,7 +418,8 @@ class ReportesController extends Controller
             'error' => $error,
             'ubicaciones' => $this->model('Ubicacion')->getActivas(),
             'tiposBaja' => $this->model('TipoBaja')->getActivos(),
-        ]);
+            'tituloPagina' => 'Reporte: Bajas por período',
+        ], 'main');
     }
 
     private function exportarBajas(array $filas, array $filtros): void
@@ -567,7 +573,8 @@ class ReportesController extends Controller
             'filtros' => $filtros,
             'error' => $error,
             'ubicaciones' => $this->model('Ubicacion')->getActivas(),
-        ]);
+            'tituloPagina' => 'Reporte: Verificaciones con diferencias',
+        ], 'main');
     }
 
     private function exportarVerificaciones(array $filas, array $filtros): void
@@ -703,7 +710,8 @@ class ReportesController extends Controller
             'error' => $error,
             'formasIngreso' => $this->model('FormaIngreso')->getActivas(),
             'categorias' => $this->model('CategoriaBien')->getActivas(),
-        ]);
+            'tituloPagina' => 'Reporte: Ingresos de bienes',
+        ], 'main');
     }
 
     private function exportarIngresos(array $filas, array $filtros): void
@@ -817,7 +825,8 @@ class ReportesController extends Controller
             'resultado' => $resultado,
             'filtros' => $filtros,
             'error' => $error,
-        ]);
+            'tituloPagina' => 'Reporte: Resumen de movimientos',
+        ], 'main');
     }
 
     private function exportarResumen(array $resultado, array $filtros): void

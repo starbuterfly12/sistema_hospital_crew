@@ -56,7 +56,8 @@ class BitacoraController extends Controller
                 'pagina' => 1,
                 'totalPaginas' => 1,
                 'total' => 0,
-            ]);
+                'tituloPagina' => 'Bitácora',
+            ], 'main');
             return;
         }
 
@@ -85,7 +86,8 @@ class BitacoraController extends Controller
             'pagina' => $pagina,
             'totalPaginas' => $totalPaginas,
             'total' => $total,
-        ]);
+            'tituloPagina' => 'Bitácora',
+        ], 'main');
     }
 
     public function ver(): void
@@ -116,6 +118,7 @@ class BitacoraController extends Controller
 
         $this->view('bitacora/ver', [
             'registro' => $registro,
-        ]);
+            'tituloPagina' => 'Detalle de bitácora',
+        ], 'main');
     }
 }

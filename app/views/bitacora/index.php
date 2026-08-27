@@ -1,203 +1,179 @@
-<!DOCTYPE html>
-<html lang="es-GT">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bitácora</title>
-    <link rel="stylesheet" href="<?= url('public/vendor/flatpickr/flatpickr.min.css') ?>">
-    <style>
-        .filtros-reporte { border: 1px solid #bbb; border-radius: 4px; padding: 10px 14px; margin-bottom: 12px; }
-        .filtros-reporte legend { font-weight: bold; padding: 0 6px; }
-        .filtros-campos { display: flex; flex-wrap: wrap; gap: 10px 20px; align-items: flex-end; }
-        .campo-filtro { display: flex; flex-direction: column; gap: 2px; }
-        .campo-filtro label { font-size: 0.9em; }
-    </style>
-</head>
-<body>
-    <?php
-        $mostrar = static function ($value): string {
-            if ($value === null || $value === '') {
-                return '-';
-            }
-            return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
-        };
+<?php
+// Fragmento de contenido: se renderiza dentro de layouts/main.php (ver BitacoraController::index()).
+// Módulo de SOLO LECTURA, exclusivo de Administrador. Solo presentación: consultas, filtros GET
+// (fecha_desde, fecha_hasta, buscar, filtro_modulo, resultado, pagina), validación de fechas y
+// paginación (25/pág) NO cambian. Flatpickr local intacto.
+$mostrar = static function ($value): string {
+    return ($value !== null && trim((string) $value) !== '') ? htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8') : '—';
+};
+$valorInput = static function ($value): string {
+    return htmlspecialchars((string) ($value ?? ''), ENT_QUOTES, 'UTF-8');
+};
 
-        // Para el value="" de inputs EDITABLES: a diferencia de $mostrar() (pensado para texto de
-        // solo lectura), esto NUNCA debe convertir vacío/null en "-" — si lo hiciera, un input vacío
-        // quedaría con el literal "-" como valor, y al reenviar el formulario sin tocarlo el backend
-        // recibiría "-" en vez de "", rompiendo la validación de fecha (isValidIsoDate('-') === false).
-        $valorInput = static function ($value): string {
-            return htmlspecialchars((string) ($value ?? ''), ENT_QUOTES, 'UTF-8');
-        };
+$mostrarUsuario = static function (array $fila) use ($mostrar): string {
+    if ($fila['id_usuario'] !== null) {
+        if (($fila['nombre_completo'] ?? null) !== null && ($fila['usuario'] ?? null) !== null) {
+            return $mostrar($fila['nombre_completo']) . ' (' . $mostrar($fila['usuario']) . ')';
+        }
+        return 'Usuario #' . (int) $fila['id_usuario'];
+    }
+    if (!empty($fila['usuario_intentado'])) {
+        return 'No autenticado (intento: ' . $mostrar($fila['usuario_intentado']) . ')';
+    }
+    return 'Sistema';
+};
 
-        $mostrarUsuario = static function (array $fila) use ($mostrar): string {
-            if ($fila['id_usuario'] !== null) {
-                if (($fila['nombre_completo'] ?? null) !== null && ($fila['usuario'] ?? null) !== null) {
-                    return $mostrar($fila['nombre_completo']) . ' (' . $mostrar($fila['usuario']) . ')';
-                }
-                return 'Usuario #' . (int) $fila['id_usuario'];
-            }
+$registros = $registros ?? [];
+$error = $error ?? null;
+$filtros = $filtros ?? [];
+$modulos = $modulos ?? [];
+$pagina = (int) ($pagina ?? 1);
+$totalPaginas = (int) ($totalPaginas ?? 1);
+$total = (int) ($total ?? 0);
 
-            if (!empty($fila['usuario_intentado'])) {
-                return 'No autenticado (intento: ' . $mostrar($fila['usuario_intentado']) . ')';
-            }
+$hayFiltros = (($filtros['fecha_desde'] ?? '') !== '' || ($filtros['fecha_hasta'] ?? '') !== ''
+    || ($filtros['buscar'] ?? '') !== '' || ($filtros['modulo'] ?? '') !== '' || ($filtros['resultado'] ?? '') !== '');
 
-            return 'Sistema';
-        };
+$paramsBase = [
+    'modulo' => 'bitacora',
+    'fecha_desde' => $filtros['fecha_desde'] ?? '',
+    'fecha_hasta' => $filtros['fecha_hasta'] ?? '',
+    'buscar' => $filtros['buscar'] ?? '',
+    'filtro_modulo' => $filtros['modulo'] ?? '',
+    'resultado' => $filtros['resultado'] ?? '',
+];
+$urlPagina = static function (int $numeroPagina) use ($paramsBase): string {
+    $params = $paramsBase;
+    $params['pagina'] = $numeroPagina;
+    return 'index.php?' . http_build_query($params);
+};
+?>
+<div class="page-header">
+    <div class="page-header-fila">
+        <div>
+            <h1 class="page-title">Bitácora</h1>
+            <p class="page-subtitle">Consulta de las acciones registradas en el sistema.</p>
+        </div>
+    </div>
+</div>
 
-        $mostrarResultado = static function (string $resultado): string {
-            return $resultado === 'exitoso' ? 'Exitoso' : 'Fallido';
-        };
+<?php if ($error !== null): ?>
+    <div class="alert alert-error"><?= $mostrar($error) ?></div>
+<?php endif; ?>
 
-        // Trunca de forma segura para UTF-8 (mb_substr respeta caracteres multibyte) y escapa
-        // DESPUÉS de truncar, para no cortar a mitad de una entidad HTML.
-        $truncar = static function (?string $texto, int $limite = 120): string {
-            $texto = (string) ($texto ?? '');
-            if (mb_strlen($texto, 'UTF-8') <= $limite) {
-                return htmlspecialchars($texto, ENT_QUOTES, 'UTF-8');
-            }
-            return htmlspecialchars(mb_substr($texto, 0, $limite, 'UTF-8'), ENT_QUOTES, 'UTF-8') . '…';
-        };
+<form method="GET" action="index.php" class="filters">
+    <input type="hidden" name="modulo" value="bitacora">
 
-        $registros = $registros ?? [];
-        $error = $error ?? null;
-        $filtros = $filtros ?? [];
-        $modulos = $modulos ?? [];
-        $pagina = $pagina ?? 1;
-        $totalPaginas = $totalPaginas ?? 1;
-        $total = $total ?? 0;
+    <div class="form-group">
+        <label class="form-label" for="fecha_desde">Fecha desde</label>
+        <div class="campo-fecha">
+            <input type="text" id="fecha_desde" name="fecha_desde" class="form-control" value="<?= $valorInput($filtros['fecha_desde'] ?? '') ?>" autocomplete="off">
+            <button type="button" class="btn-calendario" data-flatpickr-target="fecha_desde" aria-label="Abrir calendario">📅</button>
+        </div>
+    </div>
 
-        // Base para reconstruir los links de paginación conservando los filtros activos — nunca el
-        // GET crudo (que ya trae modulo=bitacora, accion, y una posible 'pagina' vieja).
-        $paramsBase = [
-            'modulo' => 'bitacora',
-            'fecha_desde' => $filtros['fecha_desde'] ?? '',
-            'fecha_hasta' => $filtros['fecha_hasta'] ?? '',
-            'buscar' => $filtros['buscar'] ?? '',
-            'filtro_modulo' => $filtros['modulo'] ?? '',
-            'resultado' => $filtros['resultado'] ?? '',
-        ];
+    <div class="form-group">
+        <label class="form-label" for="fecha_hasta">Fecha hasta</label>
+        <div class="campo-fecha">
+            <input type="text" id="fecha_hasta" name="fecha_hasta" class="form-control" value="<?= $valorInput($filtros['fecha_hasta'] ?? '') ?>" autocomplete="off">
+            <button type="button" class="btn-calendario" data-flatpickr-target="fecha_hasta" aria-label="Abrir calendario">📅</button>
+        </div>
+    </div>
 
-        $urlPagina = static function (int $numeroPagina) use ($paramsBase): string {
-            $params = $paramsBase;
-            $params['pagina'] = $numeroPagina;
-            return 'index.php?' . http_build_query($params);
-        };
-    ?>
+    <div class="form-group">
+        <label class="form-label" for="buscar">Buscar</label>
+        <input type="text" id="buscar" name="buscar" class="form-control" value="<?= $valorInput($filtros['buscar'] ?? '') ?>" placeholder="Usuario, acción o descripción">
+    </div>
 
-    <h1>Bitácora</h1>
-    <p>Consulta de solo lectura. Registra la trazabilidad de acciones del sistema y los intentos de inicio de sesión.</p>
+    <div class="form-group">
+        <label class="form-label" for="filtro_modulo">Módulo</label>
+        <select id="filtro_modulo" name="filtro_modulo" class="form-control">
+            <option value="">Todos</option>
+            <?php foreach ($modulos as $moduloOpcion): ?>
+                <option value="<?= htmlspecialchars((string) $moduloOpcion, ENT_QUOTES, 'UTF-8') ?>" <?= ($filtros['modulo'] ?? '') === $moduloOpcion ? 'selected' : '' ?>><?= htmlspecialchars((string) $moduloOpcion, ENT_QUOTES, 'UTF-8') ?></option>
+            <?php endforeach; ?>
+        </select>
+    </div>
 
-    <?php if ($error !== null): ?>
-        <p><?= $mostrar($error) ?></p>
-    <?php endif; ?>
+    <div class="form-group">
+        <label class="form-label" for="resultado">Resultado</label>
+        <select id="resultado" name="resultado" class="form-control">
+            <option value="">Todos</option>
+            <option value="exitoso" <?= ($filtros['resultado'] ?? '') === 'exitoso' ? 'selected' : '' ?>>Exitoso</option>
+            <option value="fallido" <?= ($filtros['resultado'] ?? '') === 'fallido' ? 'selected' : '' ?>>Fallido</option>
+        </select>
+    </div>
 
-    <form method="GET" action="index.php">
-        <input type="hidden" name="modulo" value="bitacora">
+    <div class="form-actions-inline">
+        <button type="submit" class="btn btn-primary">Filtrar</button>
+        <a href="index.php?modulo=bitacora" class="btn btn-secondary">Limpiar filtros</a>
+    </div>
+</form>
 
-        <fieldset class="filtros-reporte">
-            <legend>Filtros</legend>
-            <div class="filtros-campos">
-                <div class="campo-filtro">
-                    <label for="fecha_desde">Fecha desde</label>
-                    <span><input type="text" id="fecha_desde" name="fecha_desde" value="<?= $valorInput($filtros['fecha_desde'] ?? '') ?>"> <button type="button" data-flatpickr-target="fecha_desde">📅</button></span>
-                </div>
-
-                <div class="campo-filtro">
-                    <label for="fecha_hasta">Fecha hasta</label>
-                    <span><input type="text" id="fecha_hasta" name="fecha_hasta" value="<?= $valorInput($filtros['fecha_hasta'] ?? '') ?>"> <button type="button" data-flatpickr-target="fecha_hasta">📅</button></span>
-                </div>
-
-                <div class="campo-filtro">
-                    <label for="buscar">Buscar</label>
-                    <input type="text" id="buscar" name="buscar" value="<?= $valorInput($filtros['buscar'] ?? '') ?>" placeholder="Usuario, acción, descripción...">
-                </div>
-
-                <div class="campo-filtro">
-                    <label for="filtro_modulo">Módulo</label>
-                    <select id="filtro_modulo" name="filtro_modulo">
-                        <option value="">Todos los módulos</option>
-                        <?php foreach ($modulos as $moduloOpcion): ?>
-                            <option value="<?= $mostrar($moduloOpcion) ?>" <?= ($filtros['modulo'] ?? '') === $moduloOpcion ? 'selected' : '' ?>><?= $mostrar($moduloOpcion) ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-
-                <div class="campo-filtro">
-                    <label for="resultado">Resultado</label>
-                    <select id="resultado" name="resultado">
-                        <option value="">Todos los resultados</option>
-                        <option value="exitoso" <?= ($filtros['resultado'] ?? '') === 'exitoso' ? 'selected' : '' ?>>Exitoso</option>
-                        <option value="fallido" <?= ($filtros['resultado'] ?? '') === 'fallido' ? 'selected' : '' ?>>Fallido</option>
-                    </select>
-                </div>
-
-                <div class="campo-filtro">
-                    <button type="submit">Filtrar</button>
-                    <a href="index.php?modulo=bitacora">Limpiar filtros</a>
-                </div>
-            </div>
-        </fieldset>
-    </form>
-
-    <p>Total de registros encontrados: <?= (int) $total ?></p>
-
+<div class="card">
     <?php if ($error === null && empty($registros)): ?>
-        <p>No se encontraron registros para los filtros seleccionados.</p>
+        <p class="estado-vacio">No se encontraron registros de bitácora para los filtros seleccionados.</p>
     <?php elseif ($error === null): ?>
-        <table border="1" cellpadding="5" cellspacing="0">
-            <thead>
-                <tr>
-                    <th>Fecha y hora</th>
-                    <th>Usuario</th>
-                    <th>Acción</th>
-                    <th>Módulo</th>
-                    <th>Resultado</th>
-                    <th>Descripción</th>
-                    <th>Acciones</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php foreach ($registros as $registro): ?>
+        <div class="table-responsive">
+            <table class="table-app table-detail-centered table-resizable table-bitacora">
+                <thead>
                     <tr>
-                        <td><?= $mostrar(formatDateTimeSeconds($registro['fecha_hora'])) ?></td>
-                        <td><?= $mostrarUsuario($registro) ?></td>
-                        <td><?= $mostrar($registro['accion']) ?></td>
-                        <td><?= $mostrar($registro['modulo']) ?></td>
-                        <td><?= $mostrarResultado($registro['resultado']) ?></td>
-                        <td><?= $truncar($registro['descripcion']) ?></td>
-                        <td>
-                            <a href="index.php?modulo=bitacora&accion=ver&id=<?= (int) $registro['id_bitacora'] ?>">Ver</a>
-                        </td>
+                        <th>Fecha y hora</th>
+                        <th>Usuario</th>
+                        <th>Acción</th>
+                        <th>Módulo</th>
+                        <th>Resultado</th>
+                        <th>Descripción</th>
+                        <th>Acciones</th>
                     </tr>
-                <?php endforeach; ?>
-            </tbody>
-        </table>
+                </thead>
+                <tbody>
+                    <?php foreach ($registros as $registro): ?>
+                        <?php $exito = ($registro['resultado'] ?? '') === 'exitoso'; ?>
+                        <tr>
+                            <td><?= $mostrar(formatDateTimeSeconds($registro['fecha_hora'] ?? null)) ?></td>
+                            <td><?= $mostrarUsuario($registro) ?></td>
+                            <td><?= $mostrar($registro['accion'] ?? null) ?></td>
+                            <td><?= $mostrar($registro['modulo'] ?? null) ?></td>
+                            <td><span class="badge <?= $exito ? 'badge-exito' : 'badge-error' ?>"><?= $exito ? 'Exitoso' : 'Fallido' ?></span></td>
+                            <td><?= $mostrar($registro['descripcion'] ?? null) ?></td>
+                            <td>
+                                <div class="table-actions">
+                                    <a class="table-action-btn table-action-ver" href="index.php?modulo=bitacora&accion=ver&id=<?= (int) $registro['id_bitacora'] ?>">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.5 12S5 5 12 5s10.5 7 10.5 7-3.5 7-10.5 7S1.5 12 1.5 12Z"/><circle cx="12" cy="12" r="3"/></svg>
+                                        Ver
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
 
-        <p>
+        <div class="pagination">
             <?php if ($pagina > 1): ?>
-                <a href="<?= htmlspecialchars($urlPagina($pagina - 1), ENT_QUOTES, 'UTF-8') ?>">« Anterior</a>
+                <a href="<?= htmlspecialchars($urlPagina($pagina - 1), ENT_QUOTES, 'UTF-8') ?>" class="btn btn-secondary">« Anterior</a>
             <?php else: ?>
-                « Anterior
+                <span class="btn btn-secondary" aria-disabled="true" style="opacity:.5;pointer-events:none;">« Anterior</span>
             <?php endif; ?>
 
-            &nbsp;Página <?= (int) $pagina ?> de <?= (int) $totalPaginas ?>&nbsp;
+            <span>Página <?= $pagina ?> de <?= $totalPaginas ?> · <?= $total ?> registro<?= $total === 1 ? '' : 's' ?></span>
 
             <?php if ($pagina < $totalPaginas): ?>
-                <a href="<?= htmlspecialchars($urlPagina($pagina + 1), ENT_QUOTES, 'UTF-8') ?>">Siguiente »</a>
+                <a href="<?= htmlspecialchars($urlPagina($pagina + 1), ENT_QUOTES, 'UTF-8') ?>" class="btn btn-secondary">Siguiente »</a>
             <?php else: ?>
-                Siguiente »
+                <span class="btn btn-secondary" aria-disabled="true" style="opacity:.5;pointer-events:none;">Siguiente »</span>
             <?php endif; ?>
-        </p>
+        </div>
     <?php endif; ?>
+</div>
 
-    <p><a href="index.php?modulo=dashboard">Volver al panel principal</a></p>
-
-    <script src="<?= url('public/vendor/flatpickr/flatpickr.min.js') ?>"></script>
-    <script src="<?= url('public/vendor/flatpickr/l10n/es.js') ?>"></script>
-    <script src="<?= url('public/js/fecha-picker.js') ?>"></script>
-    <script>
-        inicializarSelectoresFecha(['fecha_desde', 'fecha_hasta']);
-    </script>
-</body>
-</html>
+<link rel="stylesheet" href="<?= url('public/vendor/flatpickr/flatpickr.min.css') ?>">
+<script src="<?= url('public/vendor/flatpickr/flatpickr.min.js') ?>"></script>
+<script src="<?= url('public/vendor/flatpickr/l10n/es.js') ?>"></script>
+<script src="<?= url('public/js/fecha-picker.js') ?>"></script>
+<script src="<?= url('public/js/app.js') ?>"></script>
+<script>
+    inicializarSelectoresFecha(['fecha_desde', 'fecha_hasta']);
+</script>

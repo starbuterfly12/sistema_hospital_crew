@@ -1,56 +1,84 @@
-<!DOCTYPE html>
-<html lang="es-GT">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Generar tarjeta de responsabilidad</title>
-</head>
-<body>
-    <?php
-        $asignaciones = $asignaciones ?? [];
-        $error = $error ?? null;
-    ?>
+<?php
+// Fragmento de contenido: se renderiza dentro de layouts/main.php (ver TarjetasController::generar()).
+// La lógica de emisión NO cambia: mismo endpoint (POST a index.php?modulo=tarjetas&accion=generar),
+// mismo csrfField(), mismo <select name="id_asignacion"> con las asignaciones en estado 'Asignada'
+// (Asignacion::getAsignadas()). La confirmación final usa el modal global #modal-confirm del layout
+// (data-confirm), nunca window.confirm(): el <button> visible es type="button" y dispara el envío del
+// <form> real mediante requestSubmit().
+$asignaciones = $asignaciones ?? [];
+$error = $error ?? null;
 
-    <?php if (!empty($error)): ?>
-        <p><?= htmlspecialchars($error, ENT_QUOTES, 'UTF-8') ?></p>
-    <?php endif; ?>
+$mostrar = static function ($valor): string {
+    return ($valor !== null && trim((string) $valor) !== '') ? htmlspecialchars((string) $valor, ENT_QUOTES, 'UTF-8') : '—';
+};
+?>
+<div class="page-header">
+    <div class="page-header-fila">
+        <div>
+            <h1 class="page-title">Generar tarjeta de responsabilidad</h1>
+            <p class="page-subtitle">Emisión de una tarjeta a partir de una asignación en estado Asignada.</p>
+        </div>
 
-    <h1>Generar tarjeta de responsabilidad</h1>
+        <div class="page-actions">
+            <a href="index.php?modulo=tarjetas" class="btn btn-secondary">Volver</a>
+        </div>
+    </div>
+</div>
 
-    <?php if (empty($asignaciones)): ?>
-        <p>No hay asignaciones en estado Asignada disponibles para generar una tarjeta.</p>
-    <?php else: ?>
-        <form method="POST">
-            <?= csrfField() ?>
+<?php if ($error !== null && $error !== ''): ?>
+    <div class="alert alert-error"><?= $mostrar($error) ?></div>
+<?php endif; ?>
 
-            <div>
-                <label for="id_asignacion">Asignación *</label>
-                <select id="id_asignacion" name="id_asignacion" required>
-                    <option value="">Seleccione</option>
-                    <?php foreach ($asignaciones as $asignacion): ?>
-                        <?php
-                            $ubicacionTexto = $asignacion['nombre_ubicacion'] ?? '-';
+<?php if (empty($asignaciones)): ?>
+    <div class="card">
+        <p class="estado-vacio">No hay asignaciones en estado Asignada disponibles para generar una tarjeta.</p>
+    </div>
+<?php else: ?>
+    <form method="POST" action="index.php?modulo=tarjetas&accion=generar" id="form-generar-tarjeta" class="form-card">
+        <?= csrfField() ?>
 
-                            if (!empty($asignacion['tipo_ubicacion'])) {
-                                $ubicacionTexto .= ' - ' . $asignacion['tipo_ubicacion'];
-                            }
+        <div class="form-section">
+            <h2 class="form-section-title">Asignación</h2>
+            <div class="form-grid">
+                <div class="form-group form-grid-full">
+                    <label class="form-label" for="id_asignacion">Asignación <span class="required-mark">*</span></label>
+                    <select id="id_asignacion" name="id_asignacion" class="form-control" required>
+                        <option value="">Seleccione</option>
+                        <?php foreach ($asignaciones as $asignacion): ?>
+                            <?php
+                                $ubicacionTexto = $asignacion['nombre_ubicacion'] ?? '-';
 
-                            $etiqueta = ($asignacion['numero_asignacion'] ?? '-')
-                                . ' - ' . ($asignacion['responsable_nombre'] ?? '-')
-                                . ' - ' . $ubicacionTexto;
-                        ?>
-                        <option value="<?= (int) $asignacion['id_asignacion'] ?>"><?= htmlspecialchars($etiqueta, ENT_QUOTES, 'UTF-8') ?></option>
-                    <?php endforeach; ?>
-                </select>
+                                if (!empty($asignacion['tipo_ubicacion'])) {
+                                    $ubicacionTexto .= ' - ' . $asignacion['tipo_ubicacion'];
+                                }
+
+                                $etiqueta = ($asignacion['numero_asignacion'] ?? '-')
+                                    . ' - ' . ($asignacion['responsable_nombre'] ?? '-')
+                                    . ' - ' . $ubicacionTexto;
+                            ?>
+                            <option value="<?= (int) $asignacion['id_asignacion'] ?>"><?= htmlspecialchars($etiqueta, ENT_QUOTES, 'UTF-8') ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
             </div>
+        </div>
 
-            <div>
-                <button type="submit">Generar tarjeta</button>
-                <a href="index.php?modulo=tarjetas">Cancelar</a>
-            </div>
-        </form>
-    <?php endif; ?>
+        <div class="form-actions">
+            <button type="button" class="btn btn-primary"
+                data-confirm
+                data-confirm-form="form-generar-tarjeta"
+                data-confirm-validate-form
+                data-confirm-icon="doc" data-confirm-variant="azul"
+                data-confirm-title="Confirmar generación"
+                data-confirm-text="Se generará una tarjeta de responsabilidad para la asignación seleccionada."
+                data-confirm-subtext="¿Desea generar la tarjeta?"
+                data-confirm-ok="Generar tarjeta"
+                data-confirm-btnclass="btn-primary">
+                Generar tarjeta
+            </button>
+            <a href="index.php?modulo=tarjetas" class="btn btn-secondary">Cancelar</a>
+        </div>
 
-    <p><a href="index.php?modulo=tarjetas">Volver al listado</a></p>
-</body>
-</html>
+        <button type="submit" class="visually-hidden" tabindex="-1" aria-hidden="true">Generar tarjeta</button>
+    </form>
+<?php endif; ?>

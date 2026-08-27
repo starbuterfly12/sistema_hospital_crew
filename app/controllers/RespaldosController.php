@@ -19,15 +19,10 @@ class RespaldosController extends Controller
         $respaldoModel = $this->model('Respaldo');
         $respaldos = $respaldoModel->getAll();
 
-        $mensajeExito = $_SESSION['mensaje_exito'] ?? null;
-        $mensajeError = $_SESSION['mensaje_error'] ?? null;
-        unset($_SESSION['mensaje_exito'], $_SESSION['mensaje_error']);
-
         $this->view('respaldos/index', [
             'respaldos' => $respaldos,
-            'mensajeExito' => $mensajeExito,
-            'mensajeError' => $mensajeError,
-        ]);
+            'tituloPagina' => 'Respaldos',
+        ], 'main');
     }
 
     public function generar(): void
@@ -65,7 +60,7 @@ class RespaldosController extends Controller
                 usuarioIntentado: null
             );
 
-            $_SESSION['mensaje_error'] = 'No fue posible generar el respaldo. Intente nuevamente.';
+            setFlash('error', 'No fue posible generar el respaldo', 'No fue posible generar el respaldo. Intente nuevamente.');
             header('Location: index.php?modulo=respaldos');
             exit;
         }
@@ -96,7 +91,7 @@ class RespaldosController extends Controller
                 usuarioIntentado: null
             );
 
-            $_SESSION['mensaje_error'] = 'No fue posible generar el respaldo. Intente nuevamente.';
+            setFlash('error', 'No fue posible generar el respaldo', 'No fue posible generar el respaldo. Intente nuevamente.');
             header('Location: index.php?modulo=respaldos');
             exit;
         }
@@ -113,7 +108,7 @@ class RespaldosController extends Controller
             usuarioIntentado: null
         );
 
-        $_SESSION['mensaje_exito'] = 'El respaldo fue generado correctamente.';
+        setFlash('success', 'Respaldo generado correctamente', 'El respaldo de la base de datos fue creado correctamente.');
         header('Location: index.php?modulo=respaldos');
         exit;
     }

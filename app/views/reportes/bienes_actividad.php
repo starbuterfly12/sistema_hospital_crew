@@ -1,133 +1,125 @@
-<!DOCTYPE html>
-<html lang="es-GT">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reporte: Bienes con actividad</title>
-    <link rel="stylesheet" href="<?= url('public/vendor/flatpickr/flatpickr.min.css') ?>">
-    <style>
-        .filtros-reporte { border: 1px solid #bbb; border-radius: 4px; padding: 10px 14px; margin-bottom: 12px; }
-        .filtros-reporte legend { font-weight: bold; padding: 0 6px; }
-        .filtros-campos { display: flex; flex-wrap: wrap; gap: 10px 20px; align-items: flex-end; }
-        .campo-filtro { display: flex; flex-direction: column; gap: 2px; }
-        .campo-filtro label { font-size: 0.9em; }
-    </style>
-</head>
-<body>
-    <?php
-        $mostrar = static function ($value): string {
-            if ($value === null || $value === '') {
-                return '-';
-            }
-            return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
-        };
+<?php
+// Fragmento de contenido: se renderiza dentro de layouts/main.php (ver ReportesController::bienesActividad()).
+// Solo presentación: consultas, filtros backend, exportaciones y lógica de fechas NO cambian.
+// Parámetros GET conservados: fecha_desde, fecha_hasta, tipo, formato.
+$mostrar = static function ($value): string {
+    return ($value !== null && $value !== '') ? htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8') : '—';
+};
+$valorInput = static function ($value): string {
+    return htmlspecialchars((string) ($value ?? ''), ENT_QUOTES, 'UTF-8');
+};
 
-        // Para el value="" de inputs EDITABLES (los filtros de fecha): a diferencia de $mostrar()
-        // (pensado para texto de solo lectura), esto NUNCA debe convertir vacío/null en "-" — si lo
-        // hiciera, un filtro de fecha vacío quedaría con el literal "-" como valor, y al reenviar el
-        // formulario sin tocarlo el backend recibiría "-" en vez de "", rompiendo la validación de
-        // fecha opcional.
-        $valorInput = static function ($value): string {
-            return htmlspecialchars((string) ($value ?? ''), ENT_QUOTES, 'UTF-8');
-        };
+$filas = $filas ?? [];
+$filtros = $filtros ?? [];
+$error = $error ?? null;
 
-        $filas = $filas ?? [];
-        $filtros = $filtros ?? [];
-        $error = $error ?? null;
+$paramsExportar = $_GET;
+$paramsExportar['modulo'] = 'reportes';
+$paramsExportar['accion'] = 'bienesActividad';
+$paramsExportar['formato'] = 'excel';
+$urlExportar = 'index.php?' . http_build_query($paramsExportar);
 
-        $paramsExportar = $_GET;
-        $paramsExportar['modulo'] = 'reportes';
-        $paramsExportar['accion'] = 'bienesActividad';
-        $paramsExportar['formato'] = 'excel';
-        $urlExportar = 'index.php?' . http_build_query($paramsExportar);
+$paramsExportarPdf = $paramsExportar;
+$paramsExportarPdf['formato'] = 'pdf';
+$urlExportarPdf = 'index.php?' . http_build_query($paramsExportarPdf);
 
-        $paramsExportarPdf = $paramsExportar;
-        $paramsExportarPdf['formato'] = 'pdf';
-        $urlExportarPdf = 'index.php?' . http_build_query($paramsExportarPdf);
-    ?>
+$svgDescarga = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11"/><path d="M7 11l5 5 5-5"/><path d="M4 19h16"/></svg>';
+?>
+<div class="page-header">
+    <div class="page-header-fila">
+        <div>
+            <h1 class="page-title">Bienes con actividad en un período</h1>
+        </div>
 
-    <h1>Bienes con actividad en un período</h1>
+        <div class="page-actions">
+            <a href="index.php?modulo=reportes" class="btn btn-secondary">Volver</a>
+            <a href="<?= htmlspecialchars($urlExportar, ENT_QUOTES, 'UTF-8') ?>" class="btn btn-verde-suave"><?= $svgDescarga ?> Descargar Excel</a>
+            <a href="<?= htmlspecialchars($urlExportarPdf, ENT_QUOTES, 'UTF-8') ?>" class="btn btn-azul-suave"><?= $svgDescarga ?> Descargar PDF</a>
+        </div>
+    </div>
+</div>
 
-    <?php if ($error !== null): ?>
-        <p><?= $mostrar($error) ?></p>
-    <?php endif; ?>
+<?php if ($error !== null): ?>
+    <div class="alert alert-error"><?= $mostrar($error) ?></div>
+<?php endif; ?>
 
-    <form method="GET" action="index.php">
-        <input type="hidden" name="modulo" value="reportes">
-        <input type="hidden" name="accion" value="bienesActividad">
+<form method="GET" action="index.php" class="filters">
+    <input type="hidden" name="modulo" value="reportes">
+    <input type="hidden" name="accion" value="bienesActividad">
 
-        <fieldset class="filtros-reporte">
-            <legend>Filtros</legend>
-            <div class="filtros-campos">
-                <div class="campo-filtro">
-                    <label for="fecha_desde">Fecha desde</label>
-                    <span><input type="text" id="fecha_desde" name="fecha_desde" value="<?= $valorInput($filtros['fecha_desde'] ?? '') ?>"> <button type="button" data-flatpickr-target="fecha_desde">📅</button></span>
-                </div>
+    <div class="form-group">
+        <label class="form-label" for="fecha_desde">Fecha desde</label>
+        <div class="campo-fecha">
+            <input type="text" id="fecha_desde" name="fecha_desde" class="form-control" value="<?= $valorInput($filtros['fecha_desde'] ?? '') ?>" autocomplete="off">
+            <button type="button" class="btn-calendario" data-flatpickr-target="fecha_desde" aria-label="Abrir calendario">📅</button>
+        </div>
+    </div>
 
-                <div class="campo-filtro">
-                    <label for="fecha_hasta">Fecha hasta</label>
-                    <span><input type="text" id="fecha_hasta" name="fecha_hasta" value="<?= $valorInput($filtros['fecha_hasta'] ?? '') ?>"> <button type="button" data-flatpickr-target="fecha_hasta">📅</button></span>
-                </div>
+    <div class="form-group">
+        <label class="form-label" for="fecha_hasta">Fecha hasta</label>
+        <div class="campo-fecha">
+            <input type="text" id="fecha_hasta" name="fecha_hasta" class="form-control" value="<?= $valorInput($filtros['fecha_hasta'] ?? '') ?>" autocomplete="off">
+            <button type="button" class="btn-calendario" data-flatpickr-target="fecha_hasta" aria-label="Abrir calendario">📅</button>
+        </div>
+    </div>
 
-                <div class="campo-filtro">
-                    <label for="tipo">Tipo de actividad</label>
-                    <select id="tipo" name="tipo">
-                        <option value="">Todos</option>
-                        <?php foreach (ReportesService::TIPOS_EVENTO as $tipoEvento): ?>
-                            <option value="<?= $mostrar($tipoEvento) ?>" <?= ($filtros['tipo'] ?? '') === $tipoEvento ? 'selected' : '' ?>><?= $mostrar($tipoEvento) ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
+    <div class="form-group">
+        <label class="form-label" for="tipo">Tipo de actividad</label>
+        <select id="tipo" name="tipo" class="form-control">
+            <option value="">Todos</option>
+            <?php foreach (ReportesService::TIPOS_EVENTO as $tipoEvento): ?>
+                <option value="<?= htmlspecialchars($tipoEvento, ENT_QUOTES, 'UTF-8') ?>" <?= ($filtros['tipo'] ?? '') === $tipoEvento ? 'selected' : '' ?>><?= htmlspecialchars($tipoEvento, ENT_QUOTES, 'UTF-8') ?></option>
+            <?php endforeach; ?>
+        </select>
+    </div>
 
-                <div class="campo-filtro">
-                    <button type="submit">Filtrar</button>
-                    <a href="index.php?modulo=reportes&accion=bienesActividad">Limpiar filtros</a>
-                </div>
-            </div>
-        </fieldset>
-    </form>
+    <div class="form-actions-inline">
+        <button type="submit" class="btn btn-primary">Filtrar</button>
+        <a href="index.php?modulo=reportes&accion=bienesActividad" class="btn btn-secondary">Limpiar filtros</a>
+    </div>
+</form>
 
-    <p><a href="<?= htmlspecialchars($urlExportar, ENT_QUOTES, 'UTF-8') ?>">Exportar Excel</a> | <a href="<?= htmlspecialchars($urlExportarPdf, ENT_QUOTES, 'UTF-8') ?>">Exportar PDF</a></p>
-
+<div class="card">
     <?php if ($error === null && empty($filas)): ?>
-        <p>No se encontraron bienes con actividad para los filtros seleccionados.</p>
+        <p class="estado-vacio">No se encontraron bienes con actividad para los filtros seleccionados.</p>
     <?php elseif ($error === null): ?>
-        <table border="1" cellpadding="5" cellspacing="0">
-            <thead>
-                <tr>
-                    <th>No. de Bien</th>
-                    <th>SICOIN</th>
-                    <th>Descripción</th>
-                    <th>Cantidad de eventos</th>
-                    <th>Primer evento</th>
-                    <th>Último evento</th>
-                    <th>Tipos de actividad</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php foreach ($filas as $fila): ?>
+        <div class="table-responsive">
+            <table class="table-app table-detail-centered table-resizable table-reporte-bienes-actividad">
+                <thead>
                     <tr>
-                        <td><?= $mostrar($fila['codigo_interno']) ?></td>
-                        <td><?= $mostrar($fila['codigo_sicoin']) ?></td>
-                        <td><?= $mostrar($fila['descripcion']) ?></td>
-                        <td><?= (int) $fila['eventos'] ?></td>
-                        <td><?= $mostrar(formatFechaSegunTipo($fila['primer_evento'], $fila['primer_evento_es_datetime'])) ?></td>
-                        <td><?= $mostrar(formatFechaSegunTipo($fila['ultimo_evento'], $fila['ultimo_evento_es_datetime'])) ?></td>
-                        <td><?= $mostrar($fila['tipos']) ?></td>
+                        <th>No. de Bien</th>
+                        <th>SICOIN</th>
+                        <th>Descripción</th>
+                        <th>Cantidad de eventos</th>
+                        <th>Primer evento</th>
+                        <th>Último evento</th>
+                        <th>Tipos de actividad</th>
                     </tr>
-                <?php endforeach; ?>
-            </tbody>
-        </table>
-        <p>Total de registros: <?= count($filas) ?></p>
+                </thead>
+                <tbody>
+                    <?php foreach ($filas as $fila): ?>
+                        <tr>
+                            <td><?= $mostrar($fila['codigo_interno']) ?></td>
+                            <td><?= $mostrar($fila['codigo_sicoin']) ?></td>
+                            <td><?= $mostrar($fila['descripcion']) ?></td>
+                            <td><?= (int) $fila['eventos'] ?></td>
+                            <td><?= $mostrar(formatFechaSegunTipo($fila['primer_evento'], $fila['primer_evento_es_datetime'])) ?></td>
+                            <td><?= $mostrar(formatFechaSegunTipo($fila['ultimo_evento'], $fila['ultimo_evento_es_datetime'])) ?></td>
+                            <td><?= $mostrar($fila['tipos']) ?></td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+        <p class="tabla-nota">Total de registros: <strong><?= count($filas) ?></strong></p>
     <?php endif; ?>
+</div>
 
-    <p><a href="index.php?modulo=reportes">Volver a Reportes</a></p>
-
-    <script src="<?= url('public/vendor/flatpickr/flatpickr.min.js') ?>"></script>
-    <script src="<?= url('public/vendor/flatpickr/l10n/es.js') ?>"></script>
-    <script src="<?= url('public/js/fecha-picker.js') ?>"></script>
-    <script>
-        inicializarSelectoresFecha(['fecha_desde', 'fecha_hasta']);
-    </script>
-</body>
-</html>
+<link rel="stylesheet" href="<?= url('public/vendor/flatpickr/flatpickr.min.css') ?>">
+<script src="<?= url('public/vendor/flatpickr/flatpickr.min.js') ?>"></script>
+<script src="<?= url('public/vendor/flatpickr/l10n/es.js') ?>"></script>
+<script src="<?= url('public/js/fecha-picker.js') ?>"></script>
+<script src="<?= url('public/js/app.js') ?>"></script>
+<script>
+    inicializarSelectoresFecha(['fecha_desde', 'fecha_hasta']);
+</script>

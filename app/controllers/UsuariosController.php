@@ -35,7 +35,8 @@ class UsuariosController extends Controller
             'q' => $q,
             'idRol' => $idRol,
             'estado' => $estado,
-        ]);
+            'tituloPagina' => 'Usuarios',
+        ], 'main');
     }
 
     public function ver(): void
@@ -65,7 +66,8 @@ class UsuariosController extends Controller
         $this->view('usuarios/ver', [
             'usuario' => $usuario,
             'esUsuarioActual' => $idUsuario === (int) $_SESSION['id_usuario'],
-        ]);
+            'tituloPagina' => 'Detalle de usuario',
+        ], 'main');
     }
 
     public function crear(): void
@@ -89,7 +91,8 @@ class UsuariosController extends Controller
             'roles' => $rolModel->getActivos(),
             'error' => null,
             'datosFormulario' => [],
-        ]);
+            'tituloPagina' => 'Registrar usuario',
+        ], 'main');
     }
 
     public function guardar(): void
@@ -152,7 +155,8 @@ class UsuariosController extends Controller
                 'roles' => $roles,
                 'error' => $error,
                 'datosFormulario' => $datosFormulario,
-            ]);
+                'tituloPagina' => 'Registrar usuario',
+            ], 'main');
             return;
         }
 
@@ -185,7 +189,7 @@ class UsuariosController extends Controller
 
             $usuarioModel->commit();
 
-            $_SESSION['mensaje_exito'] = 'El usuario fue registrado correctamente.';
+            setFlash('success', 'Usuario registrado correctamente', 'El usuario fue registrado en el sistema.');
 
             header('Location: index.php?modulo=usuarios&accion=ver&id=' . $idUsuario);
             exit;
@@ -203,7 +207,8 @@ class UsuariosController extends Controller
                 'roles' => $roles,
                 'error' => $error,
                 'datosFormulario' => $datosFormulario,
-            ]);
+                'tituloPagina' => 'Registrar usuario',
+            ], 'main');
             return;
         }
     }
@@ -246,7 +251,8 @@ class UsuariosController extends Controller
             'error' => null,
             'datosFormulario' => $usuario,
             'esUsuarioActual' => $idUsuario === (int) $_SESSION['id_usuario'],
-        ]);
+            'tituloPagina' => 'Editar usuario',
+        ], 'main');
     }
 
     public function actualizar(): void
@@ -336,7 +342,8 @@ class UsuariosController extends Controller
                 'error' => $error,
                 'datosFormulario' => $datosFormulario,
                 'esUsuarioActual' => $esUsuarioActual,
-            ]);
+                'tituloPagina' => 'Editar usuario',
+            ], 'main');
             return;
         }
 
@@ -379,7 +386,8 @@ class UsuariosController extends Controller
                         'error' => $mensajeUltimoAdmin,
                         'datosFormulario' => $datosFormulario,
                         'esUsuarioActual' => $esUsuarioActual,
-                    ]);
+                        'tituloPagina' => 'Editar usuario',
+                    ], 'main');
                     return;
                 }
             }
@@ -400,7 +408,7 @@ class UsuariosController extends Controller
 
             $usuarioModel->commit();
 
-            $_SESSION['mensaje_exito'] = 'Los datos del usuario fueron actualizados correctamente.';
+            setFlash('success', 'Usuario actualizado correctamente', 'Los datos del usuario fueron actualizados.');
 
             header('Location: index.php?modulo=usuarios&accion=ver&id=' . $idUsuario);
             exit;
@@ -420,7 +428,8 @@ class UsuariosController extends Controller
                 'error' => $error,
                 'datosFormulario' => $datosFormulario,
                 'esUsuarioActual' => $esUsuarioActual,
-            ]);
+                'tituloPagina' => 'Editar usuario',
+            ], 'main');
             return;
         }
     }
@@ -474,7 +483,7 @@ class UsuariosController extends Controller
         $esUsuarioActual = $idUsuario === (int) $_SESSION['id_usuario'];
 
         if ($esUsuarioActual && $estadoNuevo === 'inactivo') {
-            $_SESSION['mensaje_error'] = 'No puede inactivar su propia cuenta.';
+            setFlash('error', 'No fue posible cambiar el estado', 'No puede inactivar su propia cuenta.');
 
             header('Location: index.php?modulo=usuarios&accion=ver&id=' . $idUsuario);
             exit;
@@ -503,7 +512,7 @@ class UsuariosController extends Controller
                 if ($mensaje !== null) {
                     $usuarioModel->rollBack();
 
-                    $_SESSION['mensaje_error'] = $mensaje;
+                    setFlash('error', 'No fue posible cambiar el estado', $mensaje);
 
                     header('Location: index.php?modulo=usuarios&accion=ver&id=' . $idUsuario);
                     exit;
@@ -526,7 +535,11 @@ class UsuariosController extends Controller
 
             $usuarioModel->commit();
 
-            $_SESSION['mensaje_exito'] = 'El estado del usuario fue actualizado correctamente.';
+            setFlash(
+                'success',
+                $estadoNuevo === 'activo' ? 'Usuario activado correctamente' : 'Usuario inactivado correctamente',
+                $estadoNuevo === 'activo' ? 'El usuario fue activado en el sistema.' : 'El usuario fue inactivado en el sistema.'
+            );
 
             header('Location: index.php?modulo=usuarios&accion=ver&id=' . $idUsuario);
             exit;
@@ -537,7 +550,7 @@ class UsuariosController extends Controller
 
             error_log('Error al cambiar el estado del usuario: ' . $e->getMessage());
 
-            $_SESSION['mensaje_error'] = 'No fue posible cambiar el estado del usuario. Intente nuevamente.';
+            setFlash('error', 'No fue posible cambiar el estado', 'No fue posible cambiar el estado del usuario. Intente nuevamente.');
 
             header('Location: index.php?modulo=usuarios&accion=ver&id=' . $idUsuario);
             exit;
@@ -608,7 +621,7 @@ class UsuariosController extends Controller
         }
 
         if ($error !== null) {
-            $_SESSION['mensaje_error'] = $error;
+            setFlash('error', 'No fue posible actualizar la contraseña', $error);
 
             header('Location: index.php?modulo=usuarios&accion=ver&id=' . $idUsuario);
             exit;
@@ -633,7 +646,7 @@ class UsuariosController extends Controller
 
             $usuarioModel->commit();
 
-            $_SESSION['mensaje_exito'] = 'La contraseña fue actualizada correctamente.';
+            setFlash('success', 'Contraseña actualizada correctamente', 'La contraseña del usuario fue actualizada.');
 
             header('Location: index.php?modulo=usuarios&accion=ver&id=' . $idUsuario);
             exit;
@@ -644,7 +657,7 @@ class UsuariosController extends Controller
 
             error_log('Error al cambiar la contraseña del usuario: ' . $e->getMessage());
 
-            $_SESSION['mensaje_error'] = 'No fue posible actualizar la contraseña. Intente nuevamente.';
+            setFlash('error', 'No fue posible actualizar la contraseña', 'No fue posible actualizar la contraseña. Intente nuevamente.');
 
             header('Location: index.php?modulo=usuarios&accion=ver&id=' . $idUsuario);
             exit;

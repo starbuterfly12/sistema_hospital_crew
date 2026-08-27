@@ -6,8 +6,36 @@ class TarjetaResponsabilidad extends Model
 {
     protected string $table = 'tarjetas_responsabilidad';
 
-    public function getAll(): array
+    // $q      -> búsqueda libre (LIKE) sobre número de tarjeta / responsable / ubicación / número de
+    //            asignación. Placeholders distintos por ocurrencia (PDO::ATTR_EMULATE_PREPARES=false).
+    // $estado -> t.estado_tarjeta exacto ('Emitida' / 'Anulada').
+    // Sin argumentos devuelve el listado completo (comportamiento previo, única consumidora index()).
+    public function getAll(?string $q = null, ?string $estado = null): array
     {
+        $condiciones = [];
+        $params = [];
+
+        if ($q !== null && trim($q) !== '') {
+            $condiciones[] = "(
+                t.numero_tarjeta LIKE :q_num
+                OR t.responsable_nombre LIKE :q_resp
+                OR t.ubicacion_nombre LIKE :q_ubi
+                OR a.numero_asignacion LIKE :q_asig
+            )";
+            $like = '%' . trim($q) . '%';
+            $params[':q_num'] = $like;
+            $params[':q_resp'] = $like;
+            $params[':q_ubi'] = $like;
+            $params[':q_asig'] = $like;
+        }
+
+        if ($estado !== null && trim($estado) !== '') {
+            $condiciones[] = "t.estado_tarjeta = :estado";
+            $params[':estado'] = trim($estado);
+        }
+
+        $where = $condiciones !== [] ? ' WHERE ' . implode(' AND ', $condiciones) : '';
+
         $sql = "
             SELECT
                 t.id_tarjeta_responsabilidad,
@@ -20,10 +48,11 @@ class TarjetaResponsabilidad extends Model
                 t.estado_tarjeta
             FROM tarjetas_responsabilidad t
             LEFT JOIN asignaciones a ON t.id_asignacion = a.id_asignacion
+            {$where}
             ORDER BY t.id_tarjeta_responsabilidad DESC
         ";
 
-        return $this->fetchAll($sql);
+        return $this->fetchAll($sql, $params);
     }
 
     public function findById(int $idTarjetaResponsabilidad): array|false

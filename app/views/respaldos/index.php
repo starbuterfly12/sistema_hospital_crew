@@ -1,108 +1,105 @@
-<!DOCTYPE html>
-<html lang="es-GT">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Respaldos</title>
-</head>
-<body>
-    <?php
-        $mostrar = static function ($value): string {
-            if ($value === null || $value === '') {
-                return '-';
-            }
-            return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
-        };
+<?php
+// Fragmento de contenido: se renderiza dentro de layouts/main.php (ver RespaldosController::index()).
+// Módulo exclusivo de Administrador. Alcance real intacto: generar (POST+CSRF) + listar + descargar.
+// No hay restaurar/eliminar. La confirmación de "Generar respaldo" usa el #modal-confirm global
+// (antes window.confirm()); el feedback lo muestra #modal-feedback del layout a partir del flash del
+// controlador. La descarga conserva su endpoint y comportamiento (stream de archivo, sin layout).
+$mostrar = static function ($value): string {
+    return ($value !== null && trim((string) $value) !== '') ? htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8') : '—';
+};
 
-        $respaldos = $respaldos ?? [];
-        $mensajeExito = $mensajeExito ?? null;
-        $mensajeError = $mensajeError ?? null;
+$respaldos = $respaldos ?? [];
 
-        $mostrarGeneradoPor = static function (array $fila): string {
-            if (($fila['nombre_completo'] ?? null) !== null && ($fila['usuario'] ?? null) !== null) {
-                return htmlspecialchars($fila['nombre_completo'], ENT_QUOTES, 'UTF-8')
-                    . ' (' . htmlspecialchars($fila['usuario'], ENT_QUOTES, 'UTF-8') . ')';
-            }
+$mostrarGeneradoPor = static function (array $fila): string {
+    if (($fila['nombre_completo'] ?? null) !== null && ($fila['usuario'] ?? null) !== null) {
+        return htmlspecialchars($fila['nombre_completo'], ENT_QUOTES, 'UTF-8')
+            . ' (' . htmlspecialchars($fila['usuario'], ENT_QUOTES, 'UTF-8') . ')';
+    }
+    return '—';
+};
 
-            return '—';
-        };
+// El archivo puede haber sido borrado manualmente del disco sin tocar la BD — en ese caso se
+// muestra "No disponible" en vez de un warning de filesize() sobre un archivo inexistente.
+$mostrarTamano = static function (array $fila): string {
+    $rutaFisica = resolverRutaFisicaRespaldo($fila['ruta_archivo']);
+    if ($rutaFisica === null || !is_file($rutaFisica)) {
+        return 'No disponible';
+    }
+    $tamano = filesize($rutaFisica);
+    return $tamano === false ? 'No disponible' : formatearTamanoArchivo($tamano);
+};
 
-        // El archivo puede haber sido borrado manualmente del disco sin tocar la BD (fuera del
-        // alcance de este módulo evitarlo) — en ese caso se muestra "No disponible" en vez de un
-        // warning de filesize() sobre un archivo inexistente.
-        $mostrarTamano = static function (array $fila): string {
-            $rutaFisica = resolverRutaFisicaRespaldo($fila['ruta_archivo']);
+$mostrarEstado = static function (string $estado): string {
+    return $estado === 'generado' ? 'Generado' : htmlspecialchars($estado, ENT_QUOTES, 'UTF-8');
+};
 
-            if ($rutaFisica === null || !is_file($rutaFisica)) {
-                return 'No disponible';
-            }
+$svgDescarga = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11"/><path d="M7 11l5 5 5-5"/><path d="M4 19h16"/></svg>';
+?>
+<div class="page-header">
+    <div class="page-header-fila">
+        <div>
+            <h1 class="page-title">Respaldos</h1>
+            <p class="page-subtitle">Generación y descarga de respaldos de la base de datos.</p>
+        </div>
 
-            $tamano = filesize($rutaFisica);
+        <div class="page-actions">
+            <button type="button" class="btn btn-primary"
+                data-confirm
+                data-confirm-form="form-generar-respaldo"
+                data-confirm-icon="doc" data-confirm-variant="azul"
+                data-confirm-title="Confirmar generación de respaldo"
+                data-confirm-text="Se generará un nuevo respaldo de la base de datos."
+                data-confirm-subtext="¿Desea generar el respaldo?"
+                data-confirm-ok="Generar respaldo"
+                data-confirm-btnclass="btn-primary">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 15l3 3 3-3M12 12v6"/></svg>
+                Generar respaldo
+            </button>
+        </div>
+    </div>
+</div>
 
-            return $tamano === false ? 'No disponible' : formatearTamanoArchivo($tamano);
-        };
+<form method="POST" action="index.php?modulo=respaldos&accion=generar" id="form-generar-respaldo" hidden>
+    <?= csrfField() ?>
+    <button type="submit" tabindex="-1" aria-hidden="true">Generar respaldo</button>
+</form>
 
-        $mostrarEstado = static function (string $estado): string {
-            return $estado === 'generado' ? 'Generado' : htmlspecialchars($estado, ENT_QUOTES, 'UTF-8');
-        };
-    ?>
-
-    <h1>Respaldos</h1>
-    <p>Generación y consulta de respaldos de la base de datos del sistema.</p>
-    <p>El respaldo generado contiene únicamente la base de datos. Los documentos y archivos almacenados fuera de MariaDB no se incluyen.</p>
-
-    <?php if ($mensajeExito !== null): ?>
-        <p><?= htmlspecialchars($mensajeExito, ENT_QUOTES, 'UTF-8') ?></p>
-    <?php endif; ?>
-
-    <?php if ($mensajeError !== null): ?>
-        <p><?= htmlspecialchars($mensajeError, ENT_QUOTES, 'UTF-8') ?></p>
-    <?php endif; ?>
-
-    <form method="POST" action="index.php?modulo=respaldos&accion=generar" id="form-generar-respaldo">
-        <?= csrfField() ?>
-        <button type="submit">Generar respaldo</button>
-    </form>
-
+<div class="card">
     <?php if (empty($respaldos)): ?>
-        <p>No se han generado respaldos todavía.</p>
+        <p class="estado-vacio">No hay respaldos disponibles.</p>
     <?php else: ?>
-        <table border="1" cellpadding="5" cellspacing="0">
-            <thead>
-                <tr>
-                    <th>Fecha y hora</th>
-                    <th>Archivo</th>
-                    <th>Generado por</th>
-                    <th>Tamaño</th>
-                    <th>Estado</th>
-                    <th>Acciones</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php foreach ($respaldos as $respaldo): ?>
+        <div class="table-responsive">
+            <table class="table-app table-detail-centered table-respaldos">
+                <thead>
                     <tr>
-                        <td><?= $mostrar(formatDateTimeSeconds($respaldo['fecha_generacion'])) ?></td>
-                        <td><?= $mostrar($respaldo['nombre_archivo']) ?></td>
-                        <td><?= $mostrarGeneradoPor($respaldo) ?></td>
-                        <td><?= $mostrarTamano($respaldo) ?></td>
-                        <td><?= $mostrarEstado($respaldo['estado_respaldo']) ?></td>
-                        <td>
-                            <a href="index.php?modulo=respaldos&accion=descargar&id=<?= (int) $respaldo['id_respaldo'] ?>">Descargar</a>
-                        </td>
+                        <th>Fecha y hora</th>
+                        <th>Archivo</th>
+                        <th>Generado por</th>
+                        <th>Tamaño</th>
+                        <th>Estado</th>
+                        <th>Acciones</th>
                     </tr>
-                <?php endforeach; ?>
-            </tbody>
-        </table>
+                </thead>
+                <tbody>
+                    <?php foreach ($respaldos as $respaldo): ?>
+                        <tr>
+                            <td><?= $mostrar(formatDateTimeSeconds($respaldo['fecha_generacion'] ?? null)) ?></td>
+                            <td><?= $mostrar($respaldo['nombre_archivo'] ?? null) ?></td>
+                            <td><?= $mostrarGeneradoPor($respaldo) ?></td>
+                            <td><?= $mostrarTamano($respaldo) ?></td>
+                            <td><?= $mostrarEstado((string) ($respaldo['estado_respaldo'] ?? '')) ?></td>
+                            <td>
+                                <div class="table-actions">
+                                    <a class="table-action-btn table-action-ver" href="index.php?modulo=respaldos&accion=descargar&id=<?= (int) $respaldo['id_respaldo'] ?>">
+                                        <?= $svgDescarga ?>
+                                        Descargar
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
     <?php endif; ?>
-
-    <p><a href="index.php?modulo=dashboard">Volver al panel principal</a></p>
-
-    <script>
-        document.getElementById('form-generar-respaldo').addEventListener('submit', function (evento) {
-            if (!confirm('¿Desea generar un nuevo respaldo de la base de datos?')) {
-                evento.preventDefault();
-            }
-        });
-    </script>
-</body>
-</html>
+</div>

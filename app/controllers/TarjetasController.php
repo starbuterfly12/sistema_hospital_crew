@@ -23,11 +23,24 @@ class TarjetasController extends Controller
         }
 
         $tarjetaModel = $this->model('TarjetaResponsabilidad');
-        $tarjetas = $tarjetaModel->getAll();
+
+        // Filtros GET (solo presentación sobre datos ya disponibles en getAll()): búsqueda libre por
+        // número de tarjeta / responsable / ubicación / asignación, y estado exacto de la tarjeta.
+        // getAll() sin argumentos conserva el comportamiento previo (listado completo).
+        $q = trim($_GET['q'] ?? '');
+        $estado = trim($_GET['estado'] ?? '');
+
+        $tarjetas = $tarjetaModel->getAll(
+            $q !== '' ? $q : null,
+            $estado !== '' ? $estado : null
+        );
 
         $this->view('tarjetas/index', [
             'tarjetas' => $tarjetas,
-        ]);
+            'q' => $q,
+            'estado' => $estado,
+            'tituloPagina' => 'Tarjeta de responsabilidad',
+        ], 'main');
     }
 
     public function generar(): void
@@ -45,7 +58,8 @@ class TarjetasController extends Controller
             $this->view('tarjetas/generar', [
                 'asignaciones' => $asignacionModel->getAsignadas(),
                 'error' => null,
-            ]);
+                'tituloPagina' => 'Generar tarjeta de responsabilidad',
+            ], 'main');
             return;
         }
 
@@ -57,7 +71,8 @@ class TarjetasController extends Controller
             $this->view('tarjetas/generar', [
                 'asignaciones' => $asignacionModel->getAsignadas(),
                 'error' => 'Debe seleccionar una asignación.',
-            ]);
+                'tituloPagina' => 'Generar tarjeta de responsabilidad',
+            ], 'main');
             return;
         }
 
@@ -82,7 +97,8 @@ class TarjetasController extends Controller
                 $this->view('tarjetas/generar', [
                     'asignaciones' => $asignacionModel->getAsignadas(),
                     'error' => 'Asignación no encontrada.',
-                ]);
+                    'tituloPagina' => 'Generar tarjeta de responsabilidad',
+                ], 'main');
                 return;
             }
 
@@ -92,7 +108,8 @@ class TarjetasController extends Controller
                 $this->view('tarjetas/generar', [
                     'asignaciones' => $asignacionModel->getAsignadas(),
                     'error' => 'Solo se pueden generar tarjetas para asignaciones en estado Asignada.',
-                ]);
+                    'tituloPagina' => 'Generar tarjeta de responsabilidad',
+                ], 'main');
                 return;
             }
 
@@ -107,7 +124,8 @@ class TarjetasController extends Controller
                 $this->view('tarjetas/generar', [
                     'asignaciones' => $asignacionModel->getAsignadas(),
                     'error' => 'No se encontró el responsable de la asignación.',
-                ]);
+                    'tituloPagina' => 'Generar tarjeta de responsabilidad',
+                ], 'main');
                 return;
             }
 
@@ -119,7 +137,8 @@ class TarjetasController extends Controller
                 $this->view('tarjetas/generar', [
                     'asignaciones' => $asignacionModel->getAsignadas(),
                     'error' => 'No se encontró la ubicación de la asignación.',
-                ]);
+                    'tituloPagina' => 'Generar tarjeta de responsabilidad',
+                ], 'main');
                 return;
             }
 
@@ -131,7 +150,8 @@ class TarjetasController extends Controller
                 $this->view('tarjetas/generar', [
                     'asignaciones' => $asignacionModel->getAsignadas(),
                     'error' => 'La asignación no tiene bienes ni historial para generar una tarjeta de responsabilidad.',
-                ]);
+                    'tituloPagina' => 'Generar tarjeta de responsabilidad',
+                ], 'main');
                 return;
             }
 
@@ -217,6 +237,8 @@ class TarjetasController extends Controller
 
             $tarjetaModel->commit();
 
+            setFlash('success', 'Tarjeta generada correctamente', 'La tarjeta de responsabilidad fue generada en el sistema.');
+
             header('Location: index.php?modulo=tarjetas&accion=ver&id=' . $idTarjeta);
             exit;
         } catch (Throwable $e) {
@@ -232,7 +254,8 @@ class TarjetasController extends Controller
             $this->view('tarjetas/generar', [
                 'asignaciones' => $asignacionModel->getAsignadas(),
                 'error' => $error,
-            ]);
+                'tituloPagina' => 'Generar tarjeta de responsabilidad',
+            ], 'main');
             return;
         }
     }
@@ -265,7 +288,8 @@ class TarjetasController extends Controller
         $this->view('tarjetas/ver', [
             'tarjeta' => $tarjeta,
             'operaciones' => $operaciones,
-        ]);
+            'tituloPagina' => 'Detalle de tarjeta de responsabilidad',
+        ], 'main');
     }
 
     public function descargarExcel(): void
