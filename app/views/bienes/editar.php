@@ -137,12 +137,18 @@ $claseBadgeEstado = static function (?string $nombreEstado): string {
             <?php if ($formaNombre === 'compra' || $formaNombre === 'traslado'): ?>
                 <div class="form-group">
                     <label class="form-label" for="costo">Costo <span class="required-mark">*</span></label>
-                    <input type="number" id="costo" name="costo" class="form-control" step="0.01" min="0" value="<?= htmlspecialchars($datos['costo'] ?? '', ENT_QUOTES, 'UTF-8') ?>" required>
+                    <div class="input-money">
+                        <span class="input-money-prefix" aria-hidden="true">Q</span>
+                        <input type="number" id="costo" name="costo" class="form-control" step="0.01" min="0" value="<?= htmlspecialchars($datos['costo'] ?? '', ENT_QUOTES, 'UTF-8') ?>" required>
+                    </div>
                 </div>
             <?php elseif ($formaNombre === 'donacion'): ?>
                 <div class="form-group">
                     <label class="form-label" for="valor_estimado">Valor estimado <span class="required-mark">*</span></label>
-                    <input type="number" id="valor_estimado" name="valor_estimado" class="form-control" step="0.01" min="0" value="<?= htmlspecialchars($datos['valor_estimado'] ?? '', ENT_QUOTES, 'UTF-8') ?>" required>
+                    <div class="input-money">
+                        <span class="input-money-prefix" aria-hidden="true">Q</span>
+                        <input type="number" id="valor_estimado" name="valor_estimado" class="form-control" step="0.01" min="0" value="<?= htmlspecialchars($datos['valor_estimado'] ?? '', ENT_QUOTES, 'UTF-8') ?>" required>
+                    </div>
                 </div>
             <?php endif; ?>
 

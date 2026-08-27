@@ -129,12 +129,18 @@ $bodegaConfigurada = (bool) ($bodegaConfigurada ?? true);
 
             <div id="grupo-costo" class="form-group">
                 <label class="form-label" for="costo">Costo <span class="required-mark">*</span></label>
-                <input type="number" id="costo" name="costo" class="form-control" step="0.01" min="0" value="<?= htmlspecialchars($datos['costo'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
+                <div class="input-money">
+                    <span class="input-money-prefix" aria-hidden="true">Q</span>
+                    <input type="number" id="costo" name="costo" class="form-control" step="0.01" min="0" value="<?= htmlspecialchars($datos['costo'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
+                </div>
             </div>
 
             <div id="grupo-valor-estimado" class="form-group">
                 <label class="form-label" for="valor_estimado">Valor estimado <span class="required-mark">*</span></label>
-                <input type="number" id="valor_estimado" name="valor_estimado" class="form-control" step="0.01" min="0" value="<?= htmlspecialchars($datos['valor_estimado'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
+                <div class="input-money">
+                    <span class="input-money-prefix" aria-hidden="true">Q</span>
+                    <input type="number" id="valor_estimado" name="valor_estimado" class="form-control" step="0.01" min="0" value="<?= htmlspecialchars($datos['valor_estimado'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
+                </div>
             </div>
 
             <div class="form-group form-grid-full">
@@ -159,7 +165,6 @@ $bodegaConfigurada = (bool) ($bodegaConfigurada ?? true);
                         ><?= htmlspecialchars($forma['nombre_forma'], ENT_QUOTES, 'UTF-8') ?></option>
                     <?php endforeach; ?>
                 </select>
-                <p class="form-hint">Según lo que seleccione aquí, más abajo se habilitan los datos de Compra, Donación o Traslado.</p>
             </div>
         </div>
     </div>

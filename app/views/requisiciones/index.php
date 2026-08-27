@@ -1,13 +1,21 @@
 <?php
 // Fragmento de contenido: se renderiza dentro de layouts/main.php (ver RequisicionesController::index()).
-// Sin filtros/búsqueda/paginación: Requisicion::getAll() no los tiene hoy y esta fase es solo visual —
-// no se inventa funcionalidad nueva, solo se re-viste la tabla existente.
+// Filtros por GET (búsqueda + estado): el controlador los lee de $_GET y los pasa a Requisicion::getAll(),
+// que sin argumentos sigue devolviendo el listado completo (comportamiento previo).
 
 $requisiciones = $requisiciones ?? [];
+$q = $q ?? '';
+$estado = $estado ?? '';
 $puedeRegistrar = tieneRol(['Administrador', 'Operativo']);
+
+$estadosRequisicion = ['Pendiente', 'Autorizada', 'Entregada', 'Anulada'];
 
 $mostrar = static function ($valor): string {
     return ($valor !== null && trim((string) $valor) !== '') ? htmlspecialchars((string) $valor, ENT_QUOTES, 'UTF-8') : '—';
+};
+
+$valorInput = static function ($valor): string {
+    return htmlspecialchars((string) ($valor ?? ''), ENT_QUOTES, 'UTF-8');
 };
 
 $claseBadgeEstado = static function (?string $estado): string {
@@ -38,9 +46,33 @@ $claseBadgeEstado = static function (?string $estado): string {
     </div>
 </div>
 
+<form method="GET" action="index.php" class="filters">
+    <input type="hidden" name="modulo" value="requisiciones">
+
+    <div class="form-group">
+        <label class="form-label" for="q">Buscar</label>
+        <input type="text" id="q" name="q" class="form-control" value="<?= $valorInput($q) ?>" placeholder="No. sistema, requisición, oficio o responsable">
+    </div>
+
+    <div class="form-group">
+        <label class="form-label" for="estado">Estado</label>
+        <select id="estado" name="estado" class="form-control">
+            <option value="">Todos</option>
+            <?php foreach ($estadosRequisicion as $estadoOpcion): ?>
+                <option value="<?= $estadoOpcion ?>" <?= ($estado === $estadoOpcion) ? 'selected' : '' ?>><?= $estadoOpcion ?></option>
+            <?php endforeach; ?>
+        </select>
+    </div>
+
+    <div class="form-actions-inline">
+        <button type="submit" class="btn btn-primary">Buscar</button>
+        <a href="index.php?modulo=requisiciones" class="btn btn-secondary">Limpiar filtros</a>
+    </div>
+</form>
+
 <div class="card">
     <?php if (empty($requisiciones)): ?>
-        <p class="estado-vacio">No hay requisiciones registradas.</p>
+        <p class="estado-vacio">No se encontraron requisiciones<?= ($q !== '' || $estado !== '') ? ' con esos filtros' : ' registradas' ?>.</p>
     <?php else: ?>
         <div class="table-responsive">
             <table class="table-app table-resizable table-requisiciones">

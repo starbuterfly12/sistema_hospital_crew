@@ -25,9 +25,15 @@ class DevolucionesController extends Controller
 
         $devolucionModel = $this->model('Devolucion');
 
+        $q = trim($_GET['q'] ?? '');
+        $estado = trim($_GET['estado'] ?? '');
+
         $this->view('devoluciones/index', [
-            'devoluciones' => $devolucionModel->getAll(),
-        ]);
+            'devoluciones' => $devolucionModel->getAll($q !== '' ? $q : null, $estado !== '' ? $estado : null),
+            'q' => $q,
+            'estado' => $estado,
+            'tituloPagina' => 'Devoluciones',
+        ], 'main');
     }
 
     public function ver(): void
@@ -58,7 +64,8 @@ class DevolucionesController extends Controller
         $this->view('devoluciones/ver', [
             'devolucion' => $devolucion,
             'detalles' => $detalles,
-        ]);
+            'tituloPagina' => 'Detalle de devolución',
+        ], 'main');
     }
 
     public function crear(): void
@@ -104,7 +111,8 @@ class DevolucionesController extends Controller
                 'idPrestamoPreseleccionado' => $idPrestamoPreseleccionado,
                 'error' => null,
                 'datosFormulario' => [],
-            ]);
+                'tituloPagina' => 'Registrar devolución',
+            ], 'main');
             return;
         }
 
@@ -147,7 +155,8 @@ class DevolucionesController extends Controller
                 'idPrestamoPreseleccionado' => $idPrestamo,
                 'error' => $error,
                 'datosFormulario' => $datosFormulario,
-            ]);
+                'tituloPagina' => 'Registrar devolución',
+            ], 'main');
             return;
         }
 
@@ -267,6 +276,14 @@ class DevolucionesController extends Controller
 
             $prestamoModel->commit();
 
+            setFlash(
+                'success',
+                'Devolución registrada correctamente',
+                $estadoPrestamoNuevo === 'finalizado'
+                    ? 'La devolución fue registrada y el préstamo quedó finalizado.'
+                    : 'La devolución parcial fue registrada correctamente.'
+            );
+
             header('Location: index.php?modulo=devoluciones&accion=ver&id=' . $idDevolucion);
             exit;
         } catch (Throwable $e) {
@@ -289,7 +306,8 @@ class DevolucionesController extends Controller
                 'idPrestamoPreseleccionado' => $idPrestamo,
                 'error' => $error,
                 'datosFormulario' => $datosFormulario,
-            ]);
+                'tituloPagina' => 'Registrar devolución',
+            ], 'main');
             return;
         }
     }

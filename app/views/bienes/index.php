@@ -1,13 +1,22 @@
 <?php
 // Fragmento de contenido: se renderiza dentro de layouts/main.php (ver BienesController::index()).
-// Sin filtros/búsqueda/paginación: Bien::getAll() no los tiene hoy y esta fase es solo visual —
-// no se inventa funcionalidad nueva, solo se re-viste la tabla existente.
+// Filtros por GET (búsqueda + categoría + estado): el controlador los lee de $_GET y los pasa a
+// Bien::getAll(), que sin argumentos sigue devolviendo el listado completo (comportamiento previo).
 
 $bienes = $bienes ?? [];
+$categorias = $categorias ?? [];
+$estados = $estados ?? [];
+$q = $q ?? '';
+$idCategoria = (int) ($idCategoria ?? 0);
+$estado = $estado ?? '';
 $puedeRegistrar = tieneRol(['Administrador', 'Operativo']);
 
 $mostrar = static function (?string $valor): string {
     return ($valor !== null && trim($valor) !== '') ? htmlspecialchars($valor, ENT_QUOTES, 'UTF-8') : '—';
+};
+
+$valorInput = static function ($valor): string {
+    return htmlspecialchars((string) ($valor ?? ''), ENT_QUOTES, 'UTF-8');
 };
 
 $claseBadgeEstado = static function (?string $nombreEstado): string {
@@ -36,9 +45,47 @@ $claseBadgeEstado = static function (?string $nombreEstado): string {
     </div>
 </div>
 
+<form method="GET" action="index.php" class="filters">
+    <input type="hidden" name="modulo" value="bienes">
+
+    <div class="form-group">
+        <label class="form-label" for="q">Buscar</label>
+        <input type="text" id="q" name="q" class="form-control" value="<?= $valorInput($q) ?>" placeholder="Código interno, SICOIN o descripción">
+    </div>
+
+    <div class="form-group">
+        <label class="form-label" for="id_categoria">Categoría</label>
+        <select id="id_categoria" name="id_categoria" class="form-control">
+            <option value="">Todas</option>
+            <?php foreach ($categorias as $categoria): ?>
+                <option value="<?= (int) $categoria['id_categoria'] ?>" <?= ($idCategoria === (int) $categoria['id_categoria']) ? 'selected' : '' ?>>
+                    <?= htmlspecialchars($categoria['nombre_categoria'], ENT_QUOTES, 'UTF-8') ?>
+                </option>
+            <?php endforeach; ?>
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label class="form-label" for="estado">Estado</label>
+        <select id="estado" name="estado" class="form-control">
+            <option value="">Todos</option>
+            <?php foreach ($estados as $estadoOpcion): ?>
+                <option value="<?= htmlspecialchars($estadoOpcion['nombre_estado'], ENT_QUOTES, 'UTF-8') ?>" <?= ($estado === $estadoOpcion['nombre_estado']) ? 'selected' : '' ?>>
+                    <?= htmlspecialchars($estadoOpcion['nombre_estado'], ENT_QUOTES, 'UTF-8') ?>
+                </option>
+            <?php endforeach; ?>
+        </select>
+    </div>
+
+    <div class="form-actions-inline">
+        <button type="submit" class="btn btn-primary">Filtrar</button>
+        <a href="index.php?modulo=bienes" class="btn btn-secondary">Limpiar filtros</a>
+    </div>
+</form>
+
 <div class="card">
     <?php if (empty($bienes)): ?>
-        <p class="estado-vacio">No hay bienes registrados.</p>
+        <p class="estado-vacio">No se encontraron bienes<?= ($q !== '' || $idCategoria > 0 || $estado !== '') ? ' con esos filtros' : ' registrados' ?>.</p>
     <?php else: ?>
         <div class="table-responsive">
             <table class="table-app table-resizable">

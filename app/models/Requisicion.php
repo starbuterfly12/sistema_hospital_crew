@@ -6,8 +6,43 @@ class Requisicion extends Model
 {
     protected string $table = 'requisiciones';
 
-    public function getAll(): array
+    // Filtros opcionales para el listado (por GET, consulta preparada). Sin argumentos se comporta
+    // EXACTAMENTE igual que antes (sin WHERE).
+    //   $q      -> LIKE sobre numero_requisicion_sistema / numero_oficio / responsable_solicitante_mostrado
+    //              y también sobre cualquier numero_requisicion institucional asociado (EXISTS).
+    //   $estado -> r.estado_requisicion exacto ('Pendiente' / 'Autorizada' / 'Entregada' / 'Anulada')
+    public function getAll(?string $q = null, ?string $estado = null): array
     {
+        $condiciones = [];
+        $params = [];
+
+        if ($q !== null && trim($q) !== '') {
+            // Placeholders distintos por ocurrencia: con PDO::ATTR_EMULATE_PREPARES=false un mismo
+            // nombre no puede repetirse en la consulta.
+            $condiciones[] = "(
+                r.numero_requisicion_sistema LIKE :q_sistema
+                OR r.numero_oficio LIKE :q_oficio
+                OR r.responsable_solicitante_mostrado LIKE :q_resp
+                OR EXISTS (
+                    SELECT 1 FROM numeros_requisicion nrf
+                    WHERE nrf.id_requisicion = r.id_requisicion
+                      AND nrf.numero_requisicion LIKE :q_inst
+                )
+            )";
+            $like = '%' . trim($q) . '%';
+            $params[':q_sistema'] = $like;
+            $params[':q_oficio'] = $like;
+            $params[':q_resp'] = $like;
+            $params[':q_inst'] = $like;
+        }
+
+        if ($estado !== null && trim($estado) !== '') {
+            $condiciones[] = "r.estado_requisicion = :estado";
+            $params[':estado'] = trim($estado);
+        }
+
+        $where = $condiciones !== [] ? ' WHERE ' . implode(' AND ', $condiciones) : '';
+
         $sql = "
             SELECT
                 r.id_requisicion,
@@ -29,10 +64,11 @@ class Requisicion extends Model
                     WHERE nr.id_requisicion = r.id_requisicion
                 ) AS numeros_institucionales
             FROM requisiciones r
+            {$where}
             ORDER BY r.id_requisicion DESC
         ";
 
-        return $this->fetchAll($sql);
+        return $this->fetchAll($sql, $params);
     }
 
     public function findById(int $idRequisicion): array|false

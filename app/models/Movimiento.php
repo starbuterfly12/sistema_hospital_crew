@@ -6,8 +6,32 @@ class Movimiento extends Model
 {
     protected string $table = 'movimientos';
 
-    public function getAll(): array
+    // Filtro opcional para el listado de Traslados (por GET, consulta preparada). Sin argumento se
+    // comporta EXACTAMENTE igual que antes (sin WHERE).
+    //   $q -> LIKE sobre numero_movimiento y los nombres de responsable/ubicación de origen y destino.
+    public function getAll(?string $q = null): array
     {
+        $where = '';
+        $params = [];
+
+        if ($q !== null && trim($q) !== '') {
+            // Placeholders distintos por ocurrencia: con PDO::ATTR_EMULATE_PREPARES=false un mismo
+            // nombre no puede repetirse en la consulta.
+            $where = "
+                WHERE m.numero_movimiento LIKE :q_num
+                   OR ro.nombre_completo LIKE :q_ro
+                   OR rd.nombre_completo LIKE :q_rd
+                   OR uo.nombre_ubicacion LIKE :q_uo
+                   OR ud.nombre_ubicacion LIKE :q_ud
+            ";
+            $like = '%' . trim($q) . '%';
+            $params[':q_num'] = $like;
+            $params[':q_ro'] = $like;
+            $params[':q_rd'] = $like;
+            $params[':q_uo'] = $like;
+            $params[':q_ud'] = $like;
+        }
+
         $sql = "
             SELECT
                 m.id_movimiento,
@@ -29,10 +53,11 @@ class Movimiento extends Model
             LEFT JOIN responsables rd ON m.id_responsable_destino = rd.id_responsable
             LEFT JOIN ubicaciones ud ON m.id_ubicacion_destino = ud.id_ubicacion
             LEFT JOIN usuarios usr ON m.id_usuario_registra = usr.id_usuario
+            {$where}
             ORDER BY m.id_movimiento DESC
         ";
 
-        return $this->fetchAll($sql);
+        return $this->fetchAll($sql, $params);
     }
 
     public function generarSiguienteNumero(int $anio): string

@@ -49,9 +49,15 @@ class PrestamosController extends Controller
 
         $prestamoModel = $this->model('Prestamo');
 
+        $q = trim($_GET['q'] ?? '');
+        $estado = trim($_GET['estado'] ?? '');
+
         $this->view('prestamos/index', [
-            'prestamos' => $prestamoModel->getAll(),
-        ]);
+            'prestamos' => $prestamoModel->getAll($q !== '' ? $q : null, $estado !== '' ? $estado : null),
+            'q' => $q,
+            'estado' => $estado,
+            'tituloPagina' => 'Préstamos',
+        ], 'main');
     }
 
     public function ver(): void
@@ -82,7 +88,8 @@ class PrestamosController extends Controller
         $this->view('prestamos/ver', [
             'prestamo' => $prestamo,
             'detalles' => $detalles,
-        ]);
+            'tituloPagina' => 'Detalle del préstamo',
+        ], 'main');
     }
 
     public function descargarConstancia(): void
@@ -411,7 +418,8 @@ class PrestamosController extends Controller
                 'origenInventarios' => $origenInventarios,
                 'error' => null,
                 'datosFormulario' => [],
-            ]);
+                'tituloPagina' => 'Registrar préstamo',
+            ], 'main');
             return;
         }
 
@@ -488,7 +496,8 @@ class PrestamosController extends Controller
                 'origenInventarios' => $origenInventarios,
                 'error' => $error,
                 'datosFormulario' => $datosFormulario,
-            ]);
+                'tituloPagina' => 'Registrar préstamo',
+            ], 'main');
             return;
         }
 
@@ -672,6 +681,8 @@ class PrestamosController extends Controller
 
             $prestamoModel->commit();
 
+            setFlash('success', 'Préstamo registrado correctamente', 'El préstamo temporal fue registrado en el sistema.');
+
             header('Location: index.php?modulo=prestamos&accion=ver&id=' . $idPrestamo);
             exit;
         } catch (Throwable $e) {
@@ -696,7 +707,8 @@ class PrestamosController extends Controller
                 'origenInventarios' => $origenInventarios,
                 'error' => $error,
                 'datosFormulario' => $datosFormulario,
-            ]);
+                'tituloPagina' => 'Registrar préstamo',
+            ], 'main');
             return;
         }
     }

@@ -55,6 +55,7 @@ $rutaVolver = $bienSeleccionado !== null
     <div class="alert alert-error"><?= $mostrar($errorBien) ?></div>
 <?php endif; ?>
 
+<?php if ($bienSeleccionado === null): ?>
 <div class="card">
     <h2 class="card-titulo">A. Buscar bien</h2>
 
@@ -109,6 +110,7 @@ $rutaVolver = $bienSeleccionado !== null
         <?php endif; ?>
     <?php endif; ?>
 </div>
+<?php endif; ?>
 
 <?php if ($bienSeleccionado !== null): ?>
     <div class="detail-identidad">
@@ -119,7 +121,6 @@ $rutaVolver = $bienSeleccionado !== null
     <div class="detail-card">
         <div class="detail-section">
             <h2 class="form-section-title">B. Datos del bien</h2>
-            <p class="form-hint">Esto es lo que el sistema tiene registrado antes de realizar la verificación.</p>
             <div class="detail-grid">
                 <div class="detail-item">
                     <span class="detail-label">Código SICOIN</span>
@@ -184,7 +185,7 @@ $rutaVolver = $bienSeleccionado !== null
         </div>
     </div>
 
-    <form method="POST" action="index.php?modulo=verificaciones&accion=crear" id="form-verificacion" class="form-card" onsubmit="return confirm('¿Está seguro de guardar esta verificación física?');">
+    <form method="POST" action="index.php?modulo=verificaciones&accion=crear" id="form-verificacion" class="form-card">
         <?= csrfField() ?>
         <input type="hidden" name="id_bien" value="<?= (int) $bienSeleccionado['id_bien'] ?>">
 
@@ -256,9 +257,9 @@ $rutaVolver = $bienSeleccionado !== null
             </div>
         </fieldset>
 
-        <p id="aviso-no-localizado" class="form-hint" style="display:none;">
-            No aplica: al no localizarse el bien, responsable, ubicación y condición no se registran.
-        </p>
+        <?php // #aviso-no-localizado lo mantiene y togglea el JS (getElementById + style.display); se
+              // conserva el elemento vacío para no romper esa lógica, solo se retiró el texto. ?>
+        <p id="aviso-no-localizado" class="form-hint" style="display:none;"></p>
 
         <div class="form-section">
             <div class="form-group">
@@ -275,12 +276,23 @@ $rutaVolver = $bienSeleccionado !== null
             </div>
         </div>
 
-        <p class="form-hint">Esta verificación registra un historial: no modifica el responsable, la ubicación, el estado ni la asignación actual del bien.</p>
-
         <div class="form-actions">
-            <button type="submit" class="btn btn-primary">Guardar verificación</button>
+            <button type="button" class="btn btn-primary"
+                data-confirm
+                data-confirm-form="form-verificacion"
+                data-confirm-validate-form
+                data-confirm-icon="doc" data-confirm-variant="menta"
+                data-confirm-title="Confirmar verificación física"
+                data-confirm-text="El resultado de la verificación quedará registrado en el historial del bien."
+                data-confirm-subtext="¿Desea guardar la verificación?"
+                data-confirm-ok="Guardar verificación"
+                data-confirm-btnclass="btn-primary">
+                Guardar verificación
+            </button>
             <a href="<?= $rutaVolver ?>" class="btn btn-secondary">Cancelar</a>
         </div>
+
+        <button type="submit" class="visually-hidden" tabindex="-1" aria-hidden="true">Guardar verificación</button>
     </form>
 
     <script>

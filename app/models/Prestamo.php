@@ -6,8 +6,42 @@ class Prestamo extends Model
 {
     protected string $table = 'prestamos';
 
-    public function getAll(): array
+    // Filtros opcionales para el listado (por GET, consulta preparada). Sin argumentos se comporta
+    // EXACTAMENTE igual que antes (sin WHERE).
+    //   $q      -> LIKE sobre numero_prestamo / numero_oficio / responsable y ubicación (origen y destino) mostrados.
+    //   $estado -> p.estado_prestamo exacto ('activo' / 'parcial' / 'finalizado' / 'anulado').
+    public function getAll(?string $q = null, ?string $estado = null): array
     {
+        $condiciones = [];
+        $params = [];
+
+        if ($q !== null && trim($q) !== '') {
+            // Placeholders distintos por ocurrencia: con PDO::ATTR_EMULATE_PREPARES=false un mismo
+            // nombre no puede repetirse en la consulta (mismo criterio que los demás listados).
+            $condiciones[] = "(
+                p.numero_prestamo LIKE :q_num
+                OR p.numero_oficio LIKE :q_ofi
+                OR p.responsable_origen_mostrado LIKE :q_ro
+                OR p.responsable_destino_mostrado LIKE :q_rd
+                OR p.ubicacion_origen_mostrada LIKE :q_uo
+                OR p.ubicacion_destino_mostrada LIKE :q_ud
+            )";
+            $like = '%' . trim($q) . '%';
+            $params[':q_num'] = $like;
+            $params[':q_ofi'] = $like;
+            $params[':q_ro'] = $like;
+            $params[':q_rd'] = $like;
+            $params[':q_uo'] = $like;
+            $params[':q_ud'] = $like;
+        }
+
+        if ($estado !== null && trim($estado) !== '') {
+            $condiciones[] = "p.estado_prestamo = :estado";
+            $params[':estado'] = trim($estado);
+        }
+
+        $where = $condiciones !== [] ? ' WHERE ' . implode(' AND ', $condiciones) : '';
+
         $sql = "
             SELECT
                 p.id_prestamo,
@@ -16,18 +50,23 @@ class Prestamo extends Model
                 p.numero_oficio,
                 p.responsable_origen_mostrado,
                 p.responsable_destino_mostrado,
+                p.ubicacion_destino_mostrada,
                 p.fecha_prestamo,
                 p.fecha_devolucion_estimada,
                 p.estado_prestamo,
+                (
+                    SELECT COUNT(*) FROM detalle_prestamo dp WHERE dp.id_prestamo = p.id_prestamo
+                ) AS total_bienes,
                 (
                     p.estado_prestamo IN ('activo', 'parcial')
                     AND p.fecha_devolucion_estimada < CURDATE()
                 ) AS vencido
             FROM prestamos p
+            {$where}
             ORDER BY p.id_prestamo DESC
         ";
 
-        return $this->fetchAll($sql);
+        return $this->fetchAll($sql, $params);
     }
 
     public function findById(int $idPrestamo): array|false

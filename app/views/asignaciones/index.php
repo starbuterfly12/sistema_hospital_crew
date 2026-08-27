@@ -48,8 +48,6 @@ $ubicacionTexto = static function (array $asignacion): ?string {
     </div>
 </div>
 
-<p class="form-hint">Las asignaciones se generan y actualizan automáticamente a partir de Ingreso de bienes, Requisiciones y Traslados.</p>
-
 <?php if ($mensajeExito !== null): ?>
     <div class="alert alert-exito"><?= htmlspecialchars($mensajeExito, ENT_QUOTES, 'UTF-8') ?></div>
 <?php endif; ?>

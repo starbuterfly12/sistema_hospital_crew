@@ -144,7 +144,6 @@ $observacionesValor = $datosFormulario['observaciones'] ?? '';
 
     <div class="form-section">
         <h2 class="form-section-title">Requisiciones institucionales</h2>
-        <p class="form-hint">Puede agregar una o varias requisiciones (número y fecha del papel elaborado por el servicio).</p>
 
         <div id="contenedor-requisiciones">
             <?php foreach ($numerosValor as $indice => $numero): ?>
@@ -205,7 +204,7 @@ $observacionesValor = $datosFormulario['observaciones'] ?? '';
                                 <td><?= $mostrar($marcaModelo !== '' ? $marcaModelo : null) ?></td>
                                 <td><?= $mostrar($bien['serie'] ?? null) ?></td>
                                 <td><?= $mostrar($bien['condicion_bien'] ?? null) ?></td>
-                                <td><?= $mostrar($valor) ?></td>
+                                <td><?= formatearQuetzales($valor) ?></td>
                             </tr>
                         <?php endforeach; ?>
                     </tbody>

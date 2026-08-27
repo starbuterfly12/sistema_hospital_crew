@@ -28,8 +28,55 @@ class Baja extends Model
     // Incluye auxiliar_encargado aunque el listado normal (bajas/index.php) no lo muestre: la
     // bandeja administrativa de Solicitudes (bajas/solicitudes.php) sí lo necesita y reutiliza esta
     // misma consulta en vez de duplicarla (BajasController::solicitudes()).
-    public function getAll(): array
+    // Filtros opcionales para el listado (por GET, consulta preparada). Sin argumentos se comporta
+    // EXACTAMENTE igual que antes (sin WHERE) — así BajasController::solicitudes() la sigue usando tal cual.
+    //   $q          -> LIKE sobre numero_baja / responsable del área / Bodega destino / servicio,
+    //                  y (EXISTS) sobre código interno o descripción de cualquier bien de la baja.
+    //   $estado     -> b.estado_baja exacto ('pendiente' / 'autorizada' / 'rechazada' / 'finalizada').
+    //   $idTipoBaja -> baja que incluya al menos un bien con ese tipo (detalle_baja.id_tipo_baja).
+    public function getAll(?string $q = null, ?string $estado = null, ?int $idTipoBaja = null): array
     {
+        $condiciones = [];
+        $params = [];
+
+        if ($q !== null && trim($q) !== '') {
+            // Placeholders distintos por ocurrencia: con PDO::ATTR_EMULATE_PREPARES=false un mismo
+            // nombre no puede repetirse en la consulta (mismo criterio que los demás listados).
+            $condiciones[] = "(
+                b.numero_baja LIKE :q_num
+                OR r.nombre_completo LIKE :q_resp
+                OR u.nombre_ubicacion LIKE :q_bod
+                OR ru.nombre_ubicacion LIKE :q_serv
+                OR EXISTS (
+                    SELECT 1 FROM detalle_baja dbq
+                    WHERE dbq.id_baja = b.id_baja
+                      AND (dbq.codigo_interno_mostrado LIKE :q_cod OR dbq.descripcion_mostrada LIKE :q_desc)
+                )
+            )";
+            $like = '%' . trim($q) . '%';
+            $params[':q_num'] = $like;
+            $params[':q_resp'] = $like;
+            $params[':q_bod'] = $like;
+            $params[':q_serv'] = $like;
+            $params[':q_cod'] = $like;
+            $params[':q_desc'] = $like;
+        }
+
+        if ($estado !== null && trim($estado) !== '') {
+            $condiciones[] = "b.estado_baja = :estado";
+            $params[':estado'] = trim($estado);
+        }
+
+        if ($idTipoBaja !== null && $idTipoBaja > 0) {
+            $condiciones[] = "EXISTS (
+                SELECT 1 FROM detalle_baja dbt
+                WHERE dbt.id_baja = b.id_baja AND dbt.id_tipo_baja = :id_tipo_baja
+            )";
+            $params[':id_tipo_baja'] = $idTipoBaja;
+        }
+
+        $where = $condiciones !== [] ? ' WHERE ' . implode(' AND ', $condiciones) : '';
+
         $sql = "
             SELECT
                 b.id_baja,
@@ -55,10 +102,11 @@ class Baja extends Model
             LEFT JOIN responsables r ON b.id_responsable_descarga = r.id_responsable
             LEFT JOIN ubicaciones ru ON r.id_ubicacion = ru.id_ubicacion
             LEFT JOIN usuarios aux ON b.id_auxiliar_encargado = aux.id_usuario
+            {$where}
             ORDER BY b.id_baja DESC
         ";
 
-        return $this->fetchAll($sql);
+        return $this->fetchAll($sql, $params);
     }
 
     // Usado solo para el contador opcional "(N pendientes)" junto al enlace de Solicitudes de baja

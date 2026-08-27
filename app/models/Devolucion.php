@@ -6,8 +6,38 @@ class Devolucion extends Model
 {
     protected string $table = 'devoluciones';
 
-    public function getAll(): array
+    // Filtros opcionales para el listado (por GET, consulta preparada). Sin argumentos se comporta
+    // EXACTAMENTE igual que antes (sin WHERE).
+    //   $q      -> LIKE sobre numero_devolucion / numero_prestamo / responsable origen y destino mostrados.
+    //   $estado -> dev.estado_devolucion exacto ('parcial' / 'completa') — columna persistente real.
+    public function getAll(?string $q = null, ?string $estado = null): array
     {
+        $condiciones = [];
+        $params = [];
+
+        if ($q !== null && trim($q) !== '') {
+            // Placeholders distintos por ocurrencia: con PDO::ATTR_EMULATE_PREPARES=false un mismo
+            // nombre no puede repetirse en la consulta (mismo criterio que los demás listados).
+            $condiciones[] = "(
+                dev.numero_devolucion LIKE :q_num
+                OR p.numero_prestamo LIKE :q_pre
+                OR p.responsable_origen_mostrado LIKE :q_ro
+                OR p.responsable_destino_mostrado LIKE :q_rd
+            )";
+            $like = '%' . trim($q) . '%';
+            $params[':q_num'] = $like;
+            $params[':q_pre'] = $like;
+            $params[':q_ro'] = $like;
+            $params[':q_rd'] = $like;
+        }
+
+        if ($estado !== null && trim($estado) !== '') {
+            $condiciones[] = "dev.estado_devolucion = :estado";
+            $params[':estado'] = trim($estado);
+        }
+
+        $where = $condiciones !== [] ? ' WHERE ' . implode(' AND ', $condiciones) : '';
+
         $sql = "
             SELECT
                 dev.id_devolucion,
@@ -28,10 +58,11 @@ class Devolucion extends Model
             FROM devoluciones dev
             INNER JOIN prestamos p ON p.id_prestamo = dev.id_prestamo
             LEFT JOIN usuarios usr ON usr.id_usuario = dev.id_usuario_recibe
+            {$where}
             ORDER BY dev.id_devolucion DESC
         ";
 
-        return $this->fetchAll($sql);
+        return $this->fetchAll($sql, $params);
     }
 
     public function findById(int $idDevolucion): array|false

@@ -132,10 +132,24 @@ class BienesController extends Controller
         }
 
         $bienModel = $this->model('Bien');
-        $bienes = $bienModel->getAll();
+
+        $q = trim($_GET['q'] ?? '');
+        $idCategoria = (int) ($_GET['id_categoria'] ?? 0);
+        $estado = trim($_GET['estado'] ?? '');
+
+        $bienes = $bienModel->getAll(
+            $q !== '' ? $q : null,
+            $idCategoria > 0 ? $idCategoria : null,
+            $estado !== '' ? $estado : null
+        );
 
         $this->view('bienes/index', [
             'bienes' => $bienes,
+            'q' => $q,
+            'idCategoria' => $idCategoria,
+            'estado' => $estado,
+            'categorias' => $this->model('CategoriaBien')->getActivas(),
+            'estados' => $this->model('EstadoBien')->getActivos(),
             'tituloPagina' => 'Bienes institucionales',
         ], 'main');
     }
@@ -523,8 +537,17 @@ class BienesController extends Controller
                     $qrError->getMessage()
                 );
 
-                $_SESSION['mensaje_error'] =
-                    'El bien fue registrado correctamente, pero no fue posible generar el código QR. Puede generarlo desde la ficha del bien.';
+                setFlash(
+                    'warning',
+                    'Bien registrado',
+                    'El bien fue registrado, pero no fue posible generar el código QR. Puede generarlo desde la ficha del bien.'
+                );
+            }
+
+            // El bien ya quedó confirmado ($bienModel->commit() arriba); el QR es un paso posterior de
+            // mejor esfuerzo. Solo se marca éxito pleno si el bloque QR no dejó ya un flash de aviso.
+            if (!isset($_SESSION['flash'])) {
+                setFlash('success', 'Bien registrado correctamente', 'El bien fue registrado y quedó disponible en el sistema.');
             }
 
             header('Location: index.php?modulo=bienes&accion=ver&id=' . $idBien);
@@ -1064,6 +1087,8 @@ class BienesController extends Controller
 
             $bienModel->commit();
 
+            setFlash('success', 'Cambios guardados correctamente', 'La información del bien fue actualizada.');
+
             header('Location: index.php?modulo=bienes&accion=ver&id=' . $idBien);
             exit;
         } catch (Throwable $e) {
@@ -1178,14 +1203,14 @@ class BienesController extends Controller
                 usuarioIntentado: null
             );
 
-            $_SESSION['mensaje_exito'] = 'Código QR generado correctamente.';
+            setFlash('success', 'Código QR actualizado', 'El código QR del bien fue generado correctamente.');
 
             header('Location: index.php?modulo=bienes&accion=ver&id=' . $idBien);
             exit;
         } catch (Throwable $e) {
             error_log('Error al generar QR del bien ' . $idBien . ': ' . $e->getMessage());
 
-            $_SESSION['mensaje_error'] = 'No fue posible generar el código QR.';
+            setFlash('error', 'No fue posible completar la operación', 'No fue posible generar el código QR.');
 
             header('Location: index.php?modulo=bienes&accion=ver&id=' . $idBien);
             exit;

@@ -21,9 +21,13 @@ class TrasladosController extends Controller
 
         $movimientoModel = $this->model('Movimiento');
 
+        $q = trim($_GET['q'] ?? '');
+
         $this->view('traslados/index', [
-            'movimientos' => $movimientoModel->getAll(),
-        ]);
+            'movimientos' => $movimientoModel->getAll($q !== '' ? $q : null),
+            'q' => $q,
+            'tituloPagina' => 'Traslados',
+        ], 'main');
     }
 
     public function ver(): void
@@ -54,7 +58,8 @@ class TrasladosController extends Controller
         $this->view('traslados/ver', [
             'movimiento' => $movimiento,
             'detalles' => $detalles,
-        ]);
+            'tituloPagina' => 'Detalle del traslado',
+        ], 'main');
     }
 
     public function descargarConstancia(): void
@@ -334,7 +339,8 @@ class TrasladosController extends Controller
                 'bienesPorResponsable' => $bienesPorResponsable,
                 'error' => null,
                 'datosFormulario' => [],
-            ]);
+                'tituloPagina' => 'Registrar traslado',
+            ], 'main');
             return;
         }
 
@@ -381,7 +387,8 @@ class TrasladosController extends Controller
                 'bienesPorResponsable' => $bienesPorResponsable,
                 'error' => $error,
                 'datosFormulario' => $datosFormulario,
-            ]);
+                'tituloPagina' => 'Registrar traslado',
+            ], 'main');
             return;
         }
 
@@ -616,6 +623,8 @@ class TrasladosController extends Controller
 
             $movimientoModel->commit();
 
+            setFlash('success', 'Traslado registrado correctamente', 'Los bienes fueron trasladados al responsable y ubicación seleccionados.');
+
             header('Location: index.php?modulo=traslados&accion=ver&id=' . $idMovimiento);
             exit;
         } catch (Throwable $e) {
@@ -638,7 +647,8 @@ class TrasladosController extends Controller
                 'bienesPorResponsable' => $bienesPorResponsable,
                 'error' => $error,
                 'datosFormulario' => $datosFormulario,
-            ]);
+                'tituloPagina' => 'Registrar traslado',
+            ], 'main');
             return;
         }
     }

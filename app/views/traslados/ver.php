@@ -1,114 +1,153 @@
-<!DOCTYPE html>
-<html lang="es-GT">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Detalle de traslado</title>
-</head>
-<body>
-    <?php
-        $mostrar = static function ($value): string {
-            if ($value === null || $value === '') {
-                return '-';
-            }
+<?php
+// Fragmento de contenido: se renderiza dentro de layouts/main.php (ver TrasladosController::ver()).
+// Ficha de solo lectura — mismos datos que ya recibía la vista anterior ($movimiento / $detalles) y
+// mismo endpoint de constancia (descargar_constancia). Solo cambió el marcado visual.
+$movimiento = $movimiento ?? [];
+$detalles = $detalles ?? [];
 
-            return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
-        };
+$mostrar = static function ($valor): string {
+    return ($valor !== null && trim((string) $valor) !== '') ? htmlspecialchars((string) $valor, ENT_QUOTES, 'UTF-8') : '—';
+};
 
-        $movimiento = $movimiento ?? [];
-        $detalles = $detalles ?? [];
+// Misma regla que TrasladosController::construirDescripcionCompleta(): "Descripción, marca: X,
+// modelo: Y". La serie NO se incluye aquí porque la tabla ya tiene su propia columna Serie.
+$construirDescripcion = static function (array $detalle): string {
+    $partes = [trim((string) ($detalle['descripcion'] ?? ''))];
 
-        // Misma regla que TrasladosController::construirDescripcionCompleta(): "Descripción, marca: X,
-        // modelo: Y". La serie NO se incluye aquí porque la tabla ya tiene su propia columna Serie.
-        $construirDescripcion = static function (array $detalle): string {
-            $partes = [trim((string) ($detalle['descripcion'] ?? ''))];
+    $marca = trim((string) ($detalle['marca'] ?? ''));
+    if ($marca !== '') {
+        $partes[] = 'marca: ' . $marca;
+    }
 
-            $marca = trim((string) ($detalle['marca'] ?? ''));
+    $modelo = trim((string) ($detalle['modelo'] ?? ''));
+    if ($modelo !== '') {
+        $partes[] = 'modelo: ' . $modelo;
+    }
 
-            if ($marca !== '') {
-                $partes[] = 'marca: ' . $marca;
-            }
+    return implode(', ', $partes);
+};
 
-            $modelo = trim((string) ($detalle['modelo'] ?? ''));
+$idMovimiento = (int) ($movimiento['id_movimiento'] ?? 0);
+?>
+<div class="page-header">
+    <div class="page-header-fila">
+        <div>
+            <h1 class="page-title">Detalle del traslado</h1>
+            <p class="page-subtitle">Consulta de la información registrada del traslado.</p>
+        </div>
 
-            if ($modelo !== '') {
-                $partes[] = 'modelo: ' . $modelo;
-            }
+        <div class="page-actions">
+            <a href="index.php?modulo=traslados" class="btn btn-secondary">Volver</a>
+            <a href="index.php?modulo=traslados&accion=descargar_constancia&id=<?= $idMovimiento ?>" class="btn btn-azul-suave">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11"/><path d="M7 11l5 5 5-5"/><path d="M4 19h16"/></svg>
+                Descargar constancia
+            </a>
+        </div>
+    </div>
+</div>
 
-            return implode(', ', $partes);
-        };
-    ?>
+<div class="detail-identidad">
+    <p class="detail-identidad-codigo"><?= $mostrar($movimiento['numero_movimiento'] ?? null) ?></p>
+    <p class="detail-identidad-descripcion"><?= $mostrar($movimiento['responsable_origen_nombre'] ?? null) ?> &rarr; <?= $mostrar($movimiento['responsable_destino_nombre'] ?? null) ?></p>
+</div>
 
-    <h1>Detalle de traslado</h1>
+<div class="detail-card">
+    <div class="detail-section">
+        <h2 class="form-section-title">Datos generales</h2>
+        <div class="detail-grid">
+            <div class="detail-item">
+                <span class="detail-label">Número</span>
+                <span class="detail-value"><?= $mostrar($movimiento['numero_movimiento'] ?? null) ?></span>
+            </div>
 
-    <p><a href="index.php?modulo=traslados&accion=descargar_constancia&id=<?= (int) ($movimiento['id_movimiento'] ?? 0) ?>">Descargar constancia</a></p>
+            <div class="detail-item">
+                <span class="detail-label">Fecha</span>
+                <span class="detail-value"><?= $mostrar(formatDateTime($movimiento['fecha_movimiento'] ?? null)) ?></span>
+            </div>
 
-    <dl>
-        <dt>Número</dt>
-        <dd><?= $mostrar($movimiento['numero_movimiento'] ?? null) ?></dd>
+            <div class="detail-item">
+                <span class="detail-label">Registrado por</span>
+                <span class="detail-value"><?= $mostrar($movimiento['usuario_registra_nombre'] ?? null) ?></span>
+            </div>
 
-        <dt>Fecha</dt>
-        <dd><?= $mostrar(formatDateTime($movimiento['fecha_movimiento'] ?? null)) ?></dd>
+            <div class="detail-item">
+                <span class="detail-label">Fecha de registro</span>
+                <span class="detail-value"><?= $mostrar(formatDateTime($movimiento['created_at'] ?? null)) ?></span>
+            </div>
 
-        <dt>Responsable origen</dt>
-        <dd><?= $mostrar($movimiento['responsable_origen_nombre'] ?? null) ?></dd>
+            <div class="detail-item detail-full">
+                <span class="detail-label">Motivo</span>
+                <span class="detail-value"><?= $mostrar($movimiento['motivo'] ?? null) ?></span>
+            </div>
 
-        <dt>Ubicación origen</dt>
-        <dd><?= $mostrar($movimiento['ubicacion_origen_nombre'] ?? null) ?></dd>
+            <div class="detail-item detail-full">
+                <span class="detail-label">Observaciones</span>
+                <span class="detail-value"><?= $mostrar($movimiento['observaciones'] ?? null) ?></span>
+            </div>
+        </div>
+    </div>
 
-        <dt>Asignación destino</dt>
-        <dd><?= $mostrar($movimiento['numero_asignacion_destino'] ?? null) ?></dd>
+    <div class="detail-section">
+        <h2 class="form-section-title">Origen y destino</h2>
+        <div class="detail-grid">
+            <div class="detail-item">
+                <span class="detail-label">Responsable origen</span>
+                <span class="detail-value"><?= $mostrar($movimiento['responsable_origen_nombre'] ?? null) ?></span>
+            </div>
 
-        <dt>Responsable destino</dt>
-        <dd><?= $mostrar($movimiento['responsable_destino_nombre'] ?? null) ?></dd>
+            <div class="detail-item">
+                <span class="detail-label">Ubicación origen</span>
+                <span class="detail-value"><?= $mostrar($movimiento['ubicacion_origen_nombre'] ?? null) ?></span>
+            </div>
 
-        <dt>Ubicación destino</dt>
-        <dd><?= $mostrar($movimiento['ubicacion_destino_nombre'] ?? null) ?></dd>
+            <div class="detail-item">
+                <span class="detail-label">Responsable destino</span>
+                <span class="detail-value"><?= $mostrar($movimiento['responsable_destino_nombre'] ?? null) ?></span>
+            </div>
 
-        <dt>Motivo</dt>
-        <dd><?= $mostrar($movimiento['motivo'] ?? null) ?></dd>
+            <div class="detail-item">
+                <span class="detail-label">Ubicación destino</span>
+                <span class="detail-value"><?= $mostrar($movimiento['ubicacion_destino_nombre'] ?? null) ?></span>
+            </div>
 
-        <dt>Observaciones</dt>
-        <dd><?= $mostrar($movimiento['observaciones'] ?? null) ?></dd>
+            <div class="detail-item">
+                <span class="detail-label">Asignación destino</span>
+                <span class="detail-value"><?= $mostrar($movimiento['numero_asignacion_destino'] ?? null) ?></span>
+            </div>
+        </div>
+    </div>
 
-        <dt>Registrado por</dt>
-        <dd><?= $mostrar($movimiento['usuario_registra_nombre'] ?? null) ?></dd>
-
-        <dt>Fecha de registro</dt>
-        <dd><?= $mostrar(formatDateTime($movimiento['created_at'] ?? null)) ?></dd>
-    </dl>
-
-    <h2>Bienes trasladados</h2>
-
-    <?php if (empty($detalles)): ?>
-        <p>Este traslado no tiene bienes registrados.</p>
-    <?php else: ?>
-        <table border="1" cellpadding="5" cellspacing="0">
-            <thead>
-                <tr>
-                    <th>Código</th>
-                    <th>Descripción</th>
-                    <th>Serie</th>
-                    <th>Condición</th>
-                    <th>Valor histórico</th>
-                    <th>Asignación origen</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php foreach ($detalles as $detalle): ?>
-                    <tr>
-                        <td><?= $mostrar($detalle['codigo_mostrado'] ?? null) ?></td>
-                        <td><?= $mostrar($construirDescripcion($detalle)) ?></td>
-                        <td><?= $mostrar($detalle['serie'] ?? null) ?></td>
-                        <td><?= $mostrar($detalle['condicion_nueva'] ?? null) ?></td>
-                        <td><?= $mostrar($detalle['valor_movimiento'] ?? null) ?></td>
-                        <td><?= $mostrar($detalle['numero_asignacion_origen'] ?? null) ?></td>
-                    </tr>
-                <?php endforeach; ?>
-            </tbody>
-        </table>
-    <?php endif; ?>
-
-    <p><a href="index.php?modulo=traslados">Volver al listado</a></p>
-</body>
-</html>
+    <div class="detail-section">
+        <h2 class="form-section-title">Bienes trasladados</h2>
+        <?php if (empty($detalles)): ?>
+            <p class="estado-vacio">Este traslado no tiene bienes registrados.</p>
+        <?php else: ?>
+            <div class="table-responsive">
+                <table class="table-app table-detail-centered">
+                    <thead>
+                        <tr>
+                            <th>Código</th>
+                            <th>Descripción</th>
+                            <th>Serie</th>
+                            <th>Condición</th>
+                            <th>Valor histórico</th>
+                            <th>Asignación origen</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($detalles as $detalle): ?>
+                            <tr>
+                                <td><?= $mostrar($detalle['codigo_mostrado'] ?? null) ?></td>
+                                <td><?= $mostrar($construirDescripcion($detalle)) ?></td>
+                                <td><?= $mostrar($detalle['serie'] ?? null) ?></td>
+                                <td><?= $mostrar($detalle['condicion_nueva'] ?? null) ?></td>
+                                <td><?= formatearQuetzales($detalle['valor_movimiento'] ?? null) ?></td>
+                                <td><?= $mostrar($detalle['numero_asignacion_origen'] ?? null) ?></td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        <?php endif; ?>
+    </div>
+</div>

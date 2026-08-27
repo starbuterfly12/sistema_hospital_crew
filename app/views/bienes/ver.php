@@ -33,9 +33,8 @@ $claseBadgeCondicion = static function (?string $condicion): string {
 
 $puedeEditar = tieneRol(['Administrador', 'Operativo']);
 
-$mensajeExito = $_SESSION['mensaje_exito'] ?? null;
-$mensajeError = $_SESSION['mensaje_error'] ?? null;
-unset($_SESSION['mensaje_exito'], $_SESSION['mensaje_error']);
+// El resultado de "Registrar bien" / "Modificar" / "Regenerar QR" se muestra ahora con el modal de
+// feedback global (flash de sesión consumido en layouts/main.php), no como .alert en esta vista.
 
 $documentoIngreso = $datosIngreso['documento_respaldo'] ?? null;
 ?>
@@ -49,7 +48,7 @@ $documentoIngreso = $datosIngreso['documento_respaldo'] ?? null;
         <div class="page-actions">
             <a href="index.php?modulo=bienes" class="btn btn-secondary">Volver</a>
             <?php if ($puedeEditar): ?>
-                <a href="index.php?modulo=bienes&accion=editar&id=<?= (int) $bien['id_bien'] ?>" class="btn btn-primary">
+                <a href="index.php?modulo=bienes&accion=editar&id=<?= (int) $bien['id_bien'] ?>" class="btn btn-lila">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
                     Modificar
                 </a>
@@ -57,14 +56,6 @@ $documentoIngreso = $datosIngreso['documento_respaldo'] ?? null;
         </div>
     </div>
 </div>
-
-<?php if ($mensajeExito !== null): ?>
-    <div class="alert alert-exito"><?= htmlspecialchars($mensajeExito, ENT_QUOTES, 'UTF-8') ?></div>
-<?php endif; ?>
-
-<?php if ($mensajeError !== null): ?>
-    <div class="alert alert-error"><?= htmlspecialchars($mensajeError, ENT_QUOTES, 'UTF-8') ?></div>
-<?php endif; ?>
 
 <div class="detail-identidad">
     <p class="detail-identidad-codigo"><?= $valor($bien['codigo_interno'] ?? null) ?></p>
@@ -128,12 +119,12 @@ $documentoIngreso = $datosIngreso['documento_respaldo'] ?? null;
             <?php if ($formaNombre === 'compra' || $formaNombre === 'traslado'): ?>
                 <div class="detail-item">
                     <span class="detail-label">Costo</span>
-                    <span class="detail-value"><?= $valor($bien['costo'] ?? null) ?></span>
+                    <span class="detail-value"><?= formatearQuetzales($bien['costo'] ?? null) ?></span>
                 </div>
             <?php elseif ($formaNombre === 'donacion'): ?>
                 <div class="detail-item">
                     <span class="detail-label">Valor estimado</span>
-                    <span class="detail-value"><?= $valor($bien['valor_estimado'] ?? null) ?></span>
+                    <span class="detail-value"><?= formatearQuetzales($bien['valor_estimado'] ?? null) ?></span>
                 </div>
             <?php endif; ?>
 

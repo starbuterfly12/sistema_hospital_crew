@@ -36,17 +36,32 @@ class BajasController extends Controller
         }
 
         $bajaModel = $this->model('Baja');
+        $tipoBajaModel = $this->model('TipoBaja');
+
+        $q = trim($_GET['q'] ?? '');
+        $estado = trim($_GET['estado'] ?? '');
+        $idTipoBaja = (int) ($_GET['id_tipo_baja'] ?? 0);
 
         $this->view('bajas/index', [
-            'bajas' => $bajaModel->getAll(),
-        ]);
+            'bajas' => $bajaModel->getAll(
+                $q !== '' ? $q : null,
+                $estado !== '' ? $estado : null,
+                $idTipoBaja > 0 ? $idTipoBaja : null
+            ),
+            'tiposBaja' => $tipoBajaModel->getActivos(),
+            'q' => $q,
+            'estado' => $estado,
+            'idTipoBaja' => $idTipoBaja,
+            'tituloPagina' => 'Bajas',
+        ], 'main');
     }
 
     // Bandeja administrativa de solicitudes de Baja — SOLO Administrador (nunca Operativo ni
     // Visualizador, a diferencia del listado normal de index()). No confía únicamente en que el
     // menú de Movimientos oculte el enlace: requireRole().
-    // Reutiliza Baja::getAll() (mismo modelo/consulta que index()), solo reordena para priorizar
-    // 'pendiente'. La decisión (Aceptar/Rechazar) se toma desde revisar(), no desde aquí.
+    // Reutiliza Baja::getAll() (mismo modelo/consulta que index(), incluidos sus filtros GET
+    // q/estado/id_tipo_baja) y solo reordena para priorizar 'pendiente'. La decisión
+    // (Aceptar/Rechazar) se toma desde revisar(), no desde aquí.
     public function solicitudes(): void
     {
         if (!isset($_SESSION['id_usuario'])) {
@@ -57,7 +72,17 @@ class BajasController extends Controller
         requireRole(self::ROLES_SOLICITUDES);
 
         $bajaModel = $this->model('Baja');
-        $bajas = $bajaModel->getAll();
+        $tipoBajaModel = $this->model('TipoBaja');
+
+        $q = trim($_GET['q'] ?? '');
+        $estado = trim($_GET['estado'] ?? '');
+        $idTipoBaja = (int) ($_GET['id_tipo_baja'] ?? 0);
+
+        $bajas = $bajaModel->getAll(
+            $q !== '' ? $q : null,
+            $estado !== '' ? $estado : null,
+            $idTipoBaja > 0 ? $idTipoBaja : null
+        );
 
         usort($bajas, static function (array $a, array $b): int {
             $prioridadA = ($a['estado_baja'] ?? '') === 'pendiente' ? 0 : 1;
@@ -68,7 +93,12 @@ class BajasController extends Controller
 
         $this->view('bajas/solicitudes', [
             'bajas' => $bajas,
-        ]);
+            'tiposBaja' => $tipoBajaModel->getActivos(),
+            'q' => $q,
+            'estado' => $estado,
+            'idTipoBaja' => $idTipoBaja,
+            'tituloPagina' => 'Solicitudes de baja',
+        ], 'main');
     }
 
     public function ver(): void
@@ -98,7 +128,8 @@ class BajasController extends Controller
         $this->view('bajas/ver', [
             'baja' => $baja,
             'detalles' => $detalleModel->listarPorBaja($idBaja),
-        ]);
+            'tituloPagina' => 'Detalle de baja',
+        ], 'main');
     }
 
     // Detalle en modo administrativo de SOLO LECTURA, exclusivo para el contexto Solicitudes de baja
@@ -132,11 +163,15 @@ class BajasController extends Controller
 
         $detalleModel = $this->model('DetalleBaja');
 
+        // Comparte la vista bajas/ver.php con ver(): al convertirse en fragmento de layout, este
+        // llamador también debe pasar layout 'main'. La bandeja Solicitudes (bajas/solicitudes.php)
+        // ya está migrada como fragmento y también se renderiza dentro de 'main'.
         $this->view('bajas/ver', [
             'baja' => $baja,
             'detalles' => $detalleModel->listarPorBaja($idBaja),
             'origenSolicitudes' => true,
-        ]);
+            'tituloPagina' => 'Revisar solicitud de baja',
+        ], 'main');
     }
 
     // Decisión "Aceptar solicitud" — SOLO Administrador, SOLO POST+CSRF, exige reverificar su propia
@@ -225,6 +260,8 @@ class BajasController extends Controller
 
             $bajaModel->commit();
 
+            setFlash('success', 'Baja autorizada correctamente', 'La solicitud quedó autorizada y pendiente de finalización.');
+
             header('Location: index.php?modulo=bajas&accion=revisar&id=' . $idBaja);
             exit;
         } catch (Throwable $e) {
@@ -302,6 +339,8 @@ class BajasController extends Controller
             );
 
             $bajaModel->commit();
+
+            setFlash('info', 'Solicitud rechazada', 'La solicitud de baja fue rechazada correctamente.');
 
             header('Location: index.php?modulo=bajas&accion=revisar&id=' . $idBaja);
             exit;
@@ -475,6 +514,8 @@ class BajasController extends Controller
             );
 
             $bajaModel->commit();
+
+            setFlash('success', 'Baja finalizada correctamente', 'Los bienes fueron retirados de la responsabilidad actual y trasladados a la bodega destino.');
 
             // Redirige al Ver NORMAL (no a revisar()): Finalizar ya no pertenece al flujo
             // administrativo de Solicitudes, sino al flujo normal de Baja del propio solicitante.
@@ -763,7 +804,8 @@ class BajasController extends Controller
                 'bienesPorResponsable' => $bienesPorResponsable,
                 'error' => null,
                 'datosFormulario' => [],
-            ]);
+                'tituloPagina' => 'Registrar baja',
+            ], 'main');
             return;
         }
 
@@ -795,7 +837,8 @@ class BajasController extends Controller
                 'bienesPorResponsable' => $bienesPorResponsable,
                 'error' => $error,
                 'datosFormulario' => $datosFormulario,
-            ]);
+                'tituloPagina' => 'Registrar baja',
+            ], 'main');
             return;
         }
 
@@ -897,6 +940,8 @@ class BajasController extends Controller
 
             $bajaModel->commit();
 
+            setFlash('success', 'Solicitud de baja registrada', 'La solicitud quedó pendiente de autorización.');
+
             header('Location: index.php?modulo=bajas&accion=ver&id=' . $idBaja);
             exit;
         } catch (Throwable $e) {
@@ -929,7 +974,8 @@ class BajasController extends Controller
                 'bienesPorResponsable' => $bienesPorResponsable,
                 'error' => $error,
                 'datosFormulario' => $datosFormulario,
-            ]);
+                'tituloPagina' => 'Registrar baja',
+            ], 'main');
             return;
         }
     }
@@ -995,7 +1041,8 @@ class BajasController extends Controller
                 'detallesActuales' => $detallesActuales,
                 'error' => null,
                 'datosFormulario' => $datosFormularioBase,
-            ]);
+                'tituloPagina' => 'Editar baja',
+            ], 'main');
             return;
         }
 
@@ -1032,7 +1079,8 @@ class BajasController extends Controller
                 'detallesActuales' => $detallesActuales,
                 'error' => $error,
                 'datosFormulario' => $datosFormulario,
-            ]);
+                'tituloPagina' => 'Editar baja',
+            ], 'main');
             return;
         }
 
@@ -1204,6 +1252,8 @@ class BajasController extends Controller
                 eliminarImagenBien($ruta);
             }
 
+            setFlash('success', 'Cambios guardados correctamente', 'La solicitud de baja fue actualizada.');
+
             header('Location: index.php?modulo=bajas&accion=ver&id=' . $idBaja);
             exit;
         } catch (Throwable $e) {
@@ -1235,7 +1285,8 @@ class BajasController extends Controller
                 'detallesActuales' => $detallesActuales,
                 'error' => $error,
                 'datosFormulario' => $datosFormulario,
-            ]);
+                'tituloPagina' => 'Editar baja',
+            ], 'main');
             return;
         }
     }

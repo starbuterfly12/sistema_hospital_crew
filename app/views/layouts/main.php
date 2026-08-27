@@ -140,5 +140,265 @@ $itemsSidebar = [
             </main>
         </div>
     </div>
+
+    <?php
+        // Feedback global (POST → redirect → GET): un ÚNICO modal reutilizable para todo el sistema.
+        // getFlash() consume el mensaje una sola vez; al recargar ya no vuelve a aparecer.
+        $sgbFlash = function_exists('getFlash') ? getFlash() : null;
+    ?>
+    <?php if ($sgbFlash !== null): ?>
+        <?php
+            $sgbFlashTipo = in_array($sgbFlash['tipo'], ['success', 'error', 'warning', 'info'], true) ? $sgbFlash['tipo'] : 'info';
+            $sgbFlashIconos = [
+                'success' => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>',
+                'error'   => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>',
+                'warning' => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+                'info'    => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>',
+            ];
+        ?>
+        <div id="modal-feedback" class="modal-overlay modal-abierto" data-modal-feedback>
+            <div class="modal-caja modal-feedback" role="dialog" aria-modal="true" aria-labelledby="modal-feedback-titulo">
+                <div class="modal-feedback-icono modal-feedback-icono--<?= $sgbFlashTipo ?>" aria-hidden="true"><?= $sgbFlashIconos[$sgbFlashTipo] ?></div>
+                <h2 id="modal-feedback-titulo" class="modal-feedback-titulo"><?= htmlspecialchars($sgbFlash['titulo'], ENT_QUOTES, 'UTF-8') ?></h2>
+                <?php if (trim($sgbFlash['mensaje']) !== ''): ?>
+                    <p class="modal-feedback-mensaje"><?= htmlspecialchars($sgbFlash['mensaje'], ENT_QUOTES, 'UTF-8') ?></p>
+                <?php endif; ?>
+                <div class="modal-feedback-actions">
+                    <button type="button" class="btn btn-primary" data-cerrar-modal-feedback>Aceptar</button>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            (function () {
+                var modal = document.getElementById('modal-feedback');
+                if (!modal) { return; }
+
+                var btnAceptar = modal.querySelector('[data-cerrar-modal-feedback]');
+
+                function cerrar() {
+                    modal.classList.remove('modal-abierto');
+                }
+
+                if (btnAceptar) {
+                    btnAceptar.addEventListener('click', cerrar);
+                    try { btnAceptar.focus(); } catch (e) {}
+                }
+
+                modal.addEventListener('click', function (evento) {
+                    if (evento.target === modal) { cerrar(); }
+                });
+
+                document.addEventListener('keydown', function (evento) {
+                    if (evento.key === 'Escape' && modal.classList.contains('modal-abierto')) {
+                        cerrar();
+                    }
+                });
+            })();
+        </script>
+    <?php endif; ?>
+
+    <?php
+        // Modal de CONFIRMACIÓN global y reutilizable (previo a una acción sensible). Distinto del
+        // modal de FEEDBACK de arriba (resultado posterior). Se controla por atributos data-confirm-*
+        // en el botón disparador, que debe apuntar a un <form> real (normalmente oculto) mediante
+        // data-confirm-form. Soporta un paso previo opcional con textarea (data-confirm-input) y una
+        // segunda pantalla de confirmación (data-confirm-step2-*). Nunca ejecuta el POST hasta que la
+        // persona pulsa el botón final del modal.
+    ?>
+    <div id="modal-confirm" class="modal-overlay" data-modal-confirm>
+        <div class="modal-caja modal-confirm" role="dialog" aria-modal="true" aria-labelledby="modal-confirm-titulo">
+            <div id="modal-confirm-icono" class="modal-confirm-icono modal-confirm-icono--azul" aria-hidden="true"></div>
+            <h2 id="modal-confirm-titulo" class="modal-confirm-titulo">Confirmar</h2>
+            <p id="modal-confirm-texto" class="modal-confirm-texto"></p>
+            <div id="modal-confirm-campo" class="modal-confirm-campo" hidden>
+                <label id="modal-confirm-campo-label" class="form-label" for="modal-confirm-textarea"></label>
+                <textarea id="modal-confirm-textarea" class="form-control" rows="3"></textarea>
+            </div>
+            <p id="modal-confirm-subtexto" class="modal-confirm-sub" hidden></p>
+            <div class="modal-confirm-acciones">
+                <button type="button" class="btn btn-secondary" data-modal-confirm-cancel>Cancelar</button>
+                <button type="button" class="btn btn-primary" id="modal-confirm-ok">Continuar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function () {
+            var overlay = document.getElementById('modal-confirm');
+            if (!overlay) { return; }
+
+            var elIcono  = document.getElementById('modal-confirm-icono');
+            var elTitulo = document.getElementById('modal-confirm-titulo');
+            var elTexto  = document.getElementById('modal-confirm-texto');
+            var elSub    = document.getElementById('modal-confirm-subtexto');
+            var wrapCampo = document.getElementById('modal-confirm-campo');
+            var lblCampo  = document.getElementById('modal-confirm-campo-label');
+            var txtCampo  = document.getElementById('modal-confirm-textarea');
+            var btnOk     = document.getElementById('modal-confirm-ok');
+
+            var ICONOS = {
+                check:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg>',
+                alerta: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+                doc:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h6"/></svg>'
+            };
+
+            var trigger = null;
+            var paso = 1;
+            var valores = {};   // targetId -> texto guardado (persiste entre aperturas)
+
+            function at(nombre, def) {
+                if (!trigger) { return def || ''; }
+                var v = trigger.getAttribute(nombre);
+                return (v === null || v === '') ? (def || '') : v;
+            }
+            function tiene(nombre) {
+                return trigger && trigger.getAttribute(nombre) !== null;
+            }
+
+            function pintar(o) {
+                elIcono.className = 'modal-confirm-icono modal-confirm-icono--' + (o.variant || 'azul');
+                elIcono.innerHTML = ICONOS[o.icon] || ICONOS.check;
+                elTitulo.textContent = o.title || 'Confirmar';
+                elTexto.textContent = o.text || '';
+                elTexto.hidden = !o.text;
+                elSub.textContent = o.subtext || '';
+                elSub.hidden = !o.subtext;
+                btnOk.textContent = o.ok || 'Continuar';
+                btnOk.className = 'btn ' + (o.btnclass || 'btn-primary');
+            }
+
+            function abrirPaso1() {
+                paso = 1;
+                pintar({
+                    variant: at('data-confirm-variant', 'azul'),
+                    icon: at('data-confirm-icon', 'check'),
+                    title: at('data-confirm-title', 'Confirmar'),
+                    text: at('data-confirm-text'),
+                    subtext: at('data-confirm-subtext'),
+                    ok: at('data-confirm-ok', 'Continuar'),
+                    btnclass: at('data-confirm-btnclass', 'btn-primary')
+                });
+                if (tiene('data-confirm-input')) {
+                    wrapCampo.hidden = false;
+                    lblCampo.textContent = at('data-confirm-input-label', 'Detalle');
+                    txtCampo.value = valores[at('data-confirm-input-target')] || '';
+                    txtCampo.required = true;
+                } else {
+                    wrapCampo.hidden = true;
+                    txtCampo.required = false;
+                }
+                overlay.classList.add('modal-abierto');
+                (tiene('data-confirm-input') ? txtCampo : btnOk).focus();
+            }
+
+            function abrirPaso2() {
+                paso = 2;
+                wrapCampo.hidden = true;
+                pintar({
+                    variant: at('data-confirm-step2-variant', at('data-confirm-variant', 'azul')),
+                    icon: at('data-confirm-step2-icon', at('data-confirm-icon', 'check')),
+                    title: at('data-confirm-step2-title', 'Confirmar'),
+                    text: at('data-confirm-step2-text'),
+                    subtext: at('data-confirm-step2-subtext'),
+                    ok: at('data-confirm-step2-ok', 'Confirmar'),
+                    btnclass: at('data-confirm-step2-btnclass', at('data-confirm-btnclass', 'btn-primary'))
+                });
+                btnOk.focus();
+            }
+
+            function cerrar() {
+                overlay.classList.remove('modal-abierto');
+                // El modal es reutilizable: al cerrarse se reinicia el estado del paso con textarea
+                // para que la próxima confirmación (simple o de otro trigger) no lo herede visible.
+                paso = 1;
+                wrapCampo.hidden = true;
+                txtCampo.required = false;
+            }
+
+            function enviar() {
+                if (!trigger) { cerrar(); return; }
+                var form = document.getElementById(at('data-confirm-form'));
+                if (!form) { cerrar(); return; }
+                var destinoId = at('data-confirm-input-target');
+                if (destinoId) {
+                    var destino = document.getElementById(destinoId);
+                    if (destino) { destino.value = valores[destinoId] || txtCampo.value || ''; }
+                }
+                form.__confirmado = true;
+                cerrar();
+                if (typeof form.requestSubmit === 'function') { form.requestSubmit(); }
+                else { form.submit(); }
+            }
+
+            btnOk.addEventListener('click', function () {
+                if (paso === 1 && tiene('data-confirm-input')) {
+                    if (typeof txtCampo.reportValidity === 'function' && !txtCampo.reportValidity()) { return; }
+                    if (txtCampo.value.trim() === '') { txtCampo.focus(); return; }
+                    valores[at('data-confirm-input-target')] = txtCampo.value;
+                    abrirPaso2();
+                    return;
+                }
+                if (paso === 1 && tiene('data-confirm-step2-title')) {
+                    abrirPaso2();
+                    return;
+                }
+                enviar();
+            });
+
+            document.addEventListener('click', function (evento) {
+                var t = evento.target.closest('[data-confirm]');
+                if (t) {
+                    evento.preventDefault();
+                    trigger = t;
+
+                    var idCampoPrevio = t.getAttribute('data-confirm-require-field');
+                    if (idCampoPrevio) {
+                        var campoPrevio = document.getElementById(idCampoPrevio);
+                        if (campoPrevio && campoPrevio.value.trim() === '') {
+                            campoPrevio.focus();
+                            if (typeof campoPrevio.reportValidity === 'function') { campoPrevio.reportValidity(); }
+                            return;
+                        }
+                    }
+
+                    if (t.getAttribute('data-confirm-validate-form') !== null) {
+                        var fv = document.getElementById(t.getAttribute('data-confirm-form'));
+                        if (fv && typeof fv.checkValidity === 'function' && !fv.checkValidity()) {
+                            if (typeof fv.reportValidity === 'function') { fv.reportValidity(); }
+                            return;
+                        }
+                    }
+
+                    abrirPaso1();
+                    return;
+                }
+
+                if (evento.target === overlay || evento.target.closest('[data-modal-confirm-cancel]')) {
+                    cerrar();
+                }
+            });
+
+            document.addEventListener('keydown', function (evento) {
+                if (evento.key === 'Escape' && overlay.classList.contains('modal-abierto')) { cerrar(); }
+            });
+
+            // Enter / submit programático en un formulario objetivo: enrutarlo por el modal mientras
+            // no se haya confirmado explícitamente en él.
+            var vistos = {};
+            document.querySelectorAll('[data-confirm][data-confirm-form]').forEach(function (t) {
+                var idForm = t.getAttribute('data-confirm-form');
+                if (vistos[idForm]) { return; }
+                vistos[idForm] = 1;
+                var f = document.getElementById(idForm);
+                if (!f) { return; }
+                f.addEventListener('submit', function (evento) {
+                    if (f.__confirmado) { return; }
+                    evento.preventDefault();
+                    t.click();
+                });
+            });
+        })();
+    </script>
 </body>
 </html>

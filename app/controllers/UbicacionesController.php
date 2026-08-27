@@ -143,6 +143,8 @@ class UbicacionesController extends Controller
 
             $ubicacionModel->commit();
 
+            setFlash('success', 'Ubicación registrada correctamente', 'La información de la ubicación fue guardada en el sistema.');
+
             header('Location: index.php?modulo=ubicaciones&accion=ver&id=' . $idUbicacion);
             exit;
         } catch (Throwable $e) {
@@ -262,6 +264,8 @@ class UbicacionesController extends Controller
 
             $ubicacionModel->commit();
 
+            setFlash('success', 'Cambios guardados correctamente', 'La información de la ubicación fue actualizada.');
+
             header('Location: index.php?modulo=ubicaciones&accion=ver&id=' . $idUbicacion);
             exit;
         } catch (Throwable $e) {
@@ -354,6 +358,8 @@ class UbicacionesController extends Controller
             );
 
             $ubicacionModel->commit();
+
+            setFlash('success', 'Estado actualizado correctamente', 'El estado de la ubicación fue actualizado.');
 
             header('Location: index.php?modulo=ubicaciones&accion=ver&id=' . $idUbicacion);
             exit;

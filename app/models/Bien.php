@@ -13,8 +13,38 @@ class Bien extends Model
     // entrega; Devoluciones: condición de devolución) en vez de que cada uno defina su propia lista.
     public const CONDICIONES_VALIDAS = ['Bueno', 'Regular', 'Malo'];
 
-    public function getAll(): array
+    // Filtros opcionales para el listado (todos por GET, consulta preparada). Sin argumentos se
+    // comporta EXACTAMENTE igual que antes (sin WHERE): las llamadas existentes no cambian.
+    //   $q            -> LIKE sobre codigo_interno / codigo_sicoin / descripcion
+    //   $idCategoria  -> b.id_categoria exacto
+    //   $nombreEstado -> eb.nombre_estado exacto (ej. 'Activo' / 'Baja')
+    public function getAll(?string $q = null, ?int $idCategoria = null, ?string $nombreEstado = null): array
     {
+        $condiciones = [];
+        $params = [];
+
+        if ($q !== null && trim($q) !== '') {
+            // Placeholders distintos por ocurrencia: con PDO::ATTR_EMULATE_PREPARES=false un mismo
+            // nombre no puede repetirse en la consulta (mismo criterio que Bien::buscar()).
+            $condiciones[] = "(b.codigo_interno LIKE :q_codigo OR b.codigo_sicoin LIKE :q_sicoin OR b.descripcion LIKE :q_desc)";
+            $like = '%' . trim($q) . '%';
+            $params[':q_codigo'] = $like;
+            $params[':q_sicoin'] = $like;
+            $params[':q_desc'] = $like;
+        }
+
+        if ($idCategoria !== null && $idCategoria > 0) {
+            $condiciones[] = "b.id_categoria = :id_categoria";
+            $params[':id_categoria'] = $idCategoria;
+        }
+
+        if ($nombreEstado !== null && trim($nombreEstado) !== '') {
+            $condiciones[] = "eb.nombre_estado = :nombre_estado";
+            $params[':nombre_estado'] = trim($nombreEstado);
+        }
+
+        $where = $condiciones !== [] ? ' WHERE ' . implode(' AND ', $condiciones) : '';
+
         $sql = "
             SELECT
                 b.id_bien,
@@ -39,10 +69,11 @@ class Bien extends Model
             LEFT JOIN estados_bien eb ON b.id_estado_bien = eb.id_estado_bien
             LEFT JOIN responsables r ON b.id_responsable_actual = r.id_responsable
             LEFT JOIN ubicaciones u ON b.id_ubicacion_actual = u.id_ubicacion
+            {$where}
             ORDER BY b.id_bien DESC
         ";
 
-        return $this->fetchAll($sql);
+        return $this->fetchAll($sql, $params);
     }
 
     public function crear(array $datos): int

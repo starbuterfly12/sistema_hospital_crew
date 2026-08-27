@@ -34,8 +34,16 @@ class RequisicionesController extends Controller
 
         $requisicionModel = $this->model('Requisicion');
 
+        $q = trim($_GET['q'] ?? '');
+        $estado = trim($_GET['estado'] ?? '');
+
         $this->view('requisiciones/index', [
-            'requisiciones' => $requisicionModel->getAll(),
+            'requisiciones' => $requisicionModel->getAll(
+                $q !== '' ? $q : null,
+                $estado !== '' ? $estado : null
+            ),
+            'q' => $q,
+            'estado' => $estado,
             'tituloPagina' => 'Requisiciones',
         ], 'main');
     }
@@ -196,6 +204,8 @@ class RequisicionesController extends Controller
             );
 
             $requisicionModel->commit();
+
+            setFlash('success', 'Requisición registrada correctamente', 'La requisición quedó registrada en el sistema.');
 
             header('Location: index.php?modulo=requisiciones&accion=ver&id=' . $idRequisicion);
             exit;
@@ -426,6 +436,8 @@ class RequisicionesController extends Controller
 
             $requisicionModel->commit();
 
+            setFlash('success', 'Cambios guardados correctamente', 'La requisición fue actualizada.');
+
             header('Location: index.php?modulo=requisiciones&accion=ver&id=' . $idRequisicion);
             exit;
         } catch (Throwable $e) {
@@ -544,6 +556,8 @@ class RequisicionesController extends Controller
 
             $requisicionModel->commit();
 
+            setFlash('success', 'Requisición autorizada correctamente', 'La requisición quedó autorizada.');
+
             header('Location: index.php?modulo=requisiciones&accion=ver&id=' . $idRequisicion);
             exit;
         } catch (Throwable $e) {
@@ -625,6 +639,8 @@ class RequisicionesController extends Controller
             );
 
             $requisicionModel->commit();
+
+            setFlash('info', 'Requisición anulada', 'La requisición fue anulada correctamente.');
 
             header('Location: index.php?modulo=requisiciones&accion=ver&id=' . $idRequisicion);
             exit;
@@ -796,6 +812,8 @@ class RequisicionesController extends Controller
             );
 
             $requisicionModel->commit();
+
+            setFlash('success', 'Entrega confirmada correctamente', 'Los bienes fueron entregados y registrados en la requisición.');
 
             header('Location: index.php?modulo=requisiciones&accion=ver&id=' . $idRequisicion);
             exit;

@@ -1,69 +1,119 @@
-<!DOCTYPE html>
-<html lang="es-GT">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Devoluciones</title>
-</head>
-<body>
-    <h1>Devoluciones</h1>
+<?php
+// Fragmento de contenido: se renderiza dentro de layouts/main.php (ver DevolucionesController::index()).
+// Filtros por GET (búsqueda + estado): el controlador los lee de $_GET y los pasa a Devolucion::getAll(),
+// que sin argumentos sigue devolviendo el listado completo (comportamiento previo).
+// "estado_devolucion" (parcial / completa) SÍ es una columna persistente real de `devoluciones`,
+// escrita por DevolucionesController::crear() según cuántos bienes quedan pendientes en el préstamo.
+$devoluciones = $devoluciones ?? [];
+$q = $q ?? '';
+$estado = $estado ?? '';
+$puedeRegistrar = tieneRol(['Administrador', 'Operativo']);
 
-    <?php if (tieneRol(['Administrador', 'Operativo'])): ?>
-        <p>
-            <a href="index.php?modulo=devoluciones&accion=crear">Registrar devolución</a>
-        </p>
-    <?php endif; ?>
+$etiquetasEstadoDevolucion = DevolucionesController::ETIQUETAS_ESTADO; // ['parcial'=>'Parcial','completa'=>'Completa']
 
-    <?php
-        $devoluciones = $devoluciones ?? [];
+$mostrar = static function ($valor): string {
+    return ($valor !== null && trim((string) $valor) !== '') ? htmlspecialchars((string) $valor, ENT_QUOTES, 'UTF-8') : '—';
+};
 
-        $etiquetasTipo = PrestamosController::ETIQUETAS_TIPO;
+$valorInput = static function ($valor): string {
+    return htmlspecialchars((string) ($valor ?? ''), ENT_QUOTES, 'UTF-8');
+};
 
-        $etiquetasEstadoPrestamo = [
-            'activo' => 'Activo',
-            'parcial' => 'Parcialmente devuelto',
-            'finalizado' => 'Finalizado',
-            'anulado' => 'Anulado',
-        ];
-    ?>
+$claseBadgeDevolucion = static function (?string $estado): string {
+    return match ($estado) {
+        'parcial' => 'badge badge-pendiente',
+        'completa' => 'badge badge-exito',
+        default => 'badge',
+    };
+};
+?>
+<div class="page-header">
+    <div class="page-header-fila">
+        <div>
+            <h1 class="page-title">Devoluciones</h1>
+            <p class="page-subtitle">Gestión y consulta de las devoluciones de bienes prestados.</p>
+        </div>
 
+        <div class="page-actions">
+            <a href="index.php?modulo=movimientos" class="btn btn-secondary">Volver</a>
+            <?php if ($puedeRegistrar): ?>
+                <a class="btn btn-primary" href="index.php?modulo=devoluciones&accion=crear">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                    Registrar devolución
+                </a>
+            <?php endif; ?>
+        </div>
+    </div>
+</div>
+
+<form method="GET" action="index.php" class="filters">
+    <input type="hidden" name="modulo" value="devoluciones">
+
+    <div class="form-group">
+        <label class="form-label" for="q">Buscar</label>
+        <input type="text" id="q" name="q" class="form-control" value="<?= $valorInput($q) ?>" placeholder="Número, préstamo o responsable">
+    </div>
+
+    <div class="form-group">
+        <label class="form-label" for="estado">Estado</label>
+        <select id="estado" name="estado" class="form-control">
+            <option value="">Todos</option>
+            <?php foreach ($etiquetasEstadoDevolucion as $valorEstado => $etiquetaEstado): ?>
+                <option value="<?= $valorEstado ?>" <?= ($estado === $valorEstado) ? 'selected' : '' ?>><?= $etiquetaEstado ?></option>
+            <?php endforeach; ?>
+        </select>
+    </div>
+
+    <div class="form-actions-inline">
+        <button type="submit" class="btn btn-primary">Buscar</button>
+        <a href="index.php?modulo=devoluciones" class="btn btn-secondary">Limpiar filtros</a>
+    </div>
+</form>
+
+<div class="card">
     <?php if (empty($devoluciones)): ?>
-        <p>No hay devoluciones registradas.</p>
+        <p class="estado-vacio">No se encontraron devoluciones<?= ($q !== '' || $estado !== '') ? ' con esos filtros' : ' registradas' ?>.</p>
     <?php else: ?>
-        <table border="1" cellpadding="5" cellspacing="0">
-            <thead>
-                <tr>
-                    <th>No. devolución</th>
-                    <th>Préstamo</th>
-                    <th>Tipo</th>
-                    <th>Fecha</th>
-                    <th>Responsable temporal</th>
-                    <th>Bienes devueltos</th>
-                    <th>Registrada por</th>
-                    <th>Préstamo queda</th>
-                    <th>Acción</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php foreach ($devoluciones as $devolucion): ?>
+        <div class="table-responsive">
+            <table class="table-app table-detail-centered table-resizable table-devoluciones">
+                <thead>
                     <tr>
-                        <td><?= htmlspecialchars($devolucion['numero_devolucion'] ?? '-', ENT_QUOTES, 'UTF-8') ?></td>
-                        <td><?= htmlspecialchars($devolucion['numero_prestamo'] ?? '-', ENT_QUOTES, 'UTF-8') ?></td>
-                        <td><?= htmlspecialchars($etiquetasTipo[$devolucion['tipo_prestamo'] ?? ''] ?? ($devolucion['tipo_prestamo'] ?? '-'), ENT_QUOTES, 'UTF-8') ?></td>
-                        <td><?= htmlspecialchars(formatDate($devolucion['fecha_devolucion'] ?? null), ENT_QUOTES, 'UTF-8') ?></td>
-                        <td><?= htmlspecialchars($devolucion['responsable_destino_mostrado'] ?? '-', ENT_QUOTES, 'UTF-8') ?></td>
-                        <td><?= (int) ($devolucion['cantidad_bienes'] ?? 0) ?></td>
-                        <td><?= htmlspecialchars($devolucion['usuario_recibe_nombre'] ?? '-', ENT_QUOTES, 'UTF-8') ?></td>
-                        <td><?= htmlspecialchars($etiquetasEstadoPrestamo[$devolucion['estado_prestamo'] ?? ''] ?? ($devolucion['estado_prestamo'] ?? '-'), ENT_QUOTES, 'UTF-8') ?></td>
-                        <td>
-                            <a href="index.php?modulo=devoluciones&accion=ver&id=<?= (int) $devolucion['id_devolucion'] ?>">Ver</a>
-                        </td>
+                        <th>Número</th>
+                        <th>Préstamo</th>
+                        <th>Fecha de devolución</th>
+                        <th>Responsable temporal</th>
+                        <th>Bienes devueltos</th>
+                        <th>Registrada por</th>
+                        <th>Resultado</th>
+                        <th>Acciones</th>
                     </tr>
-                <?php endforeach; ?>
-            </tbody>
-        </table>
+                </thead>
+                <tbody>
+                    <?php foreach ($devoluciones as $devolucion): ?>
+                        <tr>
+                            <td><?= $mostrar($devolucion['numero_devolucion'] ?? null) ?></td>
+                            <td><?= $mostrar($devolucion['numero_prestamo'] ?? null) ?></td>
+                            <td><?= $mostrar(formatDate($devolucion['fecha_devolucion'] ?? null)) ?></td>
+                            <td><?= $mostrar($devolucion['responsable_destino_mostrado'] ?? null) ?></td>
+                            <td><?= (int) ($devolucion['cantidad_bienes'] ?? 0) ?></td>
+                            <td><?= $mostrar($devolucion['usuario_recibe_nombre'] ?? null) ?></td>
+                            <td>
+                                <span class="<?= $claseBadgeDevolucion($devolucion['estado_devolucion'] ?? null) ?>"><?= $mostrar($etiquetasEstadoDevolucion[$devolucion['estado_devolucion'] ?? ''] ?? ($devolucion['estado_devolucion'] ?? null)) ?></span>
+                            </td>
+                            <td>
+                                <div class="table-actions">
+                                    <a class="table-action-btn table-action-ver" href="index.php?modulo=devoluciones&accion=ver&id=<?= (int) $devolucion['id_devolucion'] ?>">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.5 12S5 5 12 5s10.5 7 10.5 7-3.5 7-10.5 7S1.5 12 1.5 12Z"/><circle cx="12" cy="12" r="3"/></svg>
+                                        Ver
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
     <?php endif; ?>
+</div>
 
-    <p><a href="index.php?modulo=movimientos">Volver a Movimientos</a></p>
-</body>
-</html>
+<script src="<?= url('public/js/app.js') ?>"></script>

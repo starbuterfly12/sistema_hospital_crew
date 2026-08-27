@@ -259,6 +259,8 @@ class VerificacionesController extends Controller
         // NUNCA se ejecuta ningún UPDATE sobre `bienes` en este flujo: la verificación documenta lo
         // encontrado, no corrige el registro. Ver auditoría — cualquier corrección real debe pasar
         // por el flujo administrativo correspondiente (editar bien, cambiar condición, traslado, etc).
+        setFlash('success', 'Verificación registrada correctamente', 'El resultado de la verificación física fue guardado en el historial del bien.');
+
         header('Location: index.php?modulo=verificaciones&accion=ver&id=' . $idVerificacion);
         exit;
     }

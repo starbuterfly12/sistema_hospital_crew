@@ -1,9 +1,10 @@
 <?php
 // Fragmento de contenido: se renderiza dentro de layouts/main.php (ver RequisicionesController::ver()).
-// Ficha de solo lectura de una requisición ya registrada — mismos datos que ya recibía la vista
-// anterior ($requisicion / $numeros / $detalles) y mismos endpoints POST (autorizar / confirmar_entrega
-// / anular) con su csrfField(); solo cambió el marcado visual. No se añade confirm() donde antes no lo
-// había (esta fase no crea confirmaciones nuevas).
+// Ficha de solo lectura de una requisición ya registrada — mismos datos ($requisicion / $numeros /
+// $detalles) y mismos endpoints POST (autorizar / confirmar_entrega / anular) con su csrfField().
+// Las acciones cuelgan sueltas bajo el detalle (sin tarjeta "Acciones"); Autorizar y Anular usan el
+// modal de confirmación global (#modal-confirm) — nunca window.confirm(). El motivo de anulación se
+// escribe dentro del modal y se vuelca al mismo campo name="motivo_anulacion" del <form> real oculto.
 $requisicion = $requisicion ?? [];
 $numeros = $numeros ?? [];
 $detalles = $detalles ?? [];
@@ -209,7 +210,7 @@ $tieneAccionesFlujo = $puedeGestionar && (
                                 <td><?= $mostrar($detalle['codigo_sicoin_mostrado'] ?? null) ?></td>
                                 <td><?= $mostrar($detalle['descripcion_mostrada'] ?? null) ?></td>
                                 <td><?= $mostrar($detalle['serie_mostrada'] ?? null) ?></td>
-                                <td><?= $mostrar($detalle['valor_mostrado'] ?? null) ?></td>
+                                <td><?= formatearQuetzales($detalle['valor_mostrado'] ?? null) ?></td>
                                 <td>
                                     <span class="<?= $claseBadgeDetalle($detalle['estado_detalle'] ?? null) ?>"><?= $mostrar($etiquetasEstadoDetalle[$detalle['estado_detalle'] ?? ''] ?? ($detalle['estado_detalle'] ?? null)) ?></span>
                                 </td>
@@ -218,7 +219,9 @@ $tieneAccionesFlujo = $puedeGestionar && (
                     </tbody>
                     <tfoot>
                         <tr>
-                            <td colspan="6"><strong>Total: <?= number_format($total, 2) ?></strong></td>
+                            <td colspan="4"></td>
+                            <td><strong>Total: <?= formatearQuetzales($total) ?></strong></td>
+                            <td></td>
                         </tr>
                     </tfoot>
                 </table>
@@ -227,55 +230,90 @@ $tieneAccionesFlujo = $puedeGestionar && (
     </div>
 </div>
 
-<?php if ($tieneAccionesFlujo): ?>
-    <div class="card">
-        <h2 class="card-titulo">Acciones</h2>
-        <div class="detail-actions">
-            <?php if ($estado === 'Pendiente'): ?>
-                <a href="index.php?modulo=requisiciones&accion=editar&id=<?= $idRequisicion ?>" class="btn btn-secondary">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
-                    Editar
-                </a>
+<?php
+    // Acciones sueltas y compactas bajo el detalle — sin tarjeta ni título "Acciones", sin franja de
+    // ancho completo. Mismos estados/permisos/endpoints/CSRF que antes. Autorizar y Anular confirman
+    // con el modal global (#modal-confirm); el motivo de anulación se captura DENTRO del modal y viaja
+    // en el mismo campo name="motivo_anulacion" del <form> real (oculto). Editar sigue siendo enlace.
+    $puedeEditar           = $estado === 'Pendiente'  && $puedeGestionar;
+    $puedeAutorizar        = $estado === 'Pendiente'  && $esAdministrador;
+    $puedeConfirmarEntrega = $estado === 'Autorizada' && $puedeGestionar;
+    // $puedeAnular ya definido arriba (Pendiente|Autorizada + gestión)
+    $hayAccionesInline = $puedeEditar || $puedeAutorizar || $puedeConfirmarEntrega || $puedeAnular;
+?>
+<?php if ($hayAccionesInline): ?>
+    <div class="detail-inline-actions">
+        <?php if ($puedeEditar): ?>
+            <a href="index.php?modulo=requisiciones&accion=editar&id=<?= $idRequisicion ?>" class="table-action-btn table-action-editar">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                Editar
+            </a>
+        <?php endif; ?>
 
-                <?php if ($esAdministrador): ?>
-                    <form method="POST" action="index.php?modulo=requisiciones&accion=autorizar&id=<?= $idRequisicion ?>">
-                        <?= csrfField() ?>
-                        <button type="submit" class="btn btn-primary">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>
-                            Autorizar
-                        </button>
-                    </form>
-                <?php endif; ?>
-            <?php endif; ?>
+        <?php if ($puedeAutorizar): ?>
+            <button type="button" class="btn btn-success"
+                data-confirm
+                data-confirm-form="form-req-autorizar"
+                data-confirm-icon="check" data-confirm-variant="menta"
+                data-confirm-title="Confirmar autorización"
+                data-confirm-text="La requisición quedará autorizada para continuar con el proceso de entrega."
+                data-confirm-subtext="¿Desea autorizar la requisición?"
+                data-confirm-ok="Autorizar"
+                data-confirm-btnclass="btn-success">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>
+                Autorizar
+            </button>
+        <?php endif; ?>
 
-            <?php if ($estado === 'Autorizada'): ?>
-                <form method="POST" action="index.php?modulo=requisiciones&accion=confirmar_entrega&id=<?= $idRequisicion ?>">
-                    <?= csrfField() ?>
-                    <button type="submit" class="btn btn-success">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l4 4L19 6"/></svg>
-                        Confirmar entrega
-                    </button>
-                </form>
-            <?php endif; ?>
-        </div>
-    </div>
-<?php endif; ?>
+        <?php if ($puedeConfirmarEntrega): ?>
+            <button type="submit" form="form-req-entregar" class="btn btn-success">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l4 4L19 6"/></svg>
+                Confirmar entrega
+            </button>
+        <?php endif; ?>
 
-<?php if ($puedeAnular): ?>
-    <form method="POST" action="index.php?modulo=requisiciones&accion=anular&id=<?= $idRequisicion ?>" class="form-card">
-        <?= csrfField() ?>
-        <h2 class="form-section-title">Anular requisición</h2>
-        <div class="form-grid">
-            <div class="form-group form-grid-full">
-                <label class="form-label" for="motivo_anulacion">Motivo de anulación <span class="required-mark">*</span></label>
-                <textarea id="motivo_anulacion" name="motivo_anulacion" class="form-control" rows="3" required></textarea>
-            </div>
-        </div>
-        <div class="form-actions">
-            <button type="submit" class="btn btn-danger">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        <?php if ($puedeAnular): ?>
+            <button type="button" class="btn btn-danger"
+                data-confirm
+                data-confirm-form="form-req-anular"
+                data-confirm-icon="alerta" data-confirm-variant="rosa"
+                data-confirm-title="Anular requisición"
+                data-confirm-text="Ingrese el motivo por el cual desea anular la requisición."
+                data-confirm-input="1"
+                data-confirm-input-label="Motivo de anulación *"
+                data-confirm-input-target="req-anular-motivo"
+                data-confirm-ok="Continuar"
+                data-confirm-btnclass="btn-primary"
+                data-confirm-step2-icon="alerta" data-confirm-step2-variant="rosa"
+                data-confirm-step2-title="Confirmar anulación"
+                data-confirm-step2-text="La requisición será anulada y ya no podrá continuar con su proceso."
+                data-confirm-step2-subtext="¿Desea anular la requisición?"
+                data-confirm-step2-ok="Anular requisición"
+                data-confirm-step2-btnclass="btn-danger">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>
                 Anular
             </button>
-        </div>
-    </form>
+        <?php endif; ?>
+    </div>
+
+    <?php if ($puedeAutorizar): ?>
+        <form method="POST" action="index.php?modulo=requisiciones&accion=autorizar&id=<?= $idRequisicion ?>" id="form-req-autorizar" hidden>
+            <?= csrfField() ?>
+            <button type="submit" tabindex="-1" aria-hidden="true">Autorizar</button>
+        </form>
+    <?php endif; ?>
+
+    <?php if ($puedeConfirmarEntrega): ?>
+        <form method="POST" action="index.php?modulo=requisiciones&accion=confirmar_entrega&id=<?= $idRequisicion ?>" id="form-req-entregar" hidden>
+            <?= csrfField() ?>
+        </form>
+    <?php endif; ?>
+
+    <?php if ($puedeAnular): ?>
+        <form method="POST" action="index.php?modulo=requisiciones&accion=anular&id=<?= $idRequisicion ?>" id="form-req-anular" hidden>
+            <?= csrfField() ?>
+            <textarea name="motivo_anulacion" id="req-anular-motivo" hidden></textarea>
+            <button type="submit" tabindex="-1" aria-hidden="true">Anular</button>
+        </form>
+    <?php endif; ?>
 <?php endif; ?>

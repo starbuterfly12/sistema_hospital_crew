@@ -371,8 +371,20 @@ img {
     font-family: inherit;
     font-size: 14px;
     font-weight: 600;
+    line-height: 1.45;
+    white-space: nowrap;
     cursor: pointer;
     text-decoration: none;
+}
+
+/* Escala fija del icono dentro de un botón normal: sin esta regla, un <svg> inline sin width/height
+   propios se expande y dispara la altura del botón (causa real de los botones "gigantes" de Aceptar/
+   Rechazar en el detalle de Solicitudes de baja). No afecta a .table-action-btn ni a .action-tile,
+   que tienen su propio dimensionado. */
+.btn svg {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
 }
 
 .btn:hover {
@@ -415,6 +427,19 @@ img {
 .btn-azul-suave:hover {
     background: #c2ddff;
     border-color: var(--sgb-azul);
+}
+
+/* Variante "Editar / Modificar" — mismo lila pastel de .table-action-editar / .action-tile-lila, para
+   que el botón de edición en los encabezados de detalle comparta semántica de color con su versión
+   compacta de tabla. */
+.btn-lila {
+    background: var(--sgb-pastel-lila);
+    border-color: #d3c5fb;
+    color: #5b3fb0;
+}
+.btn-lila:hover {
+    background: #ddd1fc;
+    border-color: #9a7fe0;
 }
 
 /* --------------------------------------------------------------------------
@@ -639,6 +664,34 @@ textarea.form-control {
 .input-with-action .btn {
     flex-shrink: 0;
     white-space: nowrap;
+}
+
+/* Campo monetario editable: la "Q" es un prefijo VISUAL externo (nunca entra al value). El <input>
+   real conserva su id/name/value numérico/required/type — el backend sigue recibiendo solo el
+   número. Mismo alto/borde/focus que .form-control; no ensancha el campo respecto a los demás. */
+.input-money {
+    display: flex;
+    align-items: stretch;
+}
+
+.input-money-prefix {
+    display: inline-flex;
+    align-items: center;
+    padding: 0 11px;
+    border: 1px solid var(--sgb-borde);
+    border-right: none;
+    border-radius: 8px 0 0 8px;
+    background: var(--sgb-fondo);
+    color: var(--sgb-texto-secundario);
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.input-money .form-control {
+    flex: 1;
+    min-width: 0;
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
 }
 
 .btn-calendario:hover {
@@ -898,6 +951,25 @@ textarea.form-control {
     gap: 8px;
 }
 
+/* Acciones sueltas y compactas bajo el detalle (Detalle de baja): SIN tarjeta ni título, alineadas a
+   la izquierda, con un respiro superior discreto. Los botones conservan su tamaño normal — nunca de
+   ancho completo. */
+.detail-inline-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin-top: 16px;
+}
+
+.detail-inline-form {
+    margin-top: 16px;
+}
+
+.detail-inline-form .detail-inline-actions {
+    margin-top: 12px;
+}
+
 .detail-actions form {
     display: flex;
 }
@@ -978,6 +1050,72 @@ textarea.form-control {
 .action-tile-celeste:hover {
     background: #ddebfd;
     border-color: var(--sgb-azul);
+}
+
+/* Acción destructiva suave (ej. "Rechazar solicitud" en el detalle de Baja abierto desde la bandeja
+   de Solicitudes) — rosa/rojo pastel, coherente con .badge-error / .alert-error. */
+.action-tile-rosa {
+    background: var(--sgb-pastel-rosa);
+    border-color: #f7c6d9;
+    color: var(--sgb-rojo);
+}
+.action-tile-rosa:hover {
+    background: #ffd2e2;
+    border-color: var(--sgb-rojo);
+}
+
+/* --------------------------------------------------------------------------
+   Bajas — bloque por bien en Registrar / Editar baja. Cada bien elegible se captura con su propio
+   tipo de baja + justificación + imagen (el backend los espera por ítem), así que se mantiene el
+   formato de tarjeta en vez de una tabla saturada. Puro contenedor visual; el JS conserva
+   .check-bien / .bloque-bien-datos / data-datos-bien sin cambios.
+   -------------------------------------------------------------------------- */
+.bloque-bien {
+    border: 1px solid var(--sgb-borde);
+    border-radius: var(--sgb-radio);
+    background: var(--sgb-fondo);
+    padding: 12px 14px;
+    margin-bottom: 10px;
+}
+
+.bloque-bien-cabecera {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: 14px;
+    line-height: 1.4;
+    cursor: pointer;
+}
+
+.bloque-bien-sicoin {
+    color: var(--sgb-texto-secundario);
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.bloque-bien-meta {
+    margin: 6px 0 0;
+    color: var(--sgb-texto-secundario);
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.bloque-bien-datos {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px dashed var(--sgb-borde);
+}
+
+/* Botón compacto "Ver foto actual" dentro del bloque de datos de cada bien (Editar baja): usa
+   .table-action-btn/.table-action-ver para la forma/color; aquí solo se le da el aire inferior antes
+   del selector de imagen nueva. */
+.bloque-bien-img-actual {
+    margin-bottom: 6px;
+}
+
+.form-hint-error {
+    color: var(--sgb-rojo);
+    font-weight: 600;
 }
 
 /* --------------------------------------------------------------------------
@@ -1330,6 +1468,113 @@ textarea.form-control {
 .table-resizable.table-asignaciones thead th:nth-child(6) { width: 110px; min-width: 95px;  } /* Estado */
 .table-resizable.table-asignaciones thead th:nth-child(7) { width: 90px;  min-width: 75px;  } /* Acciones: Ver */
 
+/* --------------------------------------------------------------------------
+   Traslados (listado, 8 columnas) — mismo mecanismo que las tablas resizables anteriores: el selector
+   compuesto (.table-resizable.table-traslados) gana en especificidad a los anchos por nth-child de
+   Bienes. Anchos iniciales pensados para caber sin scroll horizontal en escritorio; la usuaria puede
+   ampliar cualquier columna. Wrap por palabra y centrado los aportan .table-resizable (+ .table-detail-centered).
+   -------------------------------------------------------------------------- */
+.table-resizable.table-traslados thead th:nth-child(1) { width: 130px; min-width: 110px; } /* Número */
+.table-resizable.table-traslados thead th:nth-child(2) { width: 120px; min-width: 105px; } /* Fecha */
+.table-resizable.table-traslados thead th:nth-child(3) { width: 160px; min-width: 130px; } /* Responsable origen */
+.table-resizable.table-traslados thead th:nth-child(4) { width: 160px; min-width: 130px; } /* Responsable destino */
+.table-resizable.table-traslados thead th:nth-child(5) { width: 160px; min-width: 130px; } /* Ubicación destino */
+.table-resizable.table-traslados thead th:nth-child(6) { width: 70px;  min-width: 60px;  } /* Bienes */
+.table-resizable.table-traslados thead th:nth-child(7) { width: 140px; min-width: 120px; } /* Registrado por */
+.table-resizable.table-traslados thead th:nth-child(8) { width: 80px;  min-width: 70px;  } /* Acciones: Ver */
+
+/* --------------------------------------------------------------------------
+   Préstamos (listado, 9 columnas) — mismo mecanismo que las tablas resizables anteriores: el selector
+   compuesto (.table-resizable.table-prestamos) gana en especificidad a los anchos por nth-child de
+   Bienes. Anchos iniciales pensados para caber sin scroll horizontal en escritorio; la usuaria puede
+   ampliar cualquier columna. Wrap por palabra y centrado los aportan .table-resizable (+ .table-detail-centered).
+   -------------------------------------------------------------------------- */
+.table-resizable.table-prestamos thead th:nth-child(1) { width: 135px; min-width: 115px; } /* Número */
+.table-resizable.table-prestamos thead th:nth-child(2) { width: 115px; min-width: 100px; } /* Fecha de préstamo */
+.table-resizable.table-prestamos thead th:nth-child(3) { width: 160px; min-width: 130px; } /* Responsable origen */
+.table-resizable.table-prestamos thead th:nth-child(4) { width: 160px; min-width: 130px; } /* Responsable destino */
+.table-resizable.table-prestamos thead th:nth-child(5) { width: 155px; min-width: 125px; } /* Ubicación destino */
+.table-resizable.table-prestamos thead th:nth-child(6) { width: 115px; min-width: 100px; } /* Devolución estimada */
+.table-resizable.table-prestamos thead th:nth-child(7) { width: 70px;  min-width: 60px;  } /* Bienes */
+.table-resizable.table-prestamos thead th:nth-child(8) { width: 130px; min-width: 105px; } /* Estado */
+.table-resizable.table-prestamos thead th:nth-child(9) { width: 80px;  min-width: 70px;  } /* Acciones: Ver */
+
+/* --------------------------------------------------------------------------
+   Devoluciones (listado, 8 columnas) — mismo mecanismo que las tablas resizables anteriores: el
+   selector compuesto (.table-resizable.table-devoluciones) gana en especificidad a los anchos por
+   nth-child de Bienes. Anchos iniciales pensados para caber sin scroll horizontal en escritorio; la
+   usuaria puede ampliar cualquier columna. Wrap por palabra y centrado los aportan .table-resizable
+   (+ .table-detail-centered).
+   -------------------------------------------------------------------------- */
+.table-resizable.table-devoluciones thead th:nth-child(1) { width: 140px; min-width: 115px; } /* Número */
+.table-resizable.table-devoluciones thead th:nth-child(2) { width: 140px; min-width: 115px; } /* Préstamo */
+.table-resizable.table-devoluciones thead th:nth-child(3) { width: 120px; min-width: 100px; } /* Fecha de devolución */
+.table-resizable.table-devoluciones thead th:nth-child(4) { width: 175px; min-width: 135px; } /* Responsable temporal */
+.table-resizable.table-devoluciones thead th:nth-child(5) { width: 90px;  min-width: 75px;  } /* Bienes devueltos */
+.table-resizable.table-devoluciones thead th:nth-child(6) { width: 150px; min-width: 120px; } /* Registrada por */
+.table-resizable.table-devoluciones thead th:nth-child(7) { width: 105px; min-width: 90px;  } /* Resultado */
+.table-resizable.table-devoluciones thead th:nth-child(8) { width: 80px;  min-width: 70px;  } /* Acciones: Ver */
+
+/* --------------------------------------------------------------------------
+   Bajas (listado, 8 columnas) — mismo mecanismo que las tablas resizables anteriores: el selector
+   compuesto (.table-resizable.table-bajas) gana en especificidad a los anchos por nth-child de
+   Bienes. Anchos iniciales pensados para caber sin scroll horizontal en escritorio; la usuaria puede
+   ampliar cualquier columna. Wrap por palabra y centrado los aportan .table-resizable (+ .table-detail-centered).
+   -------------------------------------------------------------------------- */
+.table-resizable.table-bajas thead th:nth-child(1) { width: 150px; min-width: 120px; } /* Número */
+.table-resizable.table-bajas thead th:nth-child(2) { width: 135px; min-width: 110px; } /* Fecha de preparación */
+.table-resizable.table-bajas thead th:nth-child(3) { width: 175px; min-width: 135px; } /* Responsable del área */
+.table-resizable.table-bajas thead th:nth-child(4) { width: 160px; min-width: 125px; } /* Bodega destino */
+.table-resizable.table-bajas thead th:nth-child(5) { width: 70px;  min-width: 60px;  } /* Bienes */
+.table-resizable.table-bajas thead th:nth-child(6) { width: 150px; min-width: 120px; } /* Registrada por */
+.table-resizable.table-bajas thead th:nth-child(7) { width: 110px; min-width: 95px;  } /* Estado */
+.table-resizable.table-bajas thead th:nth-child(8) { width: 140px; min-width: 120px; } /* Acciones: Ver + Editar */
+
+/* --------------------------------------------------------------------------
+   Solicitudes de baja (bandeja administrativa, 9 columnas) — mismo mecanismo que las tablas
+   resizables anteriores: el selector compuesto (.table-resizable.table-solicitudes-baja) gana en
+   especificidad a los anchos por nth-child de Bienes. Anchos iniciales pensados para caber sin
+   scroll horizontal en escritorio; la persona puede ampliar cualquier columna. Wrap por palabra y
+   centrado los aportan .table-resizable (+ .table-detail-centered).
+   -------------------------------------------------------------------------- */
+.table-resizable.table-solicitudes-baja thead th:nth-child(1) { width: 120px; min-width: 105px; } /* Número */
+.table-resizable.table-solicitudes-baja thead th:nth-child(2) { width: 115px; min-width: 100px; } /* Fecha de preparación */
+.table-resizable.table-solicitudes-baja thead th:nth-child(3) { width: 145px; min-width: 120px; } /* Responsable del área */
+.table-resizable.table-solicitudes-baja thead th:nth-child(4) { width: 120px; min-width: 100px; } /* Servicio */
+.table-resizable.table-solicitudes-baja thead th:nth-child(5) { width: 60px;  min-width: 50px;  } /* Bienes */
+.table-resizable.table-solicitudes-baja thead th:nth-child(6) { width: 135px; min-width: 110px; } /* Bodega destino */
+.table-resizable.table-solicitudes-baja thead th:nth-child(7) { width: 140px; min-width: 110px; } /* Auxiliar de Inventarios */
+.table-resizable.table-solicitudes-baja thead th:nth-child(8) { width: 100px; min-width: 90px;  } /* Estado */
+.table-resizable.table-solicitudes-baja thead th:nth-child(9) { width: 95px;  min-width: 85px;  } /* Acciones: Revisar */
+
+/* --------------------------------------------------------------------------
+   Detalle de baja — tabla de Bienes (bajas/ver.php, 11 columnas) compartida por el flujo normal y por
+   la revisión administrativa de Solicitudes. Por naturaleza es ancha: los anchos iniciales la dejan
+   compacta y, si aun así no cabe, .table-responsive permite el scroll; la persona puede ampliar
+   columnas arrastrando. Wrap por palabra y centrado los aportan .table-resizable (+ .table-detail-centered).
+   -------------------------------------------------------------------------- */
+.table-resizable.table-bajas-detalle thead th:nth-child(1)  { width: 95px;  min-width: 80px;  } /* No. de Bien */
+.table-resizable.table-bajas-detalle thead th:nth-child(2)  { width: 95px;  min-width: 80px;  } /* No. SICOIN */
+.table-resizable.table-bajas-detalle thead th:nth-child(3)  { width: 165px; min-width: 120px; } /* Descripción */
+.table-resizable.table-bajas-detalle thead th:nth-child(4)  { width: 90px;  min-width: 70px;  } /* Serie */
+.table-resizable.table-bajas-detalle thead th:nth-child(5)  { width: 95px;  min-width: 80px;  } /* Valor */
+.table-resizable.table-bajas-detalle thead th:nth-child(6)  { width: 110px; min-width: 90px;  } /* Tipo de baja */
+.table-resizable.table-bajas-detalle thead th:nth-child(7)  { width: 150px; min-width: 110px; } /* Justificación */
+.table-resizable.table-bajas-detalle thead th:nth-child(8)  { width: 130px; min-width: 105px; } /* Responsable anterior */
+.table-resizable.table-bajas-detalle thead th:nth-child(9)  { width: 120px; min-width: 100px; } /* Ubicación anterior */
+.table-resizable.table-bajas-detalle thead th:nth-child(10) { width: 100px; min-width: 85px;  } /* Estado anterior */
+.table-resizable.table-bajas-detalle thead th:nth-child(11) { width: 95px;  min-width: 85px;  } /* Imagen */
+
+/* Ficha de solo lectura del préstamo embebida dentro del formulario de Registrar devolución: mismo
+   contenido que .detail-card pero sin sombra ni competir visualmente con la .form-card que la
+   contiene. Solo presentación. */
+.detail-card-embebida {
+    box-shadow: none;
+    background: var(--sgb-fondo);
+    padding: 14px 16px;
+    margin-top: 12px;
+}
+
 .table-resize-handle:hover,
 .table-resize-handle.resize-activo {
     background: rgba(47, 111, 237, 0.35);
@@ -1383,6 +1628,14 @@ textarea.form-control {
 .badge-info {
     background: var(--sgb-pastel-azul);
     color: var(--sgb-azul-oscuro);
+}
+
+/* Indicador calculado "Vencido" (Préstamos): NO es un estado persistente — se deriva de
+   fecha_devolucion_estimada < CURDATE() mientras el préstamo sigue activo/parcial. Acompaña al badge
+   de estado, nunca lo sustituye. Tono rojo suave para leerse como alerta. */
+.badge-vencido {
+    background: var(--sgb-rojo-fondo);
+    color: var(--sgb-rojo);
 }
 
 /* --------------------------------------------------------------------------
@@ -1557,6 +1810,144 @@ textarea.form-control {
     color: var(--sgb-rojo);
 }
 
+/* Modal de confirmación reutilizable (Finalizar / Autorizar / Rechazar baja). Reutiliza
+   .modal-overlay / .modal-abierto / .modal-caja; solo añade el centrado, el ícono circular y la fila
+   de botones compacta. Icono/colores según la acción (azul / menta / rosa). */
+.modal-confirm {
+    max-width: 440px;
+    text-align: center;
+}
+
+.modal-confirm-icono {
+    width: 48px;
+    height: 48px;
+    margin: 0 auto 12px;
+    border-radius: 999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-confirm-icono svg {
+    width: 24px;
+    height: 24px;
+}
+
+.modal-confirm-icono--azul  { background: var(--sgb-pastel-azul);  color: var(--sgb-azul-oscuro); }
+.modal-confirm-icono--menta { background: var(--sgb-pastel-menta); color: var(--sgb-verde); }
+.modal-confirm-icono--rosa  { background: var(--sgb-pastel-rosa);  color: var(--sgb-rojo); }
+.modal-confirm-icono--ambar { background: var(--sgb-naranja-fondo); color: var(--sgb-naranja); }
+
+/* Paso con textarea del modal de confirmación (ej. "Motivo de anulación" de Requisiciones): el
+   contenido del modal es centrado, pero el campo y su etiqueta van alineados a la izquierda.
+   Layout propio (NO usa .form-group, cuyo display:flex vencía al atributo [hidden] y dejaba una caja
+   blanca vacía en las confirmaciones simples). Con [hidden] el bloque desaparece por completo y el
+   modal cierra el espacio solo. */
+.modal-confirm-campo {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    text-align: left;
+    margin-bottom: 14px;
+}
+
+.modal-confirm-campo[hidden] {
+    display: none;
+}
+
+.modal-confirm-campo .form-control {
+    width: 100%;
+}
+
+.modal-confirm-titulo {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--sgb-azul-oscuro);
+    margin: 0 0 8px;
+}
+
+.modal-confirm-texto {
+    font-size: 14px;
+    color: var(--sgb-texto);
+    margin: 0 0 4px;
+    line-height: 1.5;
+}
+
+.modal-confirm-sub {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--sgb-texto);
+    margin: 0 0 16px;
+}
+
+.modal-confirm-acciones {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+}
+
+/* Botón de confirmación destructiva SUAVE (modal Rechazar solicitud) — rosa pastel + texto rojo,
+   nunca un rojo sólido chillón. Mismo patrón que .btn-azul-suave. */
+.btn-rosa-suave {
+    background: var(--sgb-pastel-rosa);
+    border-color: #f7c6d9;
+    color: var(--sgb-rojo);
+}
+.btn-rosa-suave:hover {
+    background: #ffd2e2;
+    border-color: var(--sgb-rojo);
+}
+
+/* --------------------------------------------------------------------------
+   Modal de FEEDBACK global (resultado de una operación: éxito / error / aviso / info). Se renderiza
+   una sola vez en layouts/main.php a partir del flash de sesión (getFlash()) y se abre solo. Es
+   distinto del modal de CONFIRMACIÓN (que pregunta antes de una acción). Reutiliza
+   .modal-overlay / .modal-abierto / .modal-caja.
+   -------------------------------------------------------------------------- */
+.modal-feedback {
+    max-width: 450px;
+    text-align: center;
+}
+
+.modal-feedback-icono {
+    width: 52px;
+    height: 52px;
+    margin: 0 auto 14px;
+    border-radius: 999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-feedback-icono svg {
+    width: 26px;
+    height: 26px;
+}
+
+.modal-feedback-icono--success { background: var(--sgb-pastel-menta); color: var(--sgb-verde); }
+.modal-feedback-icono--error   { background: var(--sgb-pastel-rosa);  color: var(--sgb-rojo); }
+.modal-feedback-icono--warning { background: var(--sgb-naranja-fondo); color: var(--sgb-naranja); }
+.modal-feedback-icono--info    { background: var(--sgb-pastel-azul);  color: var(--sgb-azul-oscuro); }
+
+.modal-feedback-titulo {
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--sgb-azul-oscuro);
+    margin: 0 0 8px;
+}
+
+.modal-feedback-mensaje {
+    font-size: 14px;
+    color: var(--sgb-texto);
+    line-height: 1.55;
+    margin: 0 0 18px;
+}
+
+.modal-feedback-actions {
+    display: flex;
+    justify-content: center;
+}
+
 /* Variante de .modal-caja para contenido más amplio (ej. QR ampliado en Detalle del bien) — el
    ancho fijo de .modal-caja (420px) se queda corto para un QR de 240px con aire alrededor. */
 .modal-caja-qr {
@@ -1595,6 +1986,23 @@ textarea.form-control {
     font-size: 14px;
     color: var(--sgb-texto);
     text-align: center;
+}
+
+/* Imagen dentro del modal "Ver foto" de Bajas (Detalle / Editar). A diferencia del QR (cuadrado y
+   pequeño), una foto de bien puede ser apaisada o vertical y grande: se limita por ancho y por alto
+   de viewport conservando proporción. Reutiliza la estructura .modal-caja-qr / .modal-qr-contenido /
+   .modal-qr-dato. */
+.modal-foto-imagen {
+    display: block;
+    max-width: 100%;
+    max-height: 60vh;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    border: 1px solid var(--sgb-borde);
+    border-radius: var(--sgb-radio);
+    background: var(--sgb-superficie);
+    margin-bottom: 8px;
 }
 
 /* Impresión limpia del QR desde el modal: oculta todo lo demás (sidebar, topbar, ficha completa,

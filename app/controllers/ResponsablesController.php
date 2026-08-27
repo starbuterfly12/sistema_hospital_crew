@@ -168,6 +168,8 @@ class ResponsablesController extends Controller
 
             $responsableModel->commit();
 
+            setFlash('success', 'Responsable registrado correctamente', 'La información del responsable fue guardada en el sistema.');
+
             header('Location: index.php?modulo=responsables&accion=ver&id=' . $idResponsable);
             exit;
         } catch (Throwable $e) {
@@ -343,6 +345,8 @@ class ResponsablesController extends Controller
 
             $responsableModel->commit();
 
+            setFlash('success', 'Cambios guardados correctamente', 'La información del responsable fue actualizada.');
+
             header('Location: index.php?modulo=responsables&accion=ver&id=' . $idResponsable);
             exit;
         } catch (Throwable $e) {
@@ -436,6 +440,8 @@ class ResponsablesController extends Controller
             );
 
             $responsableModel->commit();
+
+            setFlash('success', 'Estado actualizado correctamente', 'El estado del responsable fue actualizado.');
 
             header('Location: index.php?modulo=responsables&accion=ver&id=' . $idResponsable);
             exit;
