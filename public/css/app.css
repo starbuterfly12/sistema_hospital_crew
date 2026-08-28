@@ -1472,6 +1472,13 @@ textarea.form-control {
     flex-wrap: nowrap;
 }
 
+/* Formulario que solo envuelve un boton de accion de fila (p. ej. Descargar respaldo, que pasa a
+   POST+CSRF por seguridad): display:contents deja al <button> como hijo directo de .table-actions,
+   asi la alineacion/gap no cambian respecto al enlace que reemplaza. */
+.table-action-form {
+    display: contents;
+}
+
 .table-action-btn {
     display: inline-flex;
     align-items: center;

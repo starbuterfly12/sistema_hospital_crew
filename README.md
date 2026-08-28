@@ -90,7 +90,11 @@ Panel único (`Movimientos`, con una sola entrada en el Dashboard) que agrupa lo
 
 ### Reportes
 
-Módulo de solo consulta (los tres roles pueden consultar y exportar) con **7 reportes definitivos**:
+Módulo de **solo consulta**: ningún reporte ni su exportación escribe en la base de datos (ni `ReportesController`, ni `ReportesService`, ni los helpers de exportación tocan BD). Solo requiere sesión activa.
+
+Permisos (decisión de diseño, no una restricción pendiente): **los tres roles — Administrador, Operativo y Visualizador — pueden consultar y exportar los reportes en Excel y en PDF**, porque es una acción de consulta coherente con la función del rol Visualizador. Por eso Reportes deliberadamente **no** aplica `requireRole()`.
+
+**7 reportes definitivos**:
 
 1. Movimientos por período
 2. Bienes con actividad en un período
@@ -134,8 +138,9 @@ Acceso exclusivo al rol **Administrador**.
 - Generación manual de un respaldo completo de la base de datos, usando `mysqldump` de MariaDB/XAMPP.
 - El archivo `.sql` generado se almacena en `storage/respaldos/`.
 - Listado de los respaldos generados: fecha y hora, archivo, usuario que lo generó, tamaño (calculado desde el archivo físico, no almacenado en BD) y estado (`Generado`).
-- Descarga del archivo `.sql` de cualquier respaldo listado.
-- La generación y la descarga quedan registradas en Bitácora.
+- Descarga del archivo `.sql` de cualquier respaldo listado. Tanto **Generar** como **Descargar** son `POST` con token CSRF (un `GET` a la acción de descarga responde `405` y no registra nada); el archivo se resuelve por `id` con `realpath()` restringido a `storage/respaldos/`.
+- La generación y la descarga quedan registradas en Bitácora (solo cuando la operación se procesa realmente: no se registra en 405, CSRF inválido, id inexistente o archivo ausente).
+- Módulo de acceso **exclusivo del rol Administrador** (Operativo y Visualizador no ven el módulo ni pueden generar o descargar; verificado en el backend de cada acción, no solo en el menú).
 - Alcance actual: respalda **únicamente la base de datos**. Documentos adjuntos, fotos de baja, códigos QR y plantillas (almacenados fuera de MariaDB) no se incluyen.
 - Restauración y eliminación de respaldos **no** están implementadas en esta versión.
 

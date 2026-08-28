@@ -90,10 +90,14 @@ $svgDescarga = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strok
                             <td><?= $mostrarEstado((string) ($respaldo['estado_respaldo'] ?? '')) ?></td>
                             <td>
                                 <div class="table-actions">
-                                    <a class="table-action-btn table-action-ver" href="index.php?modulo=respaldos&accion=descargar&id=<?= (int) $respaldo['id_respaldo'] ?>">
-                                        <?= $svgDescarga ?>
-                                        Descargar
-                                    </a>
+                                    <form method="POST" action="index.php?modulo=respaldos&accion=descargar" class="table-action-form">
+                                        <?= csrfField() ?>
+                                        <input type="hidden" name="id" value="<?= (int) $respaldo['id_respaldo'] ?>">
+                                        <button type="submit" class="table-action-btn table-action-ver">
+                                            <?= $svgDescarga ?>
+                                            Descargar
+                                        </button>
+                                    </form>
                                 </div>
                             </td>
                         </tr>

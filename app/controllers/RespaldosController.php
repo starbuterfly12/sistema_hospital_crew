@@ -122,7 +122,19 @@ class RespaldosController extends Controller
 
         requireRole(['Administrador']);
 
-        $idRespaldo = (int) ($_GET['id'] ?? 0);
+        // Descarga = acción explícita del usuario que además escribe en Bitácora y entrega un archivo
+        // sensible: solo POST + CSRF. Un GET a esta acción (enlace embebido, prefetch, <img>, etc.) se
+        // rechaza con 405 SIN descargar ni registrar nada en Bitácora.
+        if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
+            http_response_code(405);
+            header('Allow: POST');
+            echo 'Método no permitido.';
+            return;
+        }
+
+        verifyCsrf();
+
+        $idRespaldo = (int) ($_POST['id'] ?? 0);
 
         if ($idRespaldo <= 0) {
             http_response_code(404);
