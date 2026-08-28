@@ -59,6 +59,14 @@ $moduloActivo = sgbModuloActivo($moduloUrlActual);
 // por filemtime(), así que $logoInstitucionalUrl aquí es una URL completa, no una ruta relativa.
 $logoInstitucionalUrl = logoInstitucionalUrl();
 
+// Resumen para la campana del topbar (cantidad sin leer + últimas 10). El helper falla en
+// silencio devolviendo ['no_leidas' => 0, 'items' => []] si algo va mal — nunca rompe el layout.
+$sgbNotif = function_exists('notificacionesResumenTopbar') ? notificacionesResumenTopbar() : ['no_leidas' => 0, 'items' => []];
+$sgbNotifNoLeidas = (int) ($sgbNotif['no_leidas'] ?? 0);
+$sgbNotifItems = is_array($sgbNotif['items'] ?? null) ? $sgbNotif['items'] : [];
+$sgbNotifBadge = $sgbNotifNoLeidas > 99 ? '99+' : (string) $sgbNotifNoLeidas;
+$sgbRetornoActual = 'index.php' . (isset($_SERVER['QUERY_STRING']) && $_SERVER['QUERY_STRING'] !== '' ? '?' . $_SERVER['QUERY_STRING'] : '?modulo=dashboard');
+
 $itemsSidebar = [
     ['id' => 'dashboard', 'etiqueta' => 'Panel principal', 'href' => 'index.php?modulo=dashboard', 'icono' => 'dashboard', 'roles' => null],
     ['id' => 'bienes', 'etiqueta' => 'Bienes institucionales', 'href' => 'index.php?modulo=bienes', 'icono' => 'bienes', 'roles' => null],
@@ -125,9 +133,48 @@ $itemsSidebar = [
                 </div>
 
                 <div class="topbar-acciones">
-                    <span class="topbar-campana" aria-hidden="true">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><?= sgbIconoSidebar('campana') ?></svg>
-                    </span>
+                    <div class="topbar-notif" data-topbar-notif>
+                        <button type="button" class="topbar-campana" data-topbar-notif-toggle aria-haspopup="true" aria-expanded="false" aria-label="Notificaciones<?= $sgbNotifNoLeidas > 0 ? ' (' . $sgbNotifNoLeidas . ' sin leer)' : '' ?>">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><?= sgbIconoSidebar('campana') ?></svg>
+                            <?php if ($sgbNotifNoLeidas > 0): ?>
+                                <span class="topbar-notif-badge" aria-hidden="true"><?= htmlspecialchars($sgbNotifBadge, ENT_QUOTES, 'UTF-8') ?></span>
+                            <?php endif; ?>
+                        </button>
+
+                        <div class="topbar-notif-panel" data-topbar-notif-panel hidden>
+                            <div class="topbar-notif-panel-head">
+                                <span class="topbar-notif-panel-titulo">Notificaciones</span>
+                                <?php if ($sgbNotifNoLeidas > 0): ?>
+                                    <form method="POST" action="index.php?modulo=notificaciones&accion=marcar_todas" class="topbar-notif-marcar-form">
+                                        <?= csrfField() ?>
+                                        <input type="hidden" name="retorno" value="<?= htmlspecialchars($sgbRetornoActual, ENT_QUOTES, 'UTF-8') ?>">
+                                        <button type="submit" class="topbar-notif-marcar">Marcar todas como leídas</button>
+                                    </form>
+                                <?php endif; ?>
+                            </div>
+
+                            <?php if (empty($sgbNotifItems)): ?>
+                                <p class="topbar-notif-vacio">No tiene notificaciones nuevas.</p>
+                            <?php else: ?>
+                                <ul class="topbar-notif-lista">
+                                    <?php foreach ($sgbNotifItems as $sgbItem): ?>
+                                        <?php $sgbNoLeida = (int) ($sgbItem['leida'] ?? 0) === 0; ?>
+                                        <li class="topbar-notif-item<?= $sgbNoLeida ? ' topbar-notif-item--sin-leer' : '' ?>">
+                                            <a href="index.php?modulo=notificaciones&accion=abrir&id=<?= (int) $sgbItem['id_notificacion'] ?>" class="topbar-notif-item-link">
+                                                <span class="topbar-notif-item-titulo">
+                                                    <?php if ($sgbNoLeida): ?><span class="topbar-notif-punto" aria-hidden="true"></span><?php endif; ?>
+                                                    <?= htmlspecialchars((string) ($sgbItem['titulo'] ?? ''), ENT_QUOTES, 'UTF-8') ?>
+                                                </span>
+                                                <span class="topbar-notif-item-msg"><?= htmlspecialchars((string) ($sgbItem['mensaje'] ?? ''), ENT_QUOTES, 'UTF-8') ?></span>
+                                                <span class="topbar-notif-item-fecha"><?= htmlspecialchars(formatDateTime($sgbItem['fecha_creacion'] ?? null), ENT_QUOTES, 'UTF-8') ?></span>
+                                            </a>
+                                        </li>
+                                    <?php endforeach; ?>
+                                </ul>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+
                     <span class="topbar-avatar" title="<?= htmlspecialchars($nombreCompletoSesion, ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($inicialAvatar, ENT_QUOTES, 'UTF-8') ?></span>
                 </div>
             </header>
@@ -397,6 +444,42 @@ $itemsSidebar = [
                     evento.preventDefault();
                     t.click();
                 });
+            });
+        })();
+    </script>
+
+    <script>
+        // Campana de notificaciones: abre/cierra el panel al pulsar la campana, lo cierra al hacer
+        // clic fuera o con Escape. No hay AJAX — el badge y la lista se pintan en el render del
+        // layout; abrir una notificación o "marcar todas" recarga la página por navegación normal.
+        (function () {
+            var contenedor = document.querySelector('[data-topbar-notif]');
+            if (!contenedor) { return; }
+
+            var boton = contenedor.querySelector('[data-topbar-notif-toggle]');
+            var panel = contenedor.querySelector('[data-topbar-notif-panel]');
+            if (!boton || !panel) { return; }
+
+            function abrir() {
+                panel.hidden = false;
+                boton.setAttribute('aria-expanded', 'true');
+            }
+            function cerrar() {
+                panel.hidden = true;
+                boton.setAttribute('aria-expanded', 'false');
+            }
+
+            boton.addEventListener('click', function (evento) {
+                evento.stopPropagation();
+                if (panel.hidden) { abrir(); } else { cerrar(); }
+            });
+
+            document.addEventListener('click', function (evento) {
+                if (!panel.hidden && !contenedor.contains(evento.target)) { cerrar(); }
+            });
+
+            document.addEventListener('keydown', function (evento) {
+                if (evento.key === 'Escape' && !panel.hidden) { cerrar(); boton.focus(); }
             });
         })();
     </script>

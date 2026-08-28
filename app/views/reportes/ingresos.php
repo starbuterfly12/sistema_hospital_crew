@@ -1,7 +1,7 @@
 <?php
 // Fragmento de contenido: se renderiza dentro de layouts/main.php (ver ReportesController::ingresos()).
 // Solo presentación: consultas, filtros backend, exportaciones y lógica de fechas NO cambian.
-// Parámetros GET conservados: fecha_desde, fecha_hasta, id_forma_ingreso, id_categoria, procedencia, formato.
+// Parámetros GET conservados: fecha_desde, fecha_hasta, nombre_bien, id_forma_ingreso, id_categoria, procedencia, formato.
 $mostrar = static function ($value): string {
     return ($value !== null && $value !== '') ? htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8') : '—';
 };
@@ -77,6 +77,11 @@ foreach ($filas as $filaTotal) {
             <input type="text" id="fecha_hasta" name="fecha_hasta" class="form-control" value="<?= $valorInput($filtros['fecha_hasta'] ?? '') ?>" autocomplete="off">
             <button type="button" class="btn-calendario" data-flatpickr-target="fecha_hasta" aria-label="Abrir calendario">📅</button>
         </div>
+    </div>
+
+    <div class="form-group">
+        <label class="form-label" for="nombre_bien">Nombre del bien</label>
+        <input type="text" id="nombre_bien" name="nombre_bien" class="form-control" value="<?= $valorInput($filtros['nombre_bien'] ?? '') ?>" autocomplete="off" placeholder="Ej. impresora">
     </div>
 
     <div class="form-group">

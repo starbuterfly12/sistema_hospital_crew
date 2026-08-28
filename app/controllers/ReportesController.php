@@ -684,6 +684,7 @@ class ReportesController extends Controller
         $filtros = [
             'fecha_desde' => $fechaDesde,
             'fecha_hasta' => $fechaHasta,
+            'nombre_bien' => trim((string) ($_GET['nombre_bien'] ?? '')),
             'id_forma_ingreso' => (int) ($_GET['id_forma_ingreso'] ?? 0),
             'id_categoria' => (int) ($_GET['id_categoria'] ?? 0),
             'procedencia' => trim((string) ($_GET['procedencia'] ?? '')),
@@ -730,6 +731,9 @@ class ReportesController extends Controller
         $totalValor = array_sum(array_map(static fn(array $f) => (float) ($f['valor'] ?? 0), $filas));
 
         $meta = [$this->lineaPeriodo($filtros)];
+        if (($filtros['nombre_bien'] ?? '') !== '') {
+            $meta[] = 'Nombre del bien contiene: ' . $filtros['nombre_bien'];
+        }
         if (!empty($filtros['id_forma_ingreso'])) {
             $meta[] = 'Forma de ingreso: ' . $this->nombreFormaIngresoPorId((int) $filtros['id_forma_ingreso']);
         }
@@ -768,6 +772,9 @@ class ReportesController extends Controller
         $totalValor = array_sum(array_map(static fn(array $f) => (float) ($f['valor'] ?? 0), $filas));
 
         $meta = [$this->lineaPeriodo($filtros)];
+        if (($filtros['nombre_bien'] ?? '') !== '') {
+            $meta[] = 'Nombre del bien contiene: ' . $filtros['nombre_bien'];
+        }
         if (!empty($filtros['id_forma_ingreso'])) {
             $meta[] = 'Forma de ingreso: ' . $this->nombreFormaIngresoPorId((int) $filtros['id_forma_ingreso']);
         }

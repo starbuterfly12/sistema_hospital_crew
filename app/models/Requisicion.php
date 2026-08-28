@@ -118,6 +118,7 @@ class Requisicion extends Model
                 responsable_solicitante_mostrado,
                 id_ubicacion_solicitante,
                 ubicacion_solicitante_mostrada,
+                id_usuario_registra,
                 estado_requisicion
             FROM requisiciones
             WHERE id_requisicion = :id_requisicion

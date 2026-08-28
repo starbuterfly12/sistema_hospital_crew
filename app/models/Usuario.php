@@ -58,6 +58,24 @@ class Usuario extends Model
         return $this->fetchAll($sql);
     }
 
+    // Ids de los Administradores que hoy pueden operar: usuario activo Y rol activo (mismo criterio
+    // que AuthController::login(), que rechaza el acceso también cuando el rol está inactivo).
+    // Usado por el módulo Notificaciones para avisar a "los Administradores" de una solicitud
+    // pendiente sin hardcodear ningún id ni nombre de usuario.
+    public function getIdsAdministradoresActivos(): array
+    {
+        $sql = "
+            SELECT u.id_usuario
+            FROM usuarios u
+            INNER JOIN roles r ON u.id_rol = r.id_rol
+            WHERE r.nombre_rol = 'Administrador'
+              AND r.estado_rol = 'activo'
+              AND u.estado_usuario = 'activo'
+        ";
+
+        return array_map('intval', array_column($this->fetchAll($sql), 'id_usuario'));
+    }
+
     // Debe ejecutarse dentro de una transacción activa para que el bloqueo FOR UPDATE tenga efecto.
     public function findActivoByIdForUpdate(int $idUsuario): array|false
     {

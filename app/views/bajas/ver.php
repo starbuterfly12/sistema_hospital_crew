@@ -248,7 +248,7 @@ $subtituloDetalle = $origenSolicitudes
 
 <?php if ($puedeEditarPendiente): ?>
     <div class="detail-inline-actions">
-        <a href="index.php?modulo=bajas&accion=editar&id=<?= $idBaja ?>" class="table-action-btn table-action-editar">
+        <a href="index.php?modulo=bajas&accion=editar&id=<?= $idBaja ?>" class="btn btn-lila">
             <?= $svgLapiz ?>
             Editar
         </a>

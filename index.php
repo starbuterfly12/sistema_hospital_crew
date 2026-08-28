@@ -18,6 +18,7 @@ require_once __DIR__ . '/app/helpers/moneda.php';
 require_once __DIR__ . '/app/helpers/archivos.php';
 require_once __DIR__ . '/app/helpers/exportacion.php';
 require_once __DIR__ . '/app/helpers/respaldo_bd.php';
+require_once __DIR__ . '/app/helpers/notificaciones.php';
 
 $modulo = $_GET['modulo'] ?? 'auth';
 $accion = $_GET['accion'] ?? 'index';
@@ -343,6 +344,25 @@ switch ($modulo) {
             $usuariosController->cambiarPassword();
         } else {
             $usuariosController->index();
+        }
+        break;
+
+    case 'notificaciones':
+        if (!isset($_SESSION['id_usuario'])) {
+            header('Location: index.php');
+            exit;
+        }
+
+        require_once __DIR__ . '/app/controllers/NotificacionesController.php';
+        $notificacionesController = new NotificacionesController();
+
+        if ($accion === 'abrir') {
+            $notificacionesController->abrir();
+        } elseif ($accion === 'marcar_todas') {
+            $notificacionesController->marcarTodas();
+        } else {
+            header('Location: index.php?modulo=dashboard');
+            exit;
         }
         break;
 

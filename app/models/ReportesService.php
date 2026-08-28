@@ -744,6 +744,13 @@ class ReportesService extends Model
             $params[':fecha_hasta'] = $filtros['fecha_hasta'];
         }
 
+        // Coincidencia parcial sobre la descripción del bien (case-insensitive según la collation
+        // utf8mb4_unicode_ci de la columna). Vacío = sin filtro. Parámetro PDO, nunca concatenado.
+        if (!empty($filtros['nombre_bien'])) {
+            $condiciones[] = 'b.descripcion LIKE :nombre_bien';
+            $params[':nombre_bien'] = '%' . trim((string) $filtros['nombre_bien']) . '%';
+        }
+
         if (!empty($filtros['id_forma_ingreso'])) {
             $condiciones[] = 'b.id_forma_ingreso = :id_forma_ingreso';
             $params[':id_forma_ingreso'] = (int) $filtros['id_forma_ingreso'];

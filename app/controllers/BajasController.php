@@ -260,6 +260,23 @@ class BajasController extends Controller
 
             $bajaModel->commit();
 
+            // Notificación al usuario que registró la solicitud (no a todos los operativos), salvo
+            // que sea quien la está autorizando. Destino = detalle 'ver' (accesible a Operativo);
+            // 'revisar' es exclusivo de Administrador. Fuera de la transacción.
+            try {
+                $idRegistra = (int) ($baja['id_usuario_registra'] ?? 0);
+                if ($idRegistra > 0 && $idRegistra !== (int) $_SESSION['id_usuario']) {
+                    $this->model('Notificacion')->crear(
+                        $idRegistra,
+                        'Solicitud de baja autorizada',
+                        sprintf('La solicitud %s fue autorizada.', $baja['numero_baja']),
+                        'index.php?modulo=bajas&accion=ver&id=' . $idBaja
+                    );
+                }
+            } catch (Throwable $e) {
+                error_log('No se pudo crear la notificación de solicitud de baja autorizada: ' . $e->getMessage());
+            }
+
             setFlash('success', 'Baja autorizada correctamente', 'La solicitud quedó autorizada y pendiente de finalización.');
 
             header('Location: index.php?modulo=bajas&accion=revisar&id=' . $idBaja);
@@ -339,6 +356,22 @@ class BajasController extends Controller
             );
 
             $bajaModel->commit();
+
+            // Notificación al usuario que registró la solicitud si la rechazó otra persona.
+            // Fuera de la transacción; su fallo no revierte el rechazo.
+            try {
+                $idRegistra = (int) ($baja['id_usuario_registra'] ?? 0);
+                if ($idRegistra > 0 && $idRegistra !== (int) $_SESSION['id_usuario']) {
+                    $this->model('Notificacion')->crear(
+                        $idRegistra,
+                        'Solicitud de baja rechazada',
+                        sprintf('La solicitud %s fue rechazada.', $baja['numero_baja']),
+                        'index.php?modulo=bajas&accion=ver&id=' . $idBaja
+                    );
+                }
+            } catch (Throwable $e) {
+                error_log('No se pudo crear la notificación de solicitud de baja rechazada: ' . $e->getMessage());
+            }
 
             setFlash('info', 'Solicitud rechazada', 'La solicitud de baja fue rechazada correctamente.');
 
@@ -939,6 +972,20 @@ class BajasController extends Controller
             );
 
             $bajaModel->commit();
+
+            // Notificación (tras confirmarse la transacción): una solicitud de baja registrada queda
+            // Pendiente y necesita que un Administrador la revise/autorice. Su fallo se registra en
+            // el log pero NO revierte la solicitud ya creada.
+            try {
+                $this->model('Notificacion')->crearParaVarios(
+                    $this->model('Usuario')->getIdsAdministradoresActivos(),
+                    'Nueva solicitud de baja',
+                    sprintf('La solicitud %s está pendiente de autorización.', $numeroBaja),
+                    'index.php?modulo=bajas&accion=revisar&id=' . $idBaja
+                );
+            } catch (Throwable $e) {
+                error_log('No se pudo crear la notificación de solicitud de baja registrada: ' . $e->getMessage());
+            }
 
             setFlash('success', 'Solicitud de baja registrada', 'La solicitud quedó pendiente de autorización.');
 

@@ -205,6 +205,20 @@ class RequisicionesController extends Controller
 
             $requisicionModel->commit();
 
+            // Notificación (fuera de la transacción, tras confirmarse): una requisición registrada
+            // queda Pendiente y necesita que un Administrador la autorice. Si falla el INSERT de la
+            // notificación se registra en el log pero NO se revierte la requisición ya creada.
+            try {
+                $this->model('Notificacion')->crearParaVarios(
+                    $this->model('Usuario')->getIdsAdministradoresActivos(),
+                    'Nueva requisición pendiente',
+                    sprintf('La requisición %s está pendiente de autorización.', $numeroSistema),
+                    'index.php?modulo=requisiciones&accion=ver&id=' . $idRequisicion
+                );
+            } catch (Throwable $e) {
+                error_log('No se pudo crear la notificación de requisición registrada: ' . $e->getMessage());
+            }
+
             setFlash('success', 'Requisición registrada correctamente', 'La requisición quedó registrada en el sistema.');
 
             header('Location: index.php?modulo=requisiciones&accion=ver&id=' . $idRequisicion);
@@ -556,6 +570,23 @@ class RequisicionesController extends Controller
 
             $requisicionModel->commit();
 
+            // Notificación al usuario que REGISTRÓ la requisición (no a todos los operativos), salvo
+            // que sea el mismo Administrador que la está autorizando (evita el aviso inútil sobre la
+            // propia acción). Fuera de la transacción; su fallo no revierte la autorización.
+            try {
+                $idRegistra = (int) ($requisicion['id_usuario_registra'] ?? 0);
+                if ($idRegistra > 0 && $idRegistra !== (int) $_SESSION['id_usuario']) {
+                    $this->model('Notificacion')->crear(
+                        $idRegistra,
+                        'Requisición autorizada',
+                        sprintf('La requisición %s fue autorizada.', $requisicion['numero_requisicion_sistema']),
+                        'index.php?modulo=requisiciones&accion=ver&id=' . $idRequisicion
+                    );
+                }
+            } catch (Throwable $e) {
+                error_log('No se pudo crear la notificación de requisición autorizada: ' . $e->getMessage());
+            }
+
             setFlash('success', 'Requisición autorizada correctamente', 'La requisición quedó autorizada.');
 
             header('Location: index.php?modulo=requisiciones&accion=ver&id=' . $idRequisicion);
@@ -639,6 +670,22 @@ class RequisicionesController extends Controller
             );
 
             $requisicionModel->commit();
+
+            // Notificación al usuario que registró la requisición si la anuló otra persona (una
+            // decisión administrativa sobre su solicitud). Fuera de la transacción.
+            try {
+                $idRegistra = (int) ($requisicion['id_usuario_registra'] ?? 0);
+                if ($idRegistra > 0 && $idRegistra !== (int) $_SESSION['id_usuario']) {
+                    $this->model('Notificacion')->crear(
+                        $idRegistra,
+                        'Requisición anulada',
+                        sprintf('La requisición %s fue anulada.', $requisicion['numero_requisicion_sistema']),
+                        'index.php?modulo=requisiciones&accion=ver&id=' . $idRequisicion
+                    );
+                }
+            } catch (Throwable $e) {
+                error_log('No se pudo crear la notificación de requisición anulada: ' . $e->getMessage());
+            }
 
             setFlash('info', 'Requisición anulada', 'La requisición fue anulada correctamente.');
 
