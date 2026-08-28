@@ -11,8 +11,13 @@ use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 class TarjetasController extends Controller
 {
-    private const OPERACIONES_POR_HOJA = 21;
+    // El cuadro preimpreso de la tarjeta física tiene 21 líneas (filas 11 a 31). La última línea
+    // de cada hoja se reserva SIEMPRE para el marcador de cierre (VAN si la tarjeta continúa,
+    // ULTIMA LINEA si es la última hoja) para que ese texto quede DENTRO del cuadro y no debajo:
+    // por eso caben 20 operaciones por hoja, no 21. Cierre en fila 11 + operaciones_en_hoja (<= 31).
+    private const OPERACIONES_POR_HOJA = 20;
     private const FILA_PRIMERA_OPERACION = 11;
+    private const FILA_ULTIMA_CUADRO = 31;
     private const FILA_ARRASTRE = 10;
 
     public function index(): void
@@ -440,6 +445,11 @@ class TarjetasController extends Controller
                 $hoja->setCellValue('D' . $filaCierre, 'VAN');
                 $hoja->getStyle('D' . $filaCierre)->getFont()->setBold(true);
             }
+
+            // El marcador de cierre cae ahora en una fila que originalmente era de ítem (col D
+            // alineada a la izquierda). Se centra explícitamente para que "VAN" / "ULTIMA LINEA"
+            // queden a media línea, como en la etiqueta VAN de la plantilla de muestra.
+            $hoja->getStyle('D' . $filaCierre)->getAlignment()->setHorizontal('center');
         }
 
         // Blindaje final — Tarjeta de Responsabilidad es un formato de REIMPRESIÓN institucional:
@@ -515,17 +525,15 @@ class TarjetasController extends Controller
         $hoja->setCellValue('D' . self::FILA_ARRASTRE, null);
         $hoja->setCellValue('G' . self::FILA_ARRASTRE, null);
 
-        $ultimaFilaOperacion = self::FILA_PRIMERA_OPERACION + self::OPERACIONES_POR_HOJA - 1;
-
-        for ($fila = self::FILA_PRIMERA_OPERACION; $fila <= $ultimaFilaOperacion; $fila++) {
+        // Limpia TODO el cuerpo de muestra heredado del clon: filas 11-31 (ítems de ejemplo de la
+        // plantilla) MÁS la fila 32 (etiqueta "VAN" que la plantilla trae escrita). El rango es fijo
+        // y NO depende de OPERACIONES_POR_HOJA — así, aunque la capacidad por hoja cambie, nunca
+        // queda una celda de muestra sin borrar por debajo del último ítem generado.
+        for ($fila = self::FILA_PRIMERA_OPERACION; $fila <= self::FILA_ULTIMA_CUADRO + 1; $fila++) {
             foreach (['A', 'B', 'C', 'D', 'E', 'F', 'G'] as $columna) {
                 $hoja->setCellValue($columna . $fila, null);
             }
         }
-
-        $filaCierre = $ultimaFilaOperacion + 1;
-        $hoja->setCellValue('D' . $filaCierre, null);
-        $hoja->setCellValue('G' . $filaCierre, null);
     }
 
     /**
