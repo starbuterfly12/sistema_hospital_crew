@@ -153,7 +153,7 @@ $subtituloDetalle = $origenSolicitudes
                 <div class="detail-item">
                     <span class="detail-label">Documento de respaldo</span>
                     <span class="detail-value">
-                        <a href="<?= url($baja['documento_respaldo']) ?>" target="_blank" rel="noopener" class="btn btn-azul-suave">Ver documento de respaldo</a>
+                        <a href="<?= htmlspecialchars(url('index.php?modulo=bajas&accion=ver_documento&id=' . $idBaja), ENT_QUOTES, 'UTF-8') ?>" target="_blank" rel="noopener" class="btn btn-azul-suave">Ver documento de respaldo</a>
                     </span>
                 </div>
             <?php endif; ?>
@@ -205,7 +205,7 @@ $subtituloDetalle = $origenSolicitudes
                                 <td>
                                     <?php if (!empty($detalle['imagen_bien'])): ?>
                                         <button type="button" class="table-action-btn table-action-ver" data-foto-bien
-                                            data-imagen="<?= htmlspecialchars(url($detalle['imagen_bien']), ENT_QUOTES, 'UTF-8') ?>"
+                                            data-imagen="<?= htmlspecialchars(url('index.php?modulo=bajas&accion=ver_foto&id=' . (int) $detalle['id_detalle_baja']), ENT_QUOTES, 'UTF-8') ?>"
                                             data-codigo="<?= htmlspecialchars((string) ($detalle['codigo_interno_mostrado'] ?? ''), ENT_QUOTES, 'UTF-8') ?>"
                                             data-descripcion="<?= htmlspecialchars((string) ($detalle['descripcion_mostrada'] ?? ''), ENT_QUOTES, 'UTF-8') ?>">
                                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>

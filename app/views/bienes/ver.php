@@ -275,7 +275,7 @@ $documentoIngreso = $datosIngreso['documento_respaldo'] ?? null;
                 <div class="detail-item detail-full">
                     <span class="detail-label">Documento de respaldo</span>
                     <?php if (!empty($documentoIngreso)): ?>
-                        <a href="<?= htmlspecialchars($documentoIngreso, ENT_QUOTES, 'UTF-8') ?>" target="_blank" rel="noopener noreferrer" class="btn btn-secondary">
+                        <a href="<?= htmlspecialchars(url('index.php?modulo=bienes&accion=ver_documento&id=' . (int) $bien['id_bien']), ENT_QUOTES, 'UTF-8') ?>" target="_blank" rel="noopener noreferrer" class="btn btn-secondary">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/></svg>
                             Ver documento de respaldo
                         </a>

@@ -189,6 +189,17 @@ class Baja extends Model
         return $this->fetchOne($sql, [':id_baja' => $idBaja]);
     }
 
+    // Lectura mínima para el endpoint autenticado que sirve el documento de respaldo de una Baja
+    // (BajasController::verDocumento()). Solo devuelve el id y la ruta relativa guardada; la ruta
+    // se resuelve/valida contra el sistema de archivos en el controlador, nunca llega del navegador.
+    public function findDocumentoRespaldoPorId(int $idBaja): array|false
+    {
+        return $this->fetchOne(
+            "SELECT id_baja, documento_respaldo FROM bajas WHERE id_baja = :id_baja LIMIT 1",
+            [':id_baja' => $idBaja]
+        );
+    }
+
     public function crear(array $datos): int
     {
         $sql = "

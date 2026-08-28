@@ -25,7 +25,9 @@ $bienesSeleccionadosPrevios = $datosFormulario['bienes'] ?? [];
 $imagenesActuales = [];
 foreach ($detallesActuales as $detalle) {
     if (!empty($detalle['imagen_bien'])) {
-        $imagenesActuales[(int) $detalle['id_bien']] = url($detalle['imagen_bien']);
+        // Ruta controlada y autenticada (no el path directo a storage/fotos_baja/, ya bloqueado):
+        // el modal "Ver foto actual" carga la imagen desde este endpoint.
+        $imagenesActuales[(int) $detalle['id_bien']] = url('index.php?modulo=bajas&accion=ver_foto&id=' . (int) $detalle['id_detalle_baja']);
     }
 }
 ?>

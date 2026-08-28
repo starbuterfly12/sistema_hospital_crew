@@ -1,0 +1,16 @@
+# Bloquea el acceso HTTP directo a esta carpeta interna del sistema.
+#
+# Esto NO afecta al acceso de PHP por sistema de archivos: el front controller
+# (index.php) sigue incluyendo y ejecutando estos archivos con normalidad.
+# Solo impide que Apache sirva estas rutas ante una petición web directa
+# (p. ej. http://host/sistema_hospital/app/controllers/AuthController.php).
+
+<IfModule mod_authz_core.c>
+    # Apache 2.4+
+    Require all denied
+</IfModule>
+<IfModule !mod_authz_core.c>
+    # Apache 2.2
+    Order allow,deny
+    Deny from all
+</IfModule>

@@ -62,7 +62,9 @@ El módulo Respaldos genera el `.sql` invocando `mysqldump` directamente, sin li
 1. Clonar u obtener una copia del repositorio dentro de `htdocs/` (u otro directorio servido por Apache).
 2. Ejecutar `composer install` — **no** `composer update`. Esto instala exactamente las versiones bloqueadas en `composer.lock` (actualmente `endroid/qr-code`, `phpoffice/phpspreadsheet` y `dompdf/dompdf`, junto con sus dependencias), sin arriesgar una actualización no probada. `dompdf/dompdf` no requiere ningún paso manual adicional ni fuentes externas — `composer install` lo resuelve por completo a partir de `composer.json`/`composer.lock`. Para confirmar que las tres quedaron instaladas: `composer show | findstr /I "qr-code phpspreadsheet dompdf"` (en Linux/macOS: `composer show | grep -iE "qr-code|phpspreadsheet|dompdf"`).
 3. Crear `config/Database.php` a partir de `config/Database.example.php` y completar ahí las credenciales locales de MariaDB. El nombre de base de datos usado por el proyecto es `sistema_hospital`.
-4. Crear `config/app.php` a partir de `config/app.example.php` y definir `base_url` según la URL local.
+4. Crear `config/app.php` a partir de `config/app.example.php` y definir:
+   - `base_url` según la URL local.
+   - `env` — dejar en `'development'` para trabajo local (muestra los errores PHP en pantalla). En el servidor institucional debe quedar en `'production'` (ver sección 5). Si la clave falta o tiene un valor no reconocido, el sistema asume `production` por seguridad (errores ocultos).
 5. Preparar la base de datos — ver advertencia importante en la sección 4, todavía no hay un script SQL consolidado en el repositorio.
 6. Confirmar que existan y sean escribibles por PHP: `storage/qr/`, `storage/documentos/`, `storage/fotos_baja/`, `storage/respaldos/` (ver [storage/README.md](storage/README.md) para el detalle de cada una).
 7. Confirmar que existan `storage/templates/tarjetas_responsabilidad.xlsx` y `storage/templates/constancia_traslado.xlsx` — son las plantillas institucionales necesarias para que la descarga de Tarjetas de Responsabilidad y de la Constancia de Traslado funcionen, respectivamente. Ambas deben ser **legibles** por PHP (no son carpetas de salida). Vienen incluidas y versionadas en el repositorio; si falta alguna, la exportación correspondiente fallará. Ninguna debe sustituirse por una plantilla vacía o de prueba — tienen que ser las plantillas institucionales reales.
@@ -84,6 +86,25 @@ El esquema real (incluyendo tablas y columnas agregadas durante el desarrollo de
 - PHP
 - MariaDB
 - Red interna del hospital
+
+### Configuración de seguridad para producción
+
+Estas medidas ya están preparadas en el código y solo requieren la configuración de servidor correspondiente:
+
+- **`.htaccess` de protección de carpetas internas.** El repositorio incluye `app/.htaccess`, `config/.htaccess`, `database/.htaccess`, `storage/.htaccess` y `storage/qr/.htaccess`. Para que Apache los aplique, el `<Directory>` que sirve el proyecto debe tener **`AllowOverride`** con al menos `AuthConfig Limit` (o `All`). En XAMPP el `<Directory "C:/xampp/htdocs">` ya trae `AllowOverride All`; en Ubuntu hay que fijarlo explícitamente en el VirtualHost.
+  - `app/`, `config/`, `database/` → **denegación total** de acceso web.
+  - `storage/.htaccess` → **denegación total** de `storage/` y todas sus subcarpetas (respaldos, plantillas, documentos, fotos de baja), incluido el listado de directorio.
+  - `storage/qr/.htaccess` → **única excepción**: permite servir los `*.png` de los códigos QR como `<img>` estático (imagen sin datos sensibles). Cualquier otro archivo de `storage/qr/`, y el listado, siguen dando `403`.
+  - Los **documentos de respaldo** y las **fotos de baja** ya **no** se sirven por URL directa: se entregan por controladores autenticados que verifican sesión, localizan el archivo por su ID en BD, resuelven la ruta con `realpath()` dentro de la carpeta permitida y validan el MIME real (PDF/JPG/PNG):
+    - `index.php?modulo=bajas&accion=ver_documento&id=<id_baja>`
+    - `index.php?modulo=bajas&accion=ver_foto&id=<id_detalle_baja>`
+    - `index.php?modulo=bienes&accion=ver_documento&id=<id_bien>`
+  - Los **respaldos `.sql`** y las **plantillas `.xlsx`** nunca son accesibles directamente; los respaldos ya se descargaban por `RespaldosController::descargar()` (sesión + rol Administrador).
+  - Confirmar tras el despliegue: dan `403` → `/app/`, `/config/`, `/config/Database.php`, `/database/`, `/storage/`, `/storage/respaldos/<archivo>.sql`, `/storage/templates/<plantilla>.xlsx`, `/storage/documentos/<archivo>`, `/storage/fotos_baja/<archivo>`. Dan `200` → `/`, `/index.php`, `/public/...`, `/storage/qr/bien_N.png`.
+- **`config/app.php` → `env` en `'production'`.** Con esto el sistema fuerza `display_errors = Off` / `display_startup_errors = Off` y mantiene `log_errors = On` y `error_reporting(E_ALL)`. Los errores nunca se muestran al usuario, solo se registran.
+- **`php.ini` del servidor** (defensa en profundidad, independiente de lo anterior): `display_errors = Off`, `log_errors = On`, `error_log` apuntando a un archivo con permisos adecuados.
+- **HTTPS.** Servir el sistema solo por HTTPS. Con HTTPS activo, la cookie de sesión se marca automáticamente como `Secure` (además de `HttpOnly` y `SameSite=Lax`, que ya se aplican siempre). Si TLS termina en un proxy inverso delante de Apache, revisar en ese entorno controlado cómo se propaga el esquema (el código actual detecta HTTPS por conexión directa / puerto 443, no por cabeceras de proxy).
+- **Ideal a futuro:** reconfigurar el `DocumentRoot` para que apunte a `public/` y dejar `app/`, `config/`, `database/`, `storage/`, `vendor/` completamente fuera del árbol servido. Eso vuelve innecesarios los `.htaccess` de bloqueo. Requiere ajustar rutas de assets y el front controller, por lo que se deja como mejora posterior.
 
 ### Pendientes antes del despliegue
 

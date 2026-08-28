@@ -1,0 +1,16 @@
+# Bloquea el acceso HTTP directo a esta carpeta de configuración.
+#
+# Contiene credenciales de base de datos y parámetros de entorno. PHP sigue
+# leyendo estos archivos por sistema de archivos sin restricción; esto solo
+# impide que Apache los sirva ante una petición web directa
+# (p. ej. http://host/sistema_hospital/config/Database.php).
+
+<IfModule mod_authz_core.c>
+    # Apache 2.4+
+    Require all denied
+</IfModule>
+<IfModule !mod_authz_core.c>
+    # Apache 2.2
+    Order allow,deny
+    Deny from all
+</IfModule>

@@ -1,0 +1,27 @@
+# -----------------------------------------------------------------------------
+# storage/ - control de acceso HTTP (H-01)
+# -----------------------------------------------------------------------------
+# DENIEGA toda peticion web directa a storage/ y a TODAS sus subcarpetas
+# (respaldos/, templates/, documentos/, fotos_baja/, qr/), incluido el listado
+# de directorio.
+#
+# Esto NO afecta al acceso de PHP por sistema de archivos: el sistema sigue
+# guardando/leyendo respaldos, plantillas, documentos, fotos y QR con normalidad.
+#
+# Los codigos QR SI se sirven como recurso estatico, pero NO desde aqui: la
+# excepcion vive acotada en storage/qr/.htaccess y solo alcanza a los .png de
+# esa unica subcarpeta. Los documentos de respaldo y las fotos de baja ya NO se
+# sirven por URL directa: se entregan por controladores autenticados
+#   index.php?modulo=bajas&accion=ver_documento&id=...
+#   index.php?modulo=bajas&accion=ver_foto&id=...
+#   index.php?modulo=bienes&accion=ver_documento&id=...
+
+<IfModule mod_authz_core.c>
+    # Apache 2.4+
+    Require all denied
+</IfModule>
+<IfModule !mod_authz_core.c>
+    # Apache 2.2
+    Order allow,deny
+    Deny from all
+</IfModule>

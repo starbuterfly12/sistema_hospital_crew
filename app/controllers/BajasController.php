@@ -132,6 +132,72 @@ class BajasController extends Controller
         ], 'main');
     }
 
+    // Sirve el DOCUMENTO DE RESPALDO de una Baja (antes accesible por URL directa a
+    // storage/documentos/, ahora bloqueada por storage/.htaccess). Mismos permisos que ver(): solo
+    // sesión activa (la comprobación global del router ya redirige a login sin sesión). GET puro, sin
+    // POST, sin CSRF, sin cambios de datos. El navegador solo envía el id de la Baja; la ruta física
+    // se obtiene de BD y se valida con realpath() contra storage/documentos/. Disposition 'inline'
+    // porque la acción es "Ver documento".
+    public function verDocumento(): void
+    {
+        if (!isset($_SESSION['id_usuario'])) {
+            header('Location: index.php');
+            exit;
+        }
+
+        $idBaja = (int) ($_GET['id'] ?? 0);
+
+        if ($idBaja <= 0) {
+            http_response_code(404);
+            echo 'Documento no disponible.';
+            return;
+        }
+
+        $baja = $this->model('Baja')->findDocumentoRespaldoPorId($idBaja);
+
+        if ($baja === false || empty($baja['documento_respaldo'])) {
+            http_response_code(404);
+            echo 'Documento no disponible.';
+            return;
+        }
+
+        $rutaFisica = resolverRutaArchivoStorage($baja['documento_respaldo'], 'documentos');
+
+        servirArchivoControlado($rutaFisica, 'inline');
+    }
+
+    // Sirve la FOTO de un bien de una Baja (antes accesible por URL directa a storage/fotos_baja/).
+    // Identificada por id_detalle_baja (PK de detalle_baja: una fila = un bien de una baja = a lo
+    // sumo una foto). Mismas condiciones que verDocumento(): solo sesión, GET, sin POST. La ruta
+    // física sale de BD y se valida con realpath() contra storage/fotos_baja/.
+    public function verFoto(): void
+    {
+        if (!isset($_SESSION['id_usuario'])) {
+            header('Location: index.php');
+            exit;
+        }
+
+        $idDetalleBaja = (int) ($_GET['id'] ?? 0);
+
+        if ($idDetalleBaja <= 0) {
+            http_response_code(404);
+            echo 'Imagen no disponible.';
+            return;
+        }
+
+        $detalle = $this->model('DetalleBaja')->findImagenPorId($idDetalleBaja);
+
+        if ($detalle === false || empty($detalle['imagen_bien'])) {
+            http_response_code(404);
+            echo 'Imagen no disponible.';
+            return;
+        }
+
+        $rutaFisica = resolverRutaArchivoStorage($detalle['imagen_bien'], 'fotos_baja');
+
+        servirArchivoControlado($rutaFisica, 'inline');
+    }
+
     // Detalle en modo administrativo de SOLO LECTURA, exclusivo para el contexto Solicitudes de baja
     // (BajasController::solicitudes()). No procesa POST, no exige CSRF, no ofrece Editar bajo ningún
     // rol ni estado — la vista se lo indica pasando 'origenSolicitudes' => true. Es una acción GET

@@ -83,6 +83,18 @@ class DetalleBaja extends Model
         return (int) $this->lastInsertId();
     }
 
+    // Lectura mínima para el endpoint autenticado que sirve la foto de un bien de la baja
+    // (BajasController::verFoto()). Identifica la foto por el PK del detalle (id_detalle_baja); una
+    // fila = un bien de una baja = a lo sumo una imagen_bien. Devuelve también id_baja por si el
+    // llamador quiere trazabilidad. La ruta se resuelve/valida contra el filesystem en el controlador.
+    public function findImagenPorId(int $idDetalleBaja): array|false
+    {
+        return $this->fetchOne(
+            "SELECT id_detalle_baja, id_baja, imagen_bien FROM detalle_baja WHERE id_detalle_baja = :id LIMIT 1",
+            [':id' => $idDetalleBaja]
+        );
+    }
+
     // Solo debe usarse mientras la baja dueña está 'pendiente' (verificado por el llamador). No hay
     // estado_detalle en esta tabla (a diferencia de detalle_requisicion): un bien quitado de una Baja
     // Pendiente se DELETE real, nunca se marca "anulado" — así lo definió la usuaria explícitamente.

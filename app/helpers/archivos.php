@@ -145,3 +145,93 @@ if (!function_exists('eliminarImagenBien')) {
         eliminarDocumentoRespaldo($rutaRelativa);
     }
 }
+
+if (!function_exists('resolverRutaArchivoStorage')) {
+    // Resuelve una ruta relativa GUARDADA EN BD (nunca provista por el navegador) hacia su ruta
+    // física absoluta, confirmando con realpath() que el archivo cae DENTRO de storage/<subcarpeta>/.
+    // Mismo criterio que resolverRutaFisicaRespaldo() (app/helpers/respaldo_bd.php): comparación en
+    // minúsculas porque Windows no distingue mayúsculas en rutas. Devuelve null si la ruta está
+    // vacía, el archivo no existe/no es legible, o queda fuera de la subcarpeta permitida
+    // (protección de path traversal aunque la ruta no venga del usuario).
+    //
+    // $subcarpetaPermitida: nombre simple, p. ej. 'documentos', 'fotos_baja', 'qr'.
+    function resolverRutaArchivoStorage(?string $rutaRelativa, string $subcarpetaPermitida): ?string
+    {
+        if ($rutaRelativa === null || trim($rutaRelativa) === '') {
+            return null;
+        }
+
+        $baseStorage = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'storage' . DIRECTORY_SEPARATOR . $subcarpetaPermitida;
+        $directorioPermitido = realpath($baseStorage);
+
+        if ($directorioPermitido === false) {
+            return null;
+        }
+
+        $rutaAbsoluta = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR
+            . str_replace('/', DIRECTORY_SEPARATOR, ltrim(trim($rutaRelativa), '/\\'));
+
+        $rutaReal = realpath($rutaAbsoluta);
+
+        if ($rutaReal === false || !is_file($rutaReal) || !is_readable($rutaReal)) {
+            return null;
+        }
+
+        $prefijoPermitido = strtolower(rtrim($directorioPermitido, DIRECTORY_SEPARATOR)) . DIRECTORY_SEPARATOR;
+
+        if (!str_starts_with(strtolower($rutaReal), $prefijoPermitido)) {
+            return null;
+        }
+
+        return $rutaReal;
+    }
+}
+
+if (!function_exists('servirArchivoControlado')) {
+    // Entrega por HTTP un archivo YA validado por resolverRutaArchivoStorage(). Determina el tipo
+    // con el MIME REAL del contenido (finfo), no con la extensión almacenada, y solo acepta
+    // PDF / JPEG / PNG. El nombre de salida se saca con basename() de la propia ruta física. Nunca
+    // expone rutas del servidor: ante cualquier problema responde un 404 genérico y corta.
+    //
+    // $disposition: 'inline' (ver en el navegador, es el caso de "Ver documento" / "Ver foto") o
+    // 'attachment' (forzar descarga).
+    function servirArchivoControlado(?string $rutaFisica, string $disposition = 'inline'): void
+    {
+        $mimesPermitidos = [
+            'application/pdf' => 'pdf',
+            'image/jpeg' => 'jpg',
+            'image/png' => 'png',
+        ];
+
+        if ($rutaFisica === null || !is_file($rutaFisica) || !is_readable($rutaFisica)) {
+            http_response_code(404);
+            echo 'Archivo no disponible.';
+            exit;
+        }
+
+        $finfo = new finfo(FILEINFO_MIME_TYPE);
+        $mimeReal = $finfo->file($rutaFisica);
+
+        if ($mimeReal === false || !isset($mimesPermitidos[$mimeReal])) {
+            http_response_code(404);
+            echo 'Archivo no disponible.';
+            exit;
+        }
+
+        $disposition = $disposition === 'attachment' ? 'attachment' : 'inline';
+        $nombreSalida = basename($rutaFisica);
+
+        if (ob_get_level() > 0) {
+            ob_end_clean();
+        }
+
+        header('Content-Type: ' . $mimeReal);
+        header('Content-Disposition: ' . $disposition . '; filename="' . $nombreSalida . '"');
+        header('Content-Length: ' . filesize($rutaFisica));
+        header('X-Content-Type-Options: nosniff');
+        header('Cache-Control: private, no-store');
+
+        readfile($rutaFisica);
+        exit;
+    }
+}

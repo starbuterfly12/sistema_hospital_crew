@@ -656,6 +656,60 @@ class BienesController extends Controller
         ], 'main');
     }
 
+    // Sirve el DOCUMENTO DE RESPALDO del ingreso (Compra/Donación/Traslado) de un bien — antes
+    // accesible por URL directa a storage/documentos/, ahora bloqueada por storage/.htaccess. Mismos
+    // permisos que ver(): solo sesión activa (el router ya redirige a login sin sesión). GET puro,
+    // sin POST, sin CSRF, sin cambios de datos. El navegador solo envía el id del bien; la ruta
+    // física se obtiene de BD (la tabla de ingreso según la forma) y se valida con realpath() contra
+    // storage/documentos/. Disposition 'inline' porque la acción es "Ver documento de respaldo".
+    public function verDocumento(): void
+    {
+        if (!isset($_SESSION['id_usuario'])) {
+            header('Location: index.php');
+            exit;
+        }
+
+        $idBien = (int) ($_GET['id'] ?? 0);
+
+        if ($idBien <= 0) {
+            http_response_code(404);
+            echo 'Documento no disponible.';
+            return;
+        }
+
+        $bien = $this->model('Bien')->findById($idBien);
+
+        if ($bien === false) {
+            http_response_code(404);
+            echo 'Documento no disponible.';
+            return;
+        }
+
+        // Misma normalización de la forma de ingreso que ver().
+        $formaNombre = mb_strtolower(trim($bien['nombre_forma'] ?? ''), 'UTF-8');
+        $formaNombre = str_replace(['á', 'é', 'í', 'ó', 'ú'], ['a', 'e', 'i', 'o', 'u'], $formaNombre);
+
+        $datosIngreso = false;
+
+        if ($formaNombre === 'compra') {
+            $datosIngreso = $this->model('IngresoCompra')->findByBienId($idBien);
+        } elseif ($formaNombre === 'donacion') {
+            $datosIngreso = $this->model('IngresoDonacion')->findByBienId($idBien);
+        } elseif ($formaNombre === 'traslado') {
+            $datosIngreso = $this->model('IngresoTraslado')->findByBienId($idBien);
+        }
+
+        if ($datosIngreso === false || empty($datosIngreso['documento_respaldo'])) {
+            http_response_code(404);
+            echo 'Documento no disponible.';
+            return;
+        }
+
+        $rutaFisica = resolverRutaArchivoStorage($datosIngreso['documento_respaldo'], 'documentos');
+
+        servirArchivoControlado($rutaFisica, 'inline');
+    }
+
     public function editar(): void
     {
         if (!isset($_SESSION['id_usuario'])) {

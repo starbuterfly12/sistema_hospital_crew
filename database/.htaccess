@@ -1,0 +1,16 @@
+# Bloquea el acceso HTTP directo a esta carpeta.
+#
+# Contiene los scripts SQL de migración del esquema. No son necesarios en
+# tiempo de ejecución; solo se aplican manualmente durante la instalación.
+# Esto impide que Apache los sirva ante una petición web directa
+# (p. ej. http://host/sistema_hospital/database/2026_08_27_notificaciones.sql).
+
+<IfModule mod_authz_core.c>
+    # Apache 2.4+
+    Require all denied
+</IfModule>
+<IfModule !mod_authz_core.c>
+    # Apache 2.2
+    Order allow,deny
+    Deny from all
+</IfModule>

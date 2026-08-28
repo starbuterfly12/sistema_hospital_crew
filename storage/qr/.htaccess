@@ -1,0 +1,27 @@
+# -----------------------------------------------------------------------------
+# storage/qr/ - unica excepcion bajo storage/ (H-01)
+# -----------------------------------------------------------------------------
+# Las vistas cargan el codigo QR de cada bien como <img src="storage/qr/bien_N.png">
+# (recurso estatico de presentacion, sin datos sensibles: la imagen solo
+# codifica el codigo del bien, que ademas va impreso en la etiqueta fisica).
+#
+# Un .htaccess de subcarpeta REEMPLAZA las directivas de autorizacion del padre
+# para esta carpeta (Apache 2.4). Aqui se deniega todo y se re-permite unicamente
+# el nombre *.png: cualquier otro archivo, y el listado de directorio (que no
+# tiene nombre de archivo), siguen devolviendo 403.
+
+<IfModule mod_authz_core.c>
+    # Apache 2.4+
+    Require all denied
+    <FilesMatch "\.png$">
+        Require all granted
+    </FilesMatch>
+</IfModule>
+<IfModule !mod_authz_core.c>
+    # Apache 2.2
+    Order allow,deny
+    Deny from all
+    <FilesMatch "\.png$">
+        Allow from all
+    </FilesMatch>
+</IfModule>

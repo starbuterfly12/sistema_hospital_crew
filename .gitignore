@@ -7,6 +7,7 @@ Thumbs.db
 # Archivos subidos por el sistema (QR, fotos de baja, respaldos, documentos)
 storage/qr/*
 !storage/qr/.gitkeep
+!storage/qr/.htaccess
 storage/fotos_baja/*
 !storage/fotos_baja/.gitkeep
 storage/respaldos/*

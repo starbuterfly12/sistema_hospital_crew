@@ -2,6 +2,64 @@
 
 date_default_timezone_set('America/Guatemala');
 
+// -----------------------------------------------------------------------------
+// Entorno de ejecucion y visibilidad de errores (H-02)
+// -----------------------------------------------------------------------------
+// El entorno se declara en config/app.php -> 'env'.
+//   'development' | 'local' | 'dev'  -> se MUESTRAN los errores en pantalla
+//   cualquier otro valor, clave ausente o config ilegible -> NO se muestran
+//     (lado seguro): incluye 'production', 'produccion', 'prod' y tambien
+//     cualquier valor mal escrito, para que un descuido nunca exponga errores.
+// config/app.php esta fuera de Git (credenciales locales); config/app.example.php
+// lo lleva por defecto en 'development'. El entorno local funciona con normalidad
+// porque su config/app.php declara 'development' de forma explicita.
+$rutaConfigApp = __DIR__ . '/config/app.php';
+$configApp = is_file($rutaConfigApp) ? require $rutaConfigApp : [];
+$entornoApp = (is_array($configApp) && isset($configApp['env']))
+    ? strtolower(trim((string) $configApp['env']))
+    : '';
+// Solo un valor de desarrollo EXPLICITO y bien escrito muestra errores en pantalla.
+// Cualquier otro caso (clave ausente, valor desconocido, config ilegible, o los
+// valores de produccion) cae en el lado seguro: errores ocultos.
+$esEntornoProduccion = !in_array($entornoApp, ['development', 'local', 'dev'], true);
+
+error_reporting(E_ALL);
+ini_set('log_errors', '1');
+ini_set('display_errors', $esEntornoProduccion ? '0' : '1');
+ini_set('display_startup_errors', $esEntornoProduccion ? '0' : '1');
+
+// -----------------------------------------------------------------------------
+// Endurecimiento de la cookie de sesion (H-03)
+// -----------------------------------------------------------------------------
+// Debe ejecutarse ANTES de session_start(). No cambia el modelo de sesion
+// (sigue siendo de sesion, lifetime 0): solo fija banderas de seguridad.
+ini_set('session.use_strict_mode', '1');
+ini_set('session.use_only_cookies', '1');
+
+// HTTPS real (conexion directa) o puerto 443. No se confia en cabeceras de proxy
+// (X-Forwarded-Proto) en esta version; si el servidor institucional termina TLS
+// en un proxy, se documenta ajustarlo en ese entorno controlado.
+$conexionHttps = (!empty($_SERVER['HTTPS']) && strtolower((string) $_SERVER['HTTPS']) !== 'off')
+    || (isset($_SERVER['SERVER_PORT']) && (int) $_SERVER['SERVER_PORT'] === 443);
+
+// Ruta de la cookie derivada de la ubicacion real del front controller, sin
+// hardcodear el nombre del proyecto:
+//   XAMPP  ->  /sistema_hospital/index.php  -> path '/sistema_hospital/'
+//   raiz   ->  /index.php                   -> path '/'
+$directorioApp = str_replace('\\', '/', dirname((string) ($_SERVER['SCRIPT_NAME'] ?? '')));
+$rutaCookieSesion = ($directorioApp === '' || $directorioApp === '/' || $directorioApp === '.')
+    ? '/'
+    : rtrim($directorioApp, '/') . '/';
+
+session_set_cookie_params([
+    'lifetime' => 0,
+    'path' => $rutaCookieSesion,
+    'domain' => '',
+    'secure' => $conexionHttps,
+    'httponly' => true,
+    'samesite' => 'Lax',
+]);
+
 session_start();
 
 require_once __DIR__ . '/vendor/autoload.php';
@@ -59,6 +117,8 @@ switch ($modulo) {
             $bienesController->crear();
         } elseif ($accion === 'ver') {
             $bienesController->ver();
+        } elseif ($accion === 'ver_documento') {
+            $bienesController->verDocumento();
         } elseif ($accion === 'editar') {
             $bienesController->editar();
         } elseif ($accion === 'generar_qr') {
@@ -272,6 +332,10 @@ switch ($modulo) {
             $bajasController->crear();
         } elseif ($accion === 'ver') {
             $bajasController->ver();
+        } elseif ($accion === 'ver_documento') {
+            $bajasController->verDocumento();
+        } elseif ($accion === 'ver_foto') {
+            $bajasController->verFoto();
         } elseif ($accion === 'editar') {
             $bajasController->editar();
         } elseif ($accion === 'solicitudes') {
