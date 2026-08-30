@@ -147,6 +147,55 @@
     box-shadow: 0 0 0 3px var(--sgb-pastel-azul);
 }
 
+/* Campo de contraseña con botón de mostrar/ocultar. El botón se superpone a la derecha, sin
+   cambiar la altura del input; el input reserva espacio a la derecha para no quedar tapado. */
+.auth-input-password {
+    position: relative;
+}
+
+.auth-input-password .auth-input {
+    padding-right: 46px;
+}
+
+.auth-toggle-password {
+    position: absolute;
+    top: 0;
+    right: 0;
+    height: 100%;
+    width: 42px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: var(--sgb-texto-secundario);
+    cursor: pointer;
+}
+
+.auth-toggle-password:hover {
+    color: var(--sgb-azul);
+}
+
+.auth-toggle-password:focus-visible {
+    outline: 2px solid var(--sgb-azul);
+    outline-offset: -3px;
+    border-radius: 8px;
+}
+
+.auth-toggle-password svg {
+    width: 18px;
+    height: 18px;
+    display: block;
+}
+
+/* El icono oculto por el atributo nativo `hidden` (lo alterna el JS): esta regla es necesaria
+   porque `.auth-toggle-password svg` de arriba tiene más especificidad que la regla `[hidden]`
+   del user-agent y, sin esto, se verían los dos ojos a la vez. */
+.auth-toggle-password svg[hidden] {
+    display: none;
+}
+
 /* --------------------------------------------------------------------------
    6. Botón
    -------------------------------------------------------------------------- */

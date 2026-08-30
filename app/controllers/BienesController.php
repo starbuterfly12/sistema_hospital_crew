@@ -820,8 +820,19 @@ class BienesController extends Controller
 
         verifyCsrf();
 
-        $codigoInterno = trim($_POST['codigo_interno'] ?? '');
-        $codigoSicoin = trim($_POST['codigo_sicoin'] ?? '');
+        // Código interno: se define SOLO al registrar el bien y queda bloqueado de forma permanente.
+        // Se ignora por completo cualquier valor recibido en el POST (aunque se edite el HTML desde
+        // DevTools) y se conserva SIEMPRE el que ya tiene la BD. Bien::actualizar() tampoco lo escribe.
+        $codigoInterno = trim((string) ($bien['codigo_interno'] ?? ''));
+
+        // Código SICOIN: si el bien YA tiene uno registrado, queda bloqueado igual que el código
+        // interno (se ignora el POST y se conserva el de BD). Si está en NULL/vacío, puede
+        // establecerse por primera vez desde esta edición (una sola vez; después queda bloqueado).
+        $sicoinRegistrado = trim((string) ($bien['codigo_sicoin'] ?? ''));
+        $sicoinYaBloqueado = $sicoinRegistrado !== '';
+        $codigoSicoin = $sicoinYaBloqueado
+            ? $sicoinRegistrado
+            : trim((string) ($_POST['codigo_sicoin'] ?? ''));
         $descripcion = trim($_POST['descripcion'] ?? '');
         $marca = trim($_POST['marca'] ?? '');
         $modelo = trim($_POST['modelo'] ?? '');

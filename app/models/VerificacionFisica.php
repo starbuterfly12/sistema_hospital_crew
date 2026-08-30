@@ -6,6 +6,10 @@ class VerificacionFisica extends Model
 {
     protected string $table = 'verificaciones_fisicas';
 
+    // $datos['id_verificacion_asignacion'] es OPCIONAL: null (o ausente) => verificación individual
+    // (comportamiento actual, intacto); un id => verificación registrada dentro de una jornada por
+    // asignación. En ambos casos la fila representa la verificación de UN bien y alimenta el mismo
+    // historial del bien.
     public function crear(array $datos): int
     {
         $sql = "
@@ -15,6 +19,7 @@ class VerificacionFisica extends Model
                 id_ubicacion_registrada,
                 condicion_registrada,
                 id_usuario_verifica,
+                id_verificacion_asignacion,
                 bien_localizado,
                 responsable_correcto,
                 ubicacion_correcta,
@@ -27,6 +32,7 @@ class VerificacionFisica extends Model
                 :id_ubicacion_registrada,
                 :condicion_registrada,
                 :id_usuario_verifica,
+                :id_verificacion_asignacion,
                 :bien_localizado,
                 :responsable_correcto,
                 :ubicacion_correcta,
@@ -42,6 +48,7 @@ class VerificacionFisica extends Model
             ':id_ubicacion_registrada' => $datos['id_ubicacion_registrada'],
             ':condicion_registrada' => $datos['condicion_registrada'],
             ':id_usuario_verifica' => $datos['id_usuario_verifica'],
+            ':id_verificacion_asignacion' => $datos['id_verificacion_asignacion'] ?? null,
             ':bien_localizado' => $datos['bien_localizado'],
             ':responsable_correcto' => $datos['responsable_correcto'],
             ':ubicacion_correcta' => $datos['ubicacion_correcta'],
@@ -72,6 +79,7 @@ class VerificacionFisica extends Model
                 vf.id_ubicacion_registrada,
                 vf.condicion_registrada,
                 vf.id_usuario_verifica,
+                vf.id_verificacion_asignacion,
                 vf.fecha_hora,
                 vf.bien_localizado,
                 vf.responsable_correcto,
@@ -88,12 +96,14 @@ class VerificacionFisica extends Model
                 b.serie,
                 u.nombre_completo AS usuario_verifica_nombre,
                 rr.nombre_completo AS responsable_registrado_nombre,
-                ur.nombre_ubicacion AS ubicacion_registrada_nombre
+                ur.nombre_ubicacion AS ubicacion_registrada_nombre,
+                va.numero_asignacion AS verificacion_asignacion_numero
             FROM verificaciones_fisicas vf
             INNER JOIN bienes b ON vf.id_bien = b.id_bien
             INNER JOIN usuarios u ON vf.id_usuario_verifica = u.id_usuario
             LEFT JOIN responsables rr ON vf.id_responsable_registrado = rr.id_responsable
             LEFT JOIN ubicaciones ur ON vf.id_ubicacion_registrada = ur.id_ubicacion
+            LEFT JOIN verificaciones_asignacion va ON vf.id_verificacion_asignacion = va.id_verificacion_asignacion
             WHERE vf.id_verificacion = :id_verificacion
             LIMIT 1
         ";
@@ -135,6 +145,14 @@ class VerificacionFisica extends Model
             $params[':tiene_diferencias'] = (int) $filtros['con_diferencias'];
         }
 
+        // Tipo de verificación: 'individual' (sin jornada) o 'asignacion' (dentro de una jornada
+        // por asignación). Se deriva de vf.id_verificacion_asignacion, sin columna de tipo aparte.
+        if (isset($filtros['tipo']) && $filtros['tipo'] === 'individual') {
+            $condiciones[] = 'vf.id_verificacion_asignacion IS NULL';
+        } elseif (isset($filtros['tipo']) && $filtros['tipo'] === 'asignacion') {
+            $condiciones[] = 'vf.id_verificacion_asignacion IS NOT NULL';
+        }
+
         if (!empty($filtros['busqueda'])) {
             $condiciones[] = '(b.codigo_interno LIKE :busqueda_codigo OR b.codigo_sicoin LIKE :busqueda_sicoin OR b.descripcion LIKE :busqueda_descripcion)';
             $like = '%' . $filtros['busqueda'] . '%';
@@ -152,15 +170,18 @@ class VerificacionFisica extends Model
                 vf.fecha_hora,
                 vf.bien_localizado,
                 vf.tiene_diferencias,
+                vf.id_verificacion_asignacion,
                 b.codigo_interno,
                 b.codigo_sicoin,
                 b.descripcion,
                 rr.nombre_completo AS responsable_registrado_nombre,
-                ur.nombre_ubicacion AS ubicacion_registrada_nombre
+                ur.nombre_ubicacion AS ubicacion_registrada_nombre,
+                va.numero_asignacion AS verificacion_asignacion_numero
             FROM verificaciones_fisicas vf
             INNER JOIN bienes b ON vf.id_bien = b.id_bien
             LEFT JOIN responsables rr ON vf.id_responsable_registrado = rr.id_responsable
             LEFT JOIN ubicaciones ur ON vf.id_ubicacion_registrada = ur.id_ubicacion
+            LEFT JOIN verificaciones_asignacion va ON vf.id_verificacion_asignacion = va.id_verificacion_asignacion
             {$where}
             ORDER BY vf.fecha_hora DESC
         ";

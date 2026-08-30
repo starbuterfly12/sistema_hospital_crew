@@ -38,6 +38,15 @@ $ubicacionTexto = static function (array $asignacion): ?string {
 
     return $nombre . ($tipo !== null && $tipo !== '' ? ' - ' . $tipo : '');
 };
+
+// La accion "Verificar" (verificacion fisica por asignacion) solo se ofrece a roles que pueden
+// ejecutar verificaciones y solo para asignaciones potencialmente elegibles (Asignada, con bienes
+// activos). La elegibilidad real la revalida VerificacionesController::porAsignacion() en backend.
+$puedeVerificar = tieneRol(['Administrador', 'Operativo']);
+$esVerificable = static function (array $asignacion): bool {
+    return ($asignacion['estado_asignacion'] ?? null) === 'Asignada'
+        && (int) ($asignacion['cantidad_bienes'] ?? 0) > 0;
+};
 ?>
 <div class="page-header">
     <div class="page-header-fila">
@@ -104,6 +113,12 @@ $ubicacionTexto = static function (array $asignacion): ?string {
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.5 12S5 5 12 5s10.5 7 10.5 7-3.5 7-10.5 7S1.5 12 1.5 12Z"/><circle cx="12" cy="12" r="3"/></svg>
                                         Ver
                                     </a>
+                                    <?php if ($puedeVerificar && $esVerificable($asignacion)): ?>
+                                        <a class="table-action-btn table-action-verificar" href="index.php?modulo=verificaciones&accion=por_asignacion&id_asignacion=<?= (int) $asignacion['id_asignacion'] ?>">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11l3 3 8-8"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                                            Verificar
+                                        </a>
+                                    <?php endif; ?>
                                 </div>
                             </td>
                         </tr>

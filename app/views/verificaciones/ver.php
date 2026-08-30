@@ -23,6 +23,9 @@ $mostrarSiNo = static function (?int $valor): string {
 $localizado = (int) ($verificacion['bien_localizado'] ?? 0);
 $tieneDiferencias = (int) ($verificacion['tiene_diferencias'] ?? 0);
 
+$idVerifAsignacion = (int) ($verificacion['id_verificacion_asignacion'] ?? 0);
+$numeroAsignacion = $verificacion['verificacion_asignacion_numero'] ?? null;
+
 $responsableCorrecto = $verificacion['responsable_correcto'] ?? null;
 $responsableCorrecto = $responsableCorrecto === null ? null : (int) $responsableCorrecto;
 
@@ -65,6 +68,28 @@ $claseBadgeLocalizado = $localizado === 1 ? 'badge badge-exito' : 'badge badge-e
                 <span class="detail-label">Verificado por</span>
                 <span class="detail-value"><?= $mostrar($verificacion['usuario_verifica_nombre'] ?? null) ?></span>
             </div>
+
+            <div class="detail-item">
+                <span class="detail-label">Tipo de verificación</span>
+                <span class="detail-value">
+                    <?php if ($idVerifAsignacion > 0): ?>
+                        <span class="badge badge-info">Por asignación</span>
+                    <?php else: ?>
+                        <span class="badge">Individual</span>
+                    <?php endif; ?>
+                </span>
+            </div>
+
+            <?php if ($idVerifAsignacion > 0): ?>
+                <div class="detail-item">
+                    <span class="detail-label">Jornada / asignación</span>
+                    <span class="detail-value">
+                        <a href="index.php?modulo=verificaciones&accion=ver_asignacion&id=<?= $idVerifAsignacion ?>">
+                            <?= $numeroAsignacion !== null ? $mostrar($numeroAsignacion) : 'Ver jornada' ?>
+                        </a>
+                    </span>
+                </div>
+            <?php endif; ?>
 
             <div class="detail-item">
                 <span class="detail-label">Resultado</span>

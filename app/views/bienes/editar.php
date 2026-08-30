@@ -43,21 +43,39 @@ $claseBadgeEstado = static function (?string $nombreEstado): string {
     <div class="form-section">
         <h2 class="form-section-title">Datos generales</h2>
         <div class="form-grid">
+            <?php
+                // Código interno: bloqueado SIEMPRE en edición (se fija al registrar el bien).
+                // Código SICOIN: bloqueado solo si el bien YA tiene uno registrado en BD; si está
+                // vacío, se permite ingresarlo por primera vez (después queda bloqueado). El estado
+                // de bloqueo del SICOIN se decide con $bien (fila real de BD), no con $datos, para
+                // que un re-render tras error conserve el campo editable si aún no se guardó.
+                $sicoinBloqueado = !empty($bien['codigo_sicoin']);
+                $tituloBloqueado = 'Este dato no puede modificarse después de registrarse.';
+            ?>
             <div class="form-group">
                 <label class="form-label" for="codigo_interno">Código interno <span class="required-mark">*</span></label>
                 <input
                     type="text"
                     id="codigo_interno"
                     name="codigo_interno"
-                    class="form-control"
+                    class="form-control form-control-bloqueado"
                     value="<?= htmlspecialchars($datos['codigo_interno'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
+                    readonly
+                    title="<?= htmlspecialchars($tituloBloqueado, ENT_QUOTES, 'UTF-8') ?>"
                     required
                 >
             </div>
 
             <div class="form-group">
                 <label class="form-label" for="codigo_sicoin">Código SICOIN</label>
-                <input type="text" id="codigo_sicoin" name="codigo_sicoin" class="form-control" value="<?= htmlspecialchars($datos['codigo_sicoin'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
+                <input
+                    type="text"
+                    id="codigo_sicoin"
+                    name="codigo_sicoin"
+                    class="form-control<?= $sicoinBloqueado ? ' form-control-bloqueado' : '' ?>"
+                    value="<?= htmlspecialchars($datos['codigo_sicoin'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
+                    <?= $sicoinBloqueado ? 'readonly title="' . htmlspecialchars($tituloBloqueado, ENT_QUOTES, 'UTF-8') . '"' : '' ?>
+                >
             </div>
 
             <div class="form-group">

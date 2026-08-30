@@ -184,12 +184,16 @@ class Bien extends Model
         return $this->fetchOne($sql, [':id_bien' => $idBien]);
     }
 
+    // El `codigo_interno` NO se actualiza aquí a propósito: se define una única vez al registrar el
+    // bien (Bien::crear()) y queda bloqueado de forma permanente. Aunque el formulario de edición se
+    // manipule para enviar otro valor, esta consulta nunca lo escribe. El `codigo_sicoin` SÍ puede
+    // escribirse, pero solo para establecerlo por primera vez cuando estaba en NULL/vacío: el
+    // controlador (BienesController::editar()) fuerza el valor existente cuando el bien ya tiene uno.
     public function actualizar(int $idBien, array $datos): bool
     {
         $sql = "
             UPDATE bienes
             SET
-                codigo_interno = :codigo_interno,
                 codigo_sicoin = :codigo_sicoin,
                 descripcion = :descripcion,
                 marca = :marca,
@@ -208,7 +212,6 @@ class Bien extends Model
         ";
 
         $params = [
-            ':codigo_interno' => $datos['codigo_interno'] ?? null,
             ':codigo_sicoin' => $datos['codigo_sicoin'] ?? null,
             ':descripcion' => $datos['descripcion'] ?? null,
             ':marca' => $datos['marca'] ?? null,

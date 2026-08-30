@@ -667,6 +667,43 @@ img {
     border-bottom: 1px solid var(--sgb-borde);
 }
 
+/* Verificación física por asignación — una tarjeta (fieldset) por bien de la jornada. Se apoya en
+   .form-section-fieldset; aquí solo se le da marco/relleno de tarjeta y la etiqueta de estado. */
+.jornada-bien {
+    border: 1px solid var(--sgb-borde);
+    border-radius: 12px;
+    padding: 16px;
+    background: #fff;
+}
+.jornada-bien > legend {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+.jornada-bien .detail-grid {
+    margin-bottom: 14px;
+}
+.jornada-bloque-localizado {
+    margin: 6px 0 0;
+}
+.jornada-bien-estado {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--sgb-borde);
+    color: var(--sgb-texto-suave, #5b6472);
+}
+.jornada-bien-estado--ok {
+    background: var(--sgb-verde-fondo);
+    color: var(--sgb-verde);
+}
+.jornada-bien-estado--pend {
+    background: #fef3c7;
+    color: #92700c;
+}
+
 /* Grupo de opciones de radio en línea (ej. Sí/No de Registrar verificación física). Genérico y
    reutilizable en cualquier formulario del sistema que necesite el mismo patrón. */
 .radio-opciones {
@@ -768,6 +805,18 @@ img {
 .form-control:disabled {
     background: var(--sgb-fondo);
     color: var(--sgb-texto-secundario);
+}
+
+/* Campo de solo lectura permanente por regla de negocio (Código interno / Código SICOIN ya
+   registrado en "Modificar bien"): se ve claramente en gris pero conserva el texto a contraste
+   pleno para poder consultarlo. No usa :disabled — así el valor sigue presente y seleccionable. */
+.form-control-bloqueado,
+.form-control-bloqueado:focus {
+    background: var(--sgb-fondo);
+    color: var(--sgb-texto);
+    border-color: var(--sgb-borde);
+    box-shadow: none;
+    cursor: default;
 }
 
 textarea.form-control {
@@ -1525,6 +1574,18 @@ textarea.form-control {
     border-color: #9a7fe0;
 }
 
+/* Accion "Verificar" (listado de Asignaciones) / "Jornada" (historial de verificaciones) — verde
+   menta pastel, coherente con .action-tile-menta / el acento turquesa de Verificacion fisica. */
+.table-action-verificar {
+    background: var(--sgb-pastel-menta);
+    border-color: #a9e6cb;
+    color: var(--sgb-azul-oscuro);
+}
+.table-action-verificar:hover {
+    background: #c2efdb;
+    border-color: var(--sgb-verde);
+}
+
 .table-resize-handle {
     position: absolute;
     top: 0;
@@ -1993,6 +2054,12 @@ textarea.form-control {
     background: var(--sgb-verde-fondo);
     border-color: #b7ebc9;
     color: var(--sgb-verde);
+}
+
+.alert-warning {
+    background: #fef3c7;
+    border-color: #fcd34d;
+    color: #92700c;
 }
 
 /* --------------------------------------------------------------------------

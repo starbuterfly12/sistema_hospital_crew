@@ -459,6 +459,12 @@ switch ($modulo) {
             $verificacionesController->crear();
         } elseif ($accion === 'ver') {
             $verificacionesController->ver();
+        } elseif ($accion === 'por_asignacion') {
+            $verificacionesController->porAsignacion();
+        } elseif ($accion === 'guardar_asignacion') {
+            $verificacionesController->guardarAsignacion();
+        } elseif ($accion === 'ver_asignacion') {
+            $verificacionesController->verAsignacion();
         } else {
             $verificacionesController->index();
         }

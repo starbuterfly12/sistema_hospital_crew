@@ -50,8 +50,14 @@ $claseBadgeLocalizado = static function (int $localizado): string {
             <?php if ($puedeRegistrar): ?>
                 <a href="index.php?modulo=verificaciones&accion=crear<?= $modoHistorialBien ? '&id_bien=' . (int) $filtros['id_bien'] : '' ?>" class="btn btn-primary">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
-                    Nueva verificación
+                    Verificación individual
                 </a>
+                <?php if (!$modoHistorialBien): ?>
+                    <a href="index.php?modulo=verificaciones&accion=por_asignacion" class="btn btn-primary">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 9.5l2 2 4-4.2"/></svg>
+                        Verificación por asignación
+                    </a>
+                <?php endif; ?>
             <?php endif; ?>
         </div>
     </div>
@@ -117,6 +123,15 @@ $claseBadgeLocalizado = static function (int $localizado): string {
         </select>
     </div>
 
+    <div class="form-group">
+        <label class="form-label" for="tipo">Tipo</label>
+        <select id="tipo" name="tipo" class="form-control">
+            <option value="">Todos</option>
+            <option value="individual" <?= (($filtros['tipo'] ?? '') === 'individual') ? 'selected' : '' ?>>Individual</option>
+            <option value="asignacion" <?= (($filtros['tipo'] ?? '') === 'asignacion') ? 'selected' : '' ?>>Por asignación</option>
+        </select>
+    </div>
+
     <div class="form-actions-inline">
         <button type="submit" class="btn btn-primary">Filtrar</button>
         <a href="index.php?modulo=verificaciones<?= $modoHistorialBien ? '&id_bien=' . (int) $filtros['id_bien'] : '' ?>" class="btn btn-secondary">Limpiar filtros</a>
@@ -137,6 +152,7 @@ $claseBadgeLocalizado = static function (int $localizado): string {
                         <th>Descripción</th>
                         <th>Responsable registrado</th>
                         <th>Ubicación registrada</th>
+                        <th>Tipo</th>
                         <th>Localizado</th>
                         <th>Resultado</th>
                         <th>Acciones</th>
@@ -147,6 +163,8 @@ $claseBadgeLocalizado = static function (int $localizado): string {
                         <?php
                             $localizado = (int) $verificacion['bien_localizado'];
                             $tieneDiferencias = (int) $verificacion['tiene_diferencias'];
+                            $idVerifAsignacion = (int) ($verificacion['id_verificacion_asignacion'] ?? 0);
+                            $numeroAsignacion = $verificacion['verificacion_asignacion_numero'] ?? null;
                         ?>
                         <tr>
                             <td><?= $mostrar(formatDateTime($verificacion['fecha_hora'] ?? null)) ?></td>
@@ -155,6 +173,16 @@ $claseBadgeLocalizado = static function (int $localizado): string {
                             <td><?= $mostrar($verificacion['descripcion'] ?? null) ?></td>
                             <td><?= $mostrar($verificacion['responsable_registrado_nombre'] ?? null) ?></td>
                             <td><?= $mostrar($verificacion['ubicacion_registrada_nombre'] ?? null) ?></td>
+                            <td>
+                                <?php if ($idVerifAsignacion > 0): ?>
+                                    <span class="badge badge-info">Por asignación</span>
+                                    <?php if ($numeroAsignacion !== null): ?>
+                                        <span class="form-hint"><?= $mostrar($numeroAsignacion) ?></span>
+                                    <?php endif; ?>
+                                <?php else: ?>
+                                    <span class="badge">Individual</span>
+                                <?php endif; ?>
+                            </td>
                             <td><span class="<?= $claseBadgeLocalizado($localizado) ?>"><?= $localizado === 1 ? 'Sí' : 'No' ?></span></td>
                             <td><span class="<?= $claseBadgeResultado($tieneDiferencias) ?>"><?= $tieneDiferencias === 1 ? 'Con diferencias' : 'Sin diferencias' ?></span></td>
                             <td>
@@ -163,6 +191,12 @@ $claseBadgeLocalizado = static function (int $localizado): string {
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.5 12S5 5 12 5s10.5 7 10.5 7-3.5 7-10.5 7S1.5 12 1.5 12Z"/><circle cx="12" cy="12" r="3"/></svg>
                                         Ver
                                     </a>
+                                    <?php if ($idVerifAsignacion > 0): ?>
+                                        <a class="table-action-btn table-action-verificar" href="index.php?modulo=verificaciones&accion=ver_asignacion&id=<?= $idVerifAsignacion ?>">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 9.5l2 2 4-4.2"/></svg>
+                                            Jornada
+                                        </a>
+                                    <?php endif; ?>
                                 </div>
                             </td>
                         </tr>
