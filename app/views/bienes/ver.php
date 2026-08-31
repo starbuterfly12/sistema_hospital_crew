@@ -205,6 +205,11 @@ $documentoIngreso = $datosIngreso['documento_respaldo'] ?? null;
                 </div>
 
                 <div class="detail-item">
+                    <span class="detail-label">Forma de pago</span>
+                    <span class="detail-value"><?= $valor($datosIngreso['forma_pago_nombre'] ?? null) ?></span>
+                </div>
+
+                <div class="detail-item">
                     <span class="detail-label">¿Tiene garantía?</span>
                     <span class="detail-value"><?= ((int) ($datosIngreso['tiene_garantia'] ?? 0) === 1) ? 'Sí' : 'No' ?></span>
                 </div>

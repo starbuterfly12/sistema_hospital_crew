@@ -211,6 +211,19 @@ $bodegaConfigurada = (bool) ($bodegaConfigurada ?? true);
             </div>
 
             <div class="form-group">
+                <label class="form-label" for="id_forma_pago">Forma de pago <span class="required-mark">*</span></label>
+                <select id="id_forma_pago" name="id_forma_pago" class="form-control" required>
+                    <option value="">Seleccione</option>
+                    <?php foreach (($formasPago ?? []) as $formaPago): ?>
+                        <option
+                            value="<?= (int) $formaPago['id_forma_pago'] ?>"
+                            <?= ((int) ($datos['id_forma_pago'] ?? 0) === (int) $formaPago['id_forma_pago']) ? ' selected' : '' ?>
+                        ><?= htmlspecialchars($formaPago['nombre_forma_pago'], ENT_QUOTES, 'UTF-8') ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+
+            <div class="form-group">
                 <label class="form-label" for="tiene_garantia">¿Tiene garantía?</label>
                 <?php $tieneGarantiaValor = (string) ($datos['tiene_garantia'] ?? '0'); ?>
                 <select id="tiene_garantia" name="tiene_garantia" class="form-control">
@@ -533,6 +546,7 @@ $bodegaConfigurada = (bool) ($bodegaConfigurada ?? true);
             aplicarRequerido('proveedor', esCompra);
             aplicarRequerido('numero_factura', esCompra);
             aplicarRequerido('fecha_factura', esCompra);
+            aplicarRequerido('id_forma_pago', esCompra);
             aplicarRequerido('costo', esCompra || esTraslado);
 
             aplicarRequerido('procedencia_donacion', esDonacion);

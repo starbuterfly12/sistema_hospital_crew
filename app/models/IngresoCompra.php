@@ -16,6 +16,7 @@ class IngresoCompra extends Model
                 serie_factura,
                 fecha_factura,
                 numero_liquidacion,
+                id_forma_pago,
                 tiene_garantia,
                 tiempo_garantia,
                 documento_respaldo,
@@ -27,6 +28,7 @@ class IngresoCompra extends Model
                 :serie_factura,
                 :fecha_factura,
                 :numero_liquidacion,
+                :id_forma_pago,
                 :tiene_garantia,
                 :tiempo_garantia,
                 :documento_respaldo,
@@ -41,6 +43,7 @@ class IngresoCompra extends Model
             ':serie_factura' => $datos['serie_factura'] ?? null,
             ':fecha_factura' => $datos['fecha_factura'] ?? null,
             ':numero_liquidacion' => $datos['numero_liquidacion'] ?? null,
+            ':id_forma_pago' => $datos['id_forma_pago'] ?? null,
             ':tiene_garantia' => isset($datos['tiene_garantia'])
                 ? (int) $datos['tiene_garantia']
                 : 0,
@@ -58,19 +61,22 @@ class IngresoCompra extends Model
     {
         $sql = "
             SELECT
-                id_compra,
-                id_bien,
-                proveedor,
-                numero_factura,
-                serie_factura,
-                fecha_factura,
-                numero_liquidacion,
-                tiene_garantia,
-                tiempo_garantia,
-                documento_respaldo,
-                observaciones
-            FROM ingreso_compra
-            WHERE id_bien = :id_bien
+                ic.id_compra,
+                ic.id_bien,
+                ic.proveedor,
+                ic.numero_factura,
+                ic.serie_factura,
+                ic.fecha_factura,
+                ic.numero_liquidacion,
+                ic.id_forma_pago,
+                fp.nombre_forma_pago AS forma_pago_nombre,
+                ic.tiene_garantia,
+                ic.tiempo_garantia,
+                ic.documento_respaldo,
+                ic.observaciones
+            FROM ingreso_compra ic
+            LEFT JOIN formas_pago fp ON fp.id_forma_pago = ic.id_forma_pago
+            WHERE ic.id_bien = :id_bien
         ";
 
         return $this->fetchOne($sql, [':id_bien' => $idBien]);
@@ -87,6 +93,7 @@ class IngresoCompra extends Model
                 serie_factura = :serie_factura,
                 fecha_factura = :fecha_factura,
                 numero_liquidacion = :numero_liquidacion,
+                id_forma_pago = :id_forma_pago,
                 tiene_garantia = :tiene_garantia,
                 tiempo_garantia = :tiempo_garantia,
                 documento_respaldo = :documento_respaldo,
@@ -100,6 +107,7 @@ class IngresoCompra extends Model
             ':serie_factura' => $datos['serie_factura'] ?? null,
             ':fecha_factura' => $datos['fecha_factura'] ?? null,
             ':numero_liquidacion' => $datos['numero_liquidacion'] ?? null,
+            ':id_forma_pago' => $datos['id_forma_pago'] ?? null,
             ':tiene_garantia' => $tieneGarantia,
             ':tiempo_garantia' => $tieneGarantia === 1 ? ($datos['tiempo_garantia'] ?? null) : null,
             ':documento_respaldo' => $datos['documento_respaldo'] ?? null,

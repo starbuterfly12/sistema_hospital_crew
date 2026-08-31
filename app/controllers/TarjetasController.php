@@ -762,11 +762,23 @@ class TarjetasController extends Controller
 
         // Regularizaciones SICOIN acotadas a la vigencia de ESTE detalle (evita duplicar un
         // mismo cambio de SICOIN entre dos responsables cuando hubo Traslado o Requisición de por
-        // medio). Límite inferior EXCLUSIVO cuando el detalle entró por movimiento (Traslado o
-        // Requisición, indistintamente): el día de *_ENTRADA ya "pertenece" a esta etapa desde ese
-        // evento, pero un cambio de SICOIN fechado ese mismo día se considera ocurrido antes de la
-        // entrada y se atribuye a la etapa anterior (cuyo límite superior es inclusivo — ver abajo).
-        // Así, un mismo día de transición nunca queda cubierto por ambas etapas a la vez.
+        // medio). Un mismo día de transición nunca debe quedar cubierto por ambas etapas a la vez,
+        // pero tampoco debe PERDERSE de las dos: por eso, cuando el detalle entró/salió por un
+        // movimiento (Traslado/Requisición, que sí tienen timestamp DATETIME real), la ventana se
+        // compara a nivel fecha+hora contra el instante exacto del movimiento — no solo la fecha.
+        // Antes se comparaba fecha contra fecha con `>` estricto en el borde inferior, así que un
+        // alta de SICOIN el MISMO día que la entrega/traslado (caso normal: se requisita el bien y
+        // se le pone el SICOIN en la misma jornada) quedaba fuera de esta etapa y, como la etapa
+        // anterior pertenece a otra asignación (otra tarjeta, que nadie regenera), la regularización
+        // desaparecía de la única tarjeta vigente. La Baja aporta solo fecha (DATE) en su salida:
+        // en ese caso se conserva la comparación por fecha con límite inclusivo.
+        $instanteEntradaMovimiento = ($entroPorMovimiento && $entrada !== false)
+            ? (string) $entrada['fecha_movimiento']
+            : null;
+        $instanteSalidaMovimiento = ($salioPorMovimiento && $salida !== false)
+            ? (string) $salida['fecha_movimiento']
+            : null;
+
         foreach ($historialBien as $evento) {
             $sicoinAnterior = $evento['sicoin_anterior'];
             $sicoinNuevo = $evento['sicoin_nuevo'];
@@ -781,11 +793,26 @@ class TarjetasController extends Controller
                 continue;
             }
 
-            $dentroLimiteInferior = $entroPorMovimiento
-                ? ($fechaCambioFecha > $fechaAgregado)
-                : ($fechaCambioFecha >= $fechaAgregado);
+            // Límite inferior: si el detalle entró por movimiento, la regularización pertenece a
+            // esta etapa solo si ocurrió DESPUÉS del instante real de entrada (fecha+hora). Para un
+            // ALTA directa no hay timestamp de entrada (fecha_agregado es DATE): límite inclusivo
+            // por fecha, comportamiento previo intacto.
+            if ($instanteEntradaMovimiento !== null) {
+                $dentroLimiteInferior = $fechaCambioCompleta > $instanteEntradaMovimiento;
+            } else {
+                $dentroLimiteInferior = $fechaCambioFecha >= $fechaAgregado;
+            }
 
-            $dentroLimiteSuperior = $fechaRetirado === null || $fechaCambioFecha <= $fechaRetirado;
+            // Límite superior: si el detalle salió por movimiento CON timestamp (Traslado/
+            // Requisición), la regularización pertenece a esta etapa solo si ocurrió ANTES O EN ese
+            // instante. Baja (solo DATE) y detalle aún vigente: comparación por fecha / sin tope.
+            if ($fechaRetirado === null) {
+                $dentroLimiteSuperior = true;
+            } elseif ($instanteSalidaMovimiento !== null && strlen($instanteSalidaMovimiento) > 10) {
+                $dentroLimiteSuperior = $fechaCambioCompleta <= $instanteSalidaMovimiento;
+            } else {
+                $dentroLimiteSuperior = $fechaCambioFecha <= $fechaRetirado;
+            }
 
             if (!$dentroLimiteInferior || !$dentroLimiteSuperior) {
                 continue;

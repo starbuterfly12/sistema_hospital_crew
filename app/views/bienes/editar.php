@@ -246,6 +246,25 @@ $claseBadgeEstado = static function (?string $nombreEstado): string {
                 </div>
 
                 <div class="form-group">
+                    <?php
+                        // Forma de pago: NO obligatoria en edición (una compra histórica puede seguir
+                        // sin ella si solo se edita otro dato). Si se elige una, el backend la valida y
+                        // la guarda. Dejar "Seleccione" conserva lo que ya tenga la BD (NULL o valor).
+                        $idFormaPagoActual = (int) ($datos['id_forma_pago'] ?? 0);
+                    ?>
+                    <label class="form-label" for="id_forma_pago">Forma de pago</label>
+                    <select id="id_forma_pago" name="id_forma_pago" class="form-control">
+                        <option value="">Seleccione</option>
+                        <?php foreach (($formasPago ?? []) as $formaPago): ?>
+                            <option
+                                value="<?= (int) $formaPago['id_forma_pago'] ?>"
+                                <?= ($idFormaPagoActual === (int) $formaPago['id_forma_pago']) ? ' selected' : '' ?>
+                            ><?= htmlspecialchars($formaPago['nombre_forma_pago'], ENT_QUOTES, 'UTF-8') ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+
+                <div class="form-group">
                     <label class="form-label" for="tiene_garantia">¿Tiene garantía?</label>
                     <?php $tieneGarantiaValor = (string) ($datos['tiene_garantia'] ?? '0'); ?>
                     <select id="tiene_garantia" name="tiene_garantia" class="form-control">

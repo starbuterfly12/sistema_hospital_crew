@@ -166,16 +166,20 @@ class BienesController extends Controller
         $formaIngresoModel = $this->model('FormaIngreso');
         $categoriaBienModel = $this->model('CategoriaBien');
         $estadoBienModel = $this->model('EstadoBien');
+        $formaPagoModel = $this->model('FormaPago');
 
         $formasIngreso = $formaIngresoModel->getActivas();
         $categorias = $categoriaBienModel->getActivas();
         $estados = $estadoBienModel->getActivos();
+        // Solo aplica a Compra. Catálogo de solo lectura (ver FormaPago.php).
+        $formasPago = $formaPagoModel->getActivas();
 
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             $this->view('bienes/crear', [
                 'formasIngreso' => $formasIngreso,
                 'categorias' => $categorias,
                 'estados' => $estados,
+                'formasPago' => $formasPago,
                 'datos' => [],
                 'error' => null,
                 'bodegaConfigurada' => $this->resolverBodegaAlmacen() !== false,
@@ -206,6 +210,8 @@ class BienesController extends Controller
         $serieFactura = trim($_POST['serie_factura'] ?? '');
         $fechaFactura = trim($_POST['fecha_factura'] ?? '');
         $numeroLiquidacion = trim($_POST['numero_liquidacion'] ?? '');
+        // Forma de pago: solo se procesa cuando la forma de ingreso es Compra. 0 = no enviada.
+        $idFormaPago = (int) ($_POST['id_forma_pago'] ?? 0);
         $tieneGarantia = isset($_POST['tiene_garantia'])
             ? ((int) ($_POST['tiene_garantia'] === '1' || $_POST['tiene_garantia'] === 'on' ? 1 : 0))
             : 0;
@@ -243,6 +249,7 @@ class BienesController extends Controller
             'serie_factura' => $serieFactura !== '' ? $serieFactura : null,
             'fecha_factura' => $fechaFactura !== '' ? $fechaFactura : null,
             'numero_liquidacion' => $numeroLiquidacion !== '' ? $numeroLiquidacion : null,
+            'id_forma_pago' => $idFormaPago > 0 ? $idFormaPago : null,
             'tiene_garantia' => $tieneGarantia,
             'tiempo_garantia' => $tieneGarantia === 1 && $tiempoGarantia !== '' ? $tiempoGarantia : null,
             'documento_respaldo' => null,
@@ -383,6 +390,11 @@ class BienesController extends Controller
                             $error = 'La fecha de factura no es válida.';
                         } elseif ($datos['costo'] === null) {
                             $error = 'El costo es obligatorio para compra.';
+                        } elseif ($idFormaPago <= 0) {
+                            $error = 'La forma de pago es obligatoria para la compra.';
+                        } elseif (!$this->formaPagoActivaValida($idFormaPago, $formasPago)) {
+                            // No se confía en el <select>: se revalida contra el catálogo activo.
+                            $error = 'La forma de pago seleccionada no es válida.';
                         } elseif ($tieneGarantia === 1 && $tiempoGarantia === '') {
                             $error = 'El tiempo de garantía es obligatorio cuando la compra tiene garantía.';
                         } elseif ($tieneGarantia === 1 && !in_array($tiempoGarantia, self::MESES_GARANTIA_VALIDOS, true)) {
@@ -436,6 +448,7 @@ class BienesController extends Controller
                     'serie_factura' => $serieFactura,
                     'fecha_factura' => $fechaFactura,
                     'numero_liquidacion' => $numeroLiquidacion,
+                    'id_forma_pago' => $idFormaPago,
                     'tiene_garantia' => $tieneGarantia,
                     'tiempo_garantia' => $tiempoGarantia,
                     'procedencia' => $procedencia,
@@ -453,6 +466,7 @@ class BienesController extends Controller
                 'formasIngreso' => $formasIngreso,
                 'categorias' => $categorias,
                 'estados' => $estados,
+                'formasPago' => $formasPago,
                 'bodegaConfigurada' => $bodegaAlmacen !== false,
                 'tituloPagina' => 'Registrar bien',
             ], 'main');
@@ -742,10 +756,13 @@ class BienesController extends Controller
         $formaIngresoModel = $this->model('FormaIngreso');
         $categoriaBienModel = $this->model('CategoriaBien');
         $estadoBienModel = $this->model('EstadoBien');
+        $formaPagoModel = $this->model('FormaPago');
 
         $formasIngreso = $formaIngresoModel->getActivas();
         $categorias = $categoriaBienModel->getActivas();
         $estados = $estadoBienModel->getActivos();
+        // Solo se usa en la sección "Datos de compra".
+        $formasPago = $formaPagoModel->getActivas();
 
         $idFormaIngresoOriginal = (int) ($bien['id_forma_ingreso'] ?? 0);
 
@@ -810,6 +827,7 @@ class BienesController extends Controller
                 'formasIngreso' => $formasIngreso,
                 'categorias' => $categorias,
                 'estados' => $estados,
+                'formasPago' => $formasPago,
                 'documentoActual' => $rutaDocumentoActual,
                 'error' => null,
                 'tituloPagina' => 'Modificar bien',
@@ -850,6 +868,10 @@ class BienesController extends Controller
         $serieFactura = trim($_POST['serie_factura'] ?? '');
         $fechaFactura = trim($_POST['fecha_factura'] ?? '');
         $numeroLiquidacion = trim($_POST['numero_liquidacion'] ?? '');
+        // Forma de pago (solo Compra). 0 = el <select> quedó en "Seleccione": para una compra
+        // histórica sin forma de pago eso significa "no completar todavía" (se conserva NULL); si el
+        // bien YA tiene una, un 0 se interpreta como "sin cambio" y se conserva la de BD.
+        $idFormaPago = (int) ($_POST['id_forma_pago'] ?? 0);
         $tieneGarantia = isset($_POST['tiene_garantia'])
             ? ((int) ($_POST['tiene_garantia'] === '1' || $_POST['tiene_garantia'] === 'on' ? 1 : 0))
             : 0;
@@ -891,12 +913,22 @@ class BienesController extends Controller
         $condicionAnterior = (string) ($bien['condicion_bien'] ?? '');
         $huboCambioCondicion = $condicionAnterior !== $condicionBien;
 
+        // Forma de pago que se guardará en ingreso_compra (solo relevante si el bien es Compra):
+        //  - si el usuario eligió una en el <select> (>0) se valida contra el catálogo activo y se usa;
+        //  - si dejó "Seleccione" (0) se conserva la de BD (NULL o valor): no se obliga a inventar el
+        //    dato en compras históricas ni se permite borrar una ya registrada desde el formulario.
+        $idFormaPagoBd = ($formaNombre === 'compra' && ($datosEspecificos['id_forma_pago'] ?? null) !== null)
+            ? (int) $datosEspecificos['id_forma_pago']
+            : null;
+        $idFormaPagoFinal = $idFormaPago > 0 ? $idFormaPago : $idFormaPagoBd;
+
         $datosIngresoCompra = [
             'proveedor' => $proveedor !== '' ? $proveedor : null,
             'numero_factura' => $numeroFactura !== '' ? $numeroFactura : null,
             'serie_factura' => $serieFactura !== '' ? $serieFactura : null,
             'fecha_factura' => $fechaFactura !== '' ? $fechaFactura : null,
             'numero_liquidacion' => $numeroLiquidacion !== '' ? $numeroLiquidacion : null,
+            'id_forma_pago' => $idFormaPagoFinal,
             'tiene_garantia' => $tieneGarantia,
             'tiempo_garantia' => $tieneGarantia === 1 && $tiempoGarantia !== '' ? $tiempoGarantia : null,
             'documento_respaldo' => null,
@@ -1001,6 +1033,11 @@ class BienesController extends Controller
                         $error = 'La fecha de factura no es válida.';
                     } elseif ($datos['costo'] === null) {
                         $error = 'El costo es obligatorio para compra.';
+                    } elseif ($idFormaPago > 0 && !$this->formaPagoActivaValida($idFormaPago, $formasPago)) {
+                        // En edición la forma de pago NO es obligatoria (una compra histórica puede
+                        // seguir sin ella si solo se edita otro dato); pero si el usuario eligió una,
+                        // se revalida contra el catálogo activo — nunca se confía en el <select>.
+                        $error = 'La forma de pago seleccionada no es válida.';
                     } elseif ($tieneGarantia === 1 && $tiempoGarantia === '') {
                         $error = 'El tiempo de garantía es obligatorio cuando la compra tiene garantía.';
                     } elseif ($tieneGarantia === 1 && !in_array($tiempoGarantia, self::MESES_GARANTIA_VALIDOS, true)) {
@@ -1057,6 +1094,7 @@ class BienesController extends Controller
                     'serie_factura' => $serieFactura,
                     'fecha_factura' => $fechaFactura,
                     'numero_liquidacion' => $numeroLiquidacion,
+                    'id_forma_pago' => $idFormaPagoFinal ?? 0,
                     'tiene_garantia' => $tieneGarantia,
                     'tiempo_garantia' => $tiempoGarantia,
                     'procedencia' => $procedencia,
@@ -1076,6 +1114,7 @@ class BienesController extends Controller
                 'formasIngreso' => $formasIngreso,
                 'categorias' => $categorias,
                 'estados' => $estados,
+                'formasPago' => $formasPago,
                 'documentoActual' => $rutaDocumentoActual,
                 'tituloPagina' => 'Modificar bien',
             ], 'main');
@@ -1183,6 +1222,7 @@ class BienesController extends Controller
                     'serie_factura' => $serieFactura,
                     'fecha_factura' => $fechaFactura,
                     'numero_liquidacion' => $numeroLiquidacion,
+                    'id_forma_pago' => $idFormaPagoFinal ?? 0,
                     'tiene_garantia' => $tieneGarantia,
                     'tiempo_garantia' => $tiempoGarantia,
                     'procedencia' => $procedencia,
@@ -1202,6 +1242,7 @@ class BienesController extends Controller
                 'formasIngreso' => $formasIngreso,
                 'categorias' => $categorias,
                 'estados' => $estados,
+                'formasPago' => $formasPago,
                 'documentoActual' => $rutaDocumentoActual,
                 'tituloPagina' => 'Modificar bien',
             ], 'main');
@@ -1538,6 +1579,24 @@ class BienesController extends Controller
         imagepng($lienzo, $rutaAbsoluta);
         imagedestroy($lienzo);
         imagedestroy($imagenQr);
+    }
+
+    // ¿El id enviado corresponde a una forma de pago del catálogo ACTIVO? $formasPago es la lista
+    // que ya devolvió FormaPago::getActivas() (solo activas). Mismo patrón que la validación de
+    // categoría / estado / forma de ingreso más arriba: nunca se confía solo en el <select>.
+    private function formaPagoActivaValida(int $idFormaPago, array $formasPago): bool
+    {
+        if ($idFormaPago <= 0) {
+            return false;
+        }
+
+        foreach ($formasPago as $formaPago) {
+            if ((int) $formaPago['id_forma_pago'] === $idFormaPago) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function mensajeErrorDuplicado(Throwable $e): ?string
