@@ -117,6 +117,8 @@ switch ($modulo) {
             $bienesController->crear();
         } elseif ($accion === 'ver') {
             $bienesController->ver();
+        } elseif ($accion === 'historial') {
+            $bienesController->historial();
         } elseif ($accion === 'ver_documento') {
             $bienesController->verDocumento();
         } elseif ($accion === 'editar') {

@@ -505,6 +505,20 @@ class ReportesService extends Model
         }
         unset($filaBien);
 
+        // Filtro "Código interno / SICOIN": coincidencia PARCIAL e insensible a mayúsculas sobre
+        // codigo_interno O codigo_sicoin (mismo criterio LIKE '%...%' que los demás filtros de texto
+        // de Reportes — nombre_bien, procedencia). No mezcla con descripción. Se aplica aquí para que
+        // web, Excel y PDF (todos parten de estas filas) queden igual de filtrados.
+        $codigo = trim((string) ($filtros['codigo'] ?? ''));
+        if ($codigo !== '') {
+            $codigoLower = mb_strtolower($codigo, 'UTF-8');
+            $filas = array_values(array_filter($filas, static function (array $fila) use ($codigoLower): bool {
+                $interno = mb_strtolower((string) ($fila['codigo_interno'] ?? ''), 'UTF-8');
+                $sicoin = mb_strtolower((string) ($fila['codigo_sicoin'] ?? ''), 'UTF-8');
+                return str_contains($interno, $codigoLower) || ($sicoin !== '' && str_contains($sicoin, $codigoLower));
+            }));
+        }
+
         usort($filas, static fn(array $a, array $b): int => $b['ultimo_evento'] <=> $a['ultimo_evento']);
 
         return $filas;

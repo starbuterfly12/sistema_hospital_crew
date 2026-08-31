@@ -670,6 +670,56 @@ class BienesController extends Controller
         ], 'main');
     }
 
+    // Historial integral (trazabilidad funcional) de un bien: qué le ha pasado a lo largo del
+    // tiempo — Ingreso, Requisiciones, Traslados, Préstamos, Devoluciones, Verificaciones, cambios
+    // de SICOIN y Bajas — reconstruido de tablas existentes por HistorialBien. Solo lectura: sesión
+    // obligatoria (igual que ver()), los tres roles pueden consultar, sin POST, sin cambios en BD.
+    public function historial(): void
+    {
+        if (!isset($_SESSION['id_usuario'])) {
+            header('Location: index.php');
+            exit;
+        }
+
+        $idBien = (int) ($_GET['id'] ?? 0);
+
+        if ($idBien <= 0) {
+            echo 'Bien no válido.';
+            return;
+        }
+
+        $bienModel = $this->model('Bien');
+        $bien = $bienModel->findById($idBien);
+
+        if ($bien === false) {
+            echo 'Bien no encontrado.';
+            return;
+        }
+
+        $historialModel = $this->model('HistorialBien');
+        $eventos = $historialModel->getEventos($idBien);
+
+        // Filtro opcional por tipo (solo si el valor es uno de los tipos realmente presentes).
+        $tiposPresentes = $historialModel->getTiposPresentes($eventos);
+        $tipoFiltro = (string) ($_GET['tipo'] ?? '');
+        if ($tipoFiltro !== '' && in_array($tipoFiltro, $tiposPresentes, true)) {
+            $eventos = array_values(array_filter(
+                $eventos,
+                static fn (array $evento): bool => $evento['tipo'] === $tipoFiltro
+            ));
+        } else {
+            $tipoFiltro = '';
+        }
+
+        $this->view('bienes/historial', [
+            'bien' => $bien,
+            'eventos' => $eventos,
+            'tiposPresentes' => $tiposPresentes,
+            'tipoFiltro' => $tipoFiltro,
+            'tituloPagina' => 'Historial del bien',
+        ], 'main');
+    }
+
     // Sirve el DOCUMENTO DE RESPALDO del ingreso (Compra/Donación/Traslado) de un bien — antes
     // accesible por URL directa a storage/documentos/, ahora bloqueada por storage/.htaccess. Mismos
     // permisos que ver(): solo sesión activa (el router ya redirige a login sin sesión). GET puro,

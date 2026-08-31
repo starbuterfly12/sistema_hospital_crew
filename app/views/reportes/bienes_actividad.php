@@ -73,6 +73,11 @@ $svgDescarga = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stro
         </select>
     </div>
 
+    <div class="form-group">
+        <label class="form-label" for="codigo">Código interno / SICOIN</label>
+        <input type="text" id="codigo" name="codigo" class="form-control" value="<?= $valorInput($filtros['codigo'] ?? '') ?>" placeholder="Ej. HC-131313 o 131313" autocomplete="off">
+    </div>
+
     <div class="form-actions-inline">
         <button type="submit" class="btn btn-primary">Filtrar</button>
         <a href="index.php?modulo=reportes&accion=bienesActividad" class="btn btn-secondary">Limpiar filtros</a>
@@ -94,6 +99,7 @@ $svgDescarga = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stro
                         <th>Primer evento</th>
                         <th>Último evento</th>
                         <th>Tipos de actividad</th>
+                        <th>Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -106,6 +112,14 @@ $svgDescarga = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stro
                             <td><?= $mostrar(formatFechaSegunTipo($fila['primer_evento'], $fila['primer_evento_es_datetime'])) ?></td>
                             <td><?= $mostrar(formatFechaSegunTipo($fila['ultimo_evento'], $fila['ultimo_evento_es_datetime'])) ?></td>
                             <td><?= $mostrar($fila['tipos']) ?></td>
+                            <td>
+                                <div class="table-actions">
+                                    <a class="table-action-btn table-action-ver" href="index.php?modulo=bienes&accion=historial&id=<?= (int) $fila['id_bien'] ?>">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 8v4l3 2"/><path d="M3.05 11a9 9 0 1 1 .5 4"/><path d="M3 4v5h5"/></svg>
+                                        Historial
+                                    </a>
+                                </div>
+                            </td>
                         </tr>
                     <?php endforeach; ?>
                 </tbody>

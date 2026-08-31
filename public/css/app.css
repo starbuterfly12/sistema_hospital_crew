@@ -1986,6 +1986,68 @@ textarea.form-control {
     text-align: center;
 }
 
+/* Línea de tiempo vertical del "Historial del bien" (bienes/historial.php). Lista simple con un
+   punto y una línea guía a la izquierda; sin colores fuertes, el tipo de evento va en un badge. */
+.historial-timeline {
+    list-style: none;
+    margin: 0;
+    padding: 4px 0 4px 6px;
+}
+.historial-evento {
+    position: relative;
+    padding: 0 0 20px 22px;
+    border-left: 2px solid var(--sgb-borde);
+}
+.historial-evento:last-child {
+    padding-bottom: 2px;
+    border-left-color: transparent;
+}
+.historial-evento-punto {
+    position: absolute;
+    left: -7px;
+    top: 3px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--sgb-superficie);
+    border: 2px solid var(--sgb-azul);
+}
+.historial-evento-cabecera {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 10px;
+    margin-bottom: 4px;
+}
+.historial-evento-fecha {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--sgb-azul-oscuro);
+}
+.historial-evento-ref {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--sgb-texto-secundario);
+}
+.historial-evento-titulo {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--sgb-texto);
+}
+.historial-evento-desc {
+    margin: 2px 0 0;
+    font-size: 13px;
+    color: var(--sgb-texto-secundario);
+    line-height: 1.5;
+}
+.historial-evento-link {
+    display: inline-block;
+    margin-top: 6px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
 /* --------------------------------------------------------------------------
    12. Badges / estados
    -------------------------------------------------------------------------- */

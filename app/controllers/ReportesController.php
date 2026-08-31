@@ -157,6 +157,8 @@ class ReportesController extends Controller
             'fecha_desde' => $fechaDesde,
             'fecha_hasta' => $fechaHasta,
             'tipo' => in_array($_GET['tipo'] ?? '', ReportesService::TIPOS_EVENTO, true) ? $_GET['tipo'] : '',
+            // "Código interno / SICOIN": búsqueda parcial (LIKE) resuelta en el servicio.
+            'codigo' => trim((string) ($_GET['codigo'] ?? '')),
         ];
 
         $service = $this->model('ReportesService');
@@ -204,6 +206,9 @@ class ReportesController extends Controller
         if ($filtros['tipo'] !== '') {
             $meta[] = 'Tipo de actividad: ' . $filtros['tipo'];
         }
+        if (($filtros['codigo'] ?? '') !== '') {
+            $meta[] = 'Código interno / SICOIN: ' . $filtros['codigo'];
+        }
 
         $spreadsheet = construirReporteExcel(
             'Bienes con actividad en el período',
@@ -237,6 +242,9 @@ class ReportesController extends Controller
         $meta = [$this->lineaPeriodo($filtros)];
         if ($filtros['tipo'] !== '') {
             $meta[] = 'Tipo de actividad: ' . $filtros['tipo'];
+        }
+        if (($filtros['codigo'] ?? '') !== '') {
+            $meta[] = 'Código interno / SICOIN: ' . $filtros['codigo'];
         }
 
         $dompdf = construirPdfReporte('Bienes con actividad en el período', $columnas, $filas, $meta, $this->nombreUsuarioActual());

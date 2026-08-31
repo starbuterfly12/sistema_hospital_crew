@@ -371,6 +371,13 @@ $documentoIngreso = $datosIngreso['documento_respaldo'] ?? null;
                 </span>
                 Ver historial de verificaciones
             </a>
+
+            <a href="index.php?modulo=bienes&accion=historial&id=<?= (int) $bien['id_bien'] ?>" class="action-tile action-tile-celeste">
+                <span class="action-tile-icono" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8v4l3 2"/><path d="M3.05 11a9 9 0 1 1 .5 4"/><path d="M3 4v5h5"/></svg>
+                </span>
+                Ver historial del bien
+            </a>
         </div>
     </div>
 </aside>
