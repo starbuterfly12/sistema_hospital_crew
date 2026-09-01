@@ -38,11 +38,11 @@ if (!function_exists('sanitizarTextoExcel')) {
 }
 
 if (!function_exists('nombreArchivoReporte')) {
-    // Con rango de fechas: Reporte_Movimientos_01-08-2026_al_31-08-2026.xlsx
-    // Sin rango (reportes de estado actual, ej. Préstamos sin filtro de fecha): Reporte_PrestamosPendientes_Generado_20-08-2026.xlsx
+    // Con rango de fechas: Informe_Movimientos_01-08-2026_al_31-08-2026.xlsx
+    // Sin rango (reportes de estado actual, ej. Préstamos sin filtro de fecha): Informe_PrestamosPendientes_Generado_20-08-2026.xlsx
     function nombreArchivoReporte(string $base, ?string $fechaDesde = null, ?string $fechaHasta = null): string
     {
-        $nombreBase = 'Reporte_' . preg_replace('/[^A-Za-z0-9]/', '', $base);
+        $nombreBase = 'Informe_' . preg_replace('/[^A-Za-z0-9]/', '', $base);
 
         if ($fechaDesde !== null && $fechaHasta !== null && isValidIsoDate($fechaDesde) && isValidIsoDate($fechaHasta)) {
             $desde = DateTime::createFromFormat('!Y-m-d', $fechaDesde)->format('d-m-Y');
@@ -119,7 +119,7 @@ if (!function_exists('construirReporteExcel')) {
 
         $spreadsheet = new Spreadsheet();
         $hoja = $spreadsheet->getActiveSheet();
-        $hoja->setTitle('Reporte');
+        $hoja->setTitle('Informe');
 
         // Fuente base de toda la hoja: Arial, para no tener que fijar la familia celda por celda.
         $spreadsheet->getDefaultStyle()->getFont()->setName(REPORTES_FUENTE)->setSize(REPORTES_TAM_DATOS);

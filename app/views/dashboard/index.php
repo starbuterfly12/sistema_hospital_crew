@@ -30,7 +30,7 @@ $accesosRapidos = [
     ['etiqueta' => 'Registrar traslado', 'href' => 'index.php?modulo=traslados&accion=crear', 'permitido' => $puedeRegistrar, 'icono' => 'traslado', 'acento' => 'lila'],
     ['etiqueta' => 'Registrar préstamo', 'href' => 'index.php?modulo=prestamos&accion=crear', 'permitido' => $puedeRegistrar, 'icono' => 'prestamo', 'acento' => 'celeste'],
     ['etiqueta' => 'Verificación física', 'href' => 'index.php?modulo=verificaciones&accion=crear', 'permitido' => $puedeRegistrar, 'icono' => 'verificacion', 'acento' => 'turquesa'],
-    ['etiqueta' => 'Generar reporte', 'href' => 'index.php?modulo=reportes', 'permitido' => true, 'icono' => 'reporte', 'acento' => 'institucional'],
+    ['etiqueta' => 'Generar informe', 'href' => 'index.php?modulo=reportes', 'permitido' => true, 'icono' => 'reporte', 'acento' => 'institucional'],
 ];
 
 $indicadores = $indicadores ?? [];

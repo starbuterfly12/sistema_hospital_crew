@@ -57,8 +57,8 @@ $reportes = [
 <div class="page-header">
     <div class="page-header-fila">
         <div>
-            <h1 class="page-title">Reportes</h1>
-            <p class="page-subtitle">Consulta y generación de reportes del sistema.</p>
+            <h1 class="page-title">Informes</h1>
+            <p class="page-subtitle">Consulta y generación de informes del sistema.</p>
         </div>
     </div>
 </div>

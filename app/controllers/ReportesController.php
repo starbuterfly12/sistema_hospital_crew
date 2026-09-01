@@ -18,7 +18,7 @@ class ReportesController extends Controller
         }
 
         $this->view('reportes/index', [
-            'tituloPagina' => 'Reportes',
+            'tituloPagina' => 'Informes',
         ], 'main');
     }
 
@@ -65,7 +65,7 @@ class ReportesController extends Controller
             'filtros' => $filtros,
             'error' => $error,
             'responsables' => $this->model('Responsable')->getActivos(),
-            'tituloPagina' => 'Reporte: Movimientos por período',
+            'tituloPagina' => 'Informe: Movimientos por período',
         ], 'main');
     }
 
@@ -180,7 +180,7 @@ class ReportesController extends Controller
             'filas' => $filas,
             'filtros' => $filtros,
             'error' => $error,
-            'tituloPagina' => 'Reporte: Bienes con actividad',
+            'tituloPagina' => 'Informe: Bienes con actividad',
         ], 'main');
     }
 
@@ -294,7 +294,7 @@ class ReportesController extends Controller
             'filtros' => $filtros,
             'error' => $error,
             'responsables' => $this->model('Responsable')->getActivos(),
-            'tituloPagina' => 'Reporte: Préstamos pendientes o vencidos',
+            'tituloPagina' => 'Informe: Préstamos pendientes o vencidos',
         ], 'main');
     }
 
@@ -426,7 +426,7 @@ class ReportesController extends Controller
             'error' => $error,
             'ubicaciones' => $this->model('Ubicacion')->getActivas(),
             'tiposBaja' => $this->model('TipoBaja')->getActivos(),
-            'tituloPagina' => 'Reporte: Bajas por período',
+            'tituloPagina' => 'Informe: Bajas por período',
         ], 'main');
     }
 
@@ -581,7 +581,7 @@ class ReportesController extends Controller
             'filtros' => $filtros,
             'error' => $error,
             'ubicaciones' => $this->model('Ubicacion')->getActivas(),
-            'tituloPagina' => 'Reporte: Verificaciones con diferencias',
+            'tituloPagina' => 'Informe: Verificaciones con diferencias',
         ], 'main');
     }
 
@@ -719,7 +719,7 @@ class ReportesController extends Controller
             'error' => $error,
             'formasIngreso' => $this->model('FormaIngreso')->getActivas(),
             'categorias' => $this->model('CategoriaBien')->getActivas(),
-            'tituloPagina' => 'Reporte: Ingresos de bienes',
+            'tituloPagina' => 'Informe: Ingresos de bienes',
         ], 'main');
     }
 
@@ -840,7 +840,7 @@ class ReportesController extends Controller
             'resultado' => $resultado,
             'filtros' => $filtros,
             'error' => $error,
-            'tituloPagina' => 'Reporte: Resumen de movimientos',
+            'tituloPagina' => 'Informe: Resumen de movimientos',
         ], 'main');
     }
 

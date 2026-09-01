@@ -51,7 +51,7 @@ if (!function_exists('nombreArchivoReportePdf')) {
     // aquí en vez de tocar exportacion.php — helper Excel aprobado, no se modifica.
     function nombreArchivoReportePdf(string $base, ?string $fechaDesde = null, ?string $fechaHasta = null): string
     {
-        $nombreBase = 'Reporte_' . preg_replace('/[^A-Za-z0-9]/', '', $base);
+        $nombreBase = 'Informe_' . preg_replace('/[^A-Za-z0-9]/', '', $base);
 
         if ($fechaDesde !== null && $fechaHasta !== null && isValidIsoDate($fechaDesde) && isValidIsoDate($fechaHasta)) {
             $desde = DateTime::createFromFormat('!Y-m-d', $fechaDesde)->format('d-m-Y');

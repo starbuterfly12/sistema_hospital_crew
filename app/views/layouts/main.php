@@ -76,7 +76,7 @@ $itemsSidebar = [
     ['id' => 'asignaciones', 'etiqueta' => 'Asignaciones', 'href' => 'index.php?modulo=asignaciones', 'icono' => 'asignaciones', 'roles' => null],
     ['id' => 'movimientos', 'etiqueta' => 'Movimientos', 'href' => 'index.php?modulo=movimientos', 'icono' => 'movimientos', 'roles' => null],
     ['id' => 'tarjetas', 'etiqueta' => 'Tarjeta de responsabilidad', 'href' => 'index.php?modulo=tarjetas', 'icono' => 'tarjetas', 'roles' => null],
-    ['id' => 'reportes', 'etiqueta' => 'Reportes', 'href' => 'index.php?modulo=reportes', 'icono' => 'reportes', 'roles' => null],
+    ['id' => 'reportes', 'etiqueta' => 'Informes', 'href' => 'index.php?modulo=reportes', 'icono' => 'reportes', 'roles' => null],
     ['id' => 'usuarios', 'etiqueta' => 'Usuarios', 'href' => 'index.php?modulo=usuarios', 'icono' => 'usuarios', 'roles' => ['Administrador']],
     ['id' => 'bitacora', 'etiqueta' => 'Bitácora', 'href' => 'index.php?modulo=bitacora', 'icono' => 'bitacora', 'roles' => ['Administrador']],
     ['id' => 'respaldos', 'etiqueta' => 'Respaldos', 'href' => 'index.php?modulo=respaldos', 'icono' => 'respaldos', 'roles' => ['Administrador']],
