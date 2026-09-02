@@ -5,6 +5,7 @@
 $bien = $bien ?? [];
 $formaNombre = $formaNombre ?? '';
 $datosIngreso = $datosIngreso ?? [];
+$documentosBien = $documentosBien ?? [];
 
 $valor = static function ($value): string {
     if ($value === null || $value === '') {
@@ -35,8 +36,6 @@ $puedeEditar = tieneRol(['Administrador', 'Operativo']);
 
 // El resultado de "Registrar bien" / "Modificar" / "Regenerar QR" se muestra ahora con el modal de
 // feedback global (flash de sesión consumido en layouts/main.php), no como .alert en esta vista.
-
-$documentoIngreso = $datosIngreso['documento_respaldo'] ?? null;
 ?>
 <div class="page-header">
     <div class="page-header-fila">
@@ -275,21 +274,32 @@ $documentoIngreso = $datosIngreso['documento_respaldo'] ?? null;
                     <span class="detail-value"><?= $valor(formatDate($datosIngreso['fecha_acta'] ?? null)) ?></span>
                 </div>
             <?php endif; ?>
-
-            <?php if (in_array($formaNombre, ['compra', 'donacion', 'traslado'], true)): ?>
-                <div class="detail-item detail-full">
-                    <span class="detail-label">Documento de respaldo</span>
-                    <?php if (!empty($documentoIngreso)): ?>
-                        <a href="<?= htmlspecialchars(url('index.php?modulo=bienes&accion=ver_documento&id=' . (int) $bien['id_bien']), ENT_QUOTES, 'UTF-8') ?>" target="_blank" rel="noopener noreferrer" class="btn btn-secondary">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/></svg>
-                            Ver documento de respaldo
-                        </a>
-                    <?php else: ?>
-                        <span class="detail-value">Sin documento de respaldo</span>
-                    <?php endif; ?>
-                </div>
-            <?php endif; ?>
         </div>
+    </div>
+
+    <div class="detail-section">
+        <h2 class="form-section-title">Documentos de respaldo</h2>
+        <?php if (empty($documentosBien)): ?>
+            <p class="detail-value detail-value-discreto">Sin documentos registrados</p>
+        <?php else: ?>
+            <ul class="lista-documentos">
+                <?php foreach ($documentosBien as $documento): ?>
+                    <li class="lista-documentos-item">
+                        <span class="lista-documentos-info">
+                            <span class="lista-documentos-nombre"><?= $valor(($documento['nombre_original'] ?? null) ?: 'Documento de respaldo') ?></span>
+                            <?php $fechaDoc = !empty($documento['fecha_registro']) ? formatDate($documento['fecha_registro']) : null; ?>
+                            <?php if (!empty($fechaDoc)): ?>
+                                <span class="lista-documentos-fecha">Registrado el <?= $valor($fechaDoc) ?></span>
+                            <?php endif; ?>
+                        </span>
+                        <a href="<?= htmlspecialchars(url('index.php?modulo=bienes&accion=ver_documento&id=' . (int) $documento['id_documento_bien']), ENT_QUOTES, 'UTF-8') ?>" target="_blank" rel="noopener noreferrer" class="btn btn-secondary">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/></svg>
+                            Ver
+                        </a>
+                    </li>
+                <?php endforeach; ?>
+            </ul>
+        <?php endif; ?>
     </div>
 </div>
 
@@ -320,6 +330,26 @@ $documentoIngreso = $datosIngreso['documento_respaldo'] ?? null;
                 </svg>
             </div>
             <p class="qr-estado-texto">QR no disponible</p>
+        <?php endif; ?>
+    </div>
+
+    <div class="card card-detalle">
+        <h2 class="card-titulo">Fotografía del bien</h2>
+        <?php if (!empty($bien['imagen_bien'])): ?>
+            <?php
+                $versionFoto = !empty($bien['updated_at']) ? strtotime((string) $bien['updated_at']) : time();
+                $urlFotoBien = url('index.php?modulo=bienes&accion=imagen&id=' . (int) $bien['id_bien']) . '&v=' . $versionFoto;
+            ?>
+            <button type="button" class="foto-bien-miniatura" data-foto-bien
+                data-imagen="<?= htmlspecialchars($urlFotoBien, ENT_QUOTES, 'UTF-8') ?>"
+                data-codigo="<?= htmlspecialchars((string) ($bien['codigo_interno'] ?? ''), ENT_QUOTES, 'UTF-8') ?>"
+                data-descripcion="<?= htmlspecialchars((string) ($bien['descripcion'] ?? ''), ENT_QUOTES, 'UTF-8') ?>"
+                aria-label="Ampliar la fotografía del bien">
+                <img src="<?= htmlspecialchars($urlFotoBien, ENT_QUOTES, 'UTF-8') ?>" alt="Fotografía del bien">
+            </button>
+            <p class="form-hint form-hint-centrado">Clic en la imagen para ampliarla.</p>
+        <?php else: ?>
+            <p class="detail-value detail-value-discreto">Sin fotografía registrada</p>
         <?php endif; ?>
     </div>
 
@@ -449,6 +479,78 @@ $documentoIngreso = $datosIngreso['documento_respaldo'] ?? null;
 
             btnImprimirQr.addEventListener('click', function () {
                 window.print();
+            });
+        })();
+    </script>
+<?php endif; ?>
+
+<?php if (!empty($bien['imagen_bien'])): ?>
+    <div id="modal-foto-bien" class="modal-overlay">
+        <div class="modal-caja modal-caja-qr" role="dialog" aria-modal="true" aria-labelledby="modal-foto-bien-titulo">
+            <h2 id="modal-foto-bien-titulo" class="modal-qr-titulo">Fotografía del bien</h2>
+
+            <div class="modal-qr-contenido">
+                <img id="modal-foto-bien-img" src="" alt="Fotografía del bien" class="modal-foto-imagen">
+                <p class="modal-qr-dato">Código interno: <strong id="modal-foto-bien-codigo">—</strong></p>
+                <p class="modal-qr-dato" id="modal-foto-bien-desc-wrap" hidden><span id="modal-foto-bien-desc"></span></p>
+            </div>
+
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary" data-cerrar-modal-foto>Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Modal de "Fotografía del bien" — mismo patrón que el modal "Ver foto" de Bajas. Solo
+        // presentación: nunca toca la imagen guardada.
+        (function () {
+            var modal = document.getElementById('modal-foto-bien');
+            if (!modal) { return; }
+
+            var img = document.getElementById('modal-foto-bien-img');
+            var codigo = document.getElementById('modal-foto-bien-codigo');
+            var descWrap = document.getElementById('modal-foto-bien-desc-wrap');
+            var desc = document.getElementById('modal-foto-bien-desc');
+
+            function abrir(src, cod, dsc) {
+                img.setAttribute('src', src || '');
+                codigo.textContent = cod && cod !== '—' ? cod : '—';
+                if (dsc && dsc !== '—') {
+                    desc.textContent = dsc;
+                    descWrap.hidden = false;
+                } else {
+                    desc.textContent = '';
+                    descWrap.hidden = true;
+                }
+                modal.classList.add('modal-abierto');
+            }
+
+            function cerrar() {
+                modal.classList.remove('modal-abierto');
+                img.setAttribute('src', '');
+            }
+
+            document.addEventListener('click', function (evento) {
+                var disparador = evento.target.closest('[data-foto-bien]');
+                if (disparador) {
+                    abrir(
+                        disparador.getAttribute('data-imagen'),
+                        disparador.getAttribute('data-codigo'),
+                        disparador.getAttribute('data-descripcion')
+                    );
+                    return;
+                }
+
+                if (evento.target === modal || evento.target.closest('[data-cerrar-modal-foto]')) {
+                    cerrar();
+                }
+            });
+
+            document.addEventListener('keydown', function (evento) {
+                if (evento.key === 'Escape' && modal.classList.contains('modal-abierto')) {
+                    cerrar();
+                }
             });
         })();
     </script>

@@ -147,6 +147,23 @@ $bodegaConfigurada = (bool) ($bodegaConfigurada ?? true);
                 <label class="form-label" for="observaciones">Observaciones</label>
                 <textarea id="observaciones" name="observaciones" class="form-control"><?= htmlspecialchars($datos['observaciones'] ?? '', ENT_QUOTES, 'UTF-8') ?></textarea>
             </div>
+
+            <div class="form-group form-grid-full">
+                <label class="form-label" for="fotografia_bien">Fotografía del bien</label>
+                <div class="file-picker">
+                    <input type="file" id="fotografia_bien" name="fotografia_bien" class="file-input visually-hidden" accept=".jpg,.jpeg,.png,.webp">
+                    <label for="fotografia_bien" class="file-picker-button">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+                        Seleccionar imagen
+                    </label>
+                    <span class="file-picker-name">Ningún archivo seleccionado</span>
+                </div>
+                <div id="fotografia-bien-preview" class="foto-bien-preview" hidden>
+                    <img id="fotografia-bien-preview-img" alt="Vista previa de la fotografía seleccionada">
+                    <button type="button" id="fotografia-bien-quitar" class="btn btn-secondary">Quitar imagen</button>
+                </div>
+                <p class="form-hint">Opcional. JPG, PNG o WEBP, hasta 5 MB.</p>
+            </div>
         </div>
     </div>
 
@@ -688,6 +705,41 @@ $bodegaConfigurada = (bool) ($bodegaConfigurada ?? true);
                     nombre.classList.remove('file-picker-name-activo');
                 }
             });
+        });
+    })();
+</script>
+
+<script>
+    // Previsualización local de la fotografía del bien (sin AJAX): al elegir un archivo se muestra
+    // una miniatura con object-fit contain; "Quitar imagen" solo limpia la selección del formulario.
+    (function () {
+        var input = document.getElementById('fotografia_bien');
+        var caja = document.getElementById('fotografia-bien-preview');
+        var img = document.getElementById('fotografia-bien-preview-img');
+        var quitar = document.getElementById('fotografia-bien-quitar');
+        if (!input || !caja || !img || !quitar) { return; }
+
+        var urlActual = null;
+
+        function limpiarUrl() {
+            if (urlActual) { URL.revokeObjectURL(urlActual); urlActual = null; }
+        }
+
+        input.addEventListener('change', function () {
+            limpiarUrl();
+            if (input.files && input.files[0]) {
+                urlActual = URL.createObjectURL(input.files[0]);
+                img.src = urlActual;
+                caja.hidden = false;
+            } else {
+                img.removeAttribute('src');
+                caja.hidden = true;
+            }
+        });
+
+        quitar.addEventListener('click', function () {
+            input.value = '';
+            input.dispatchEvent(new Event('change'));
         });
     })();
 </script>

@@ -75,6 +75,7 @@ class DetalleMovimiento extends Model
                 b.marca,
                 b.modelo,
                 b.serie,
+                b.imagen_bien,
                 dm.id_detalle_asignacion_origen,
                 ao.numero_asignacion AS numero_asignacion_origen,
                 dm.id_detalle_asignacion_destino,

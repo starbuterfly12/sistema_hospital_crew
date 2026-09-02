@@ -168,7 +168,12 @@ $estadoDevolucion = $devolucion['estado_devolucion'] ?? '';
                             <tr>
                                 <td><?= $mostrar($detalle['codigo_interno_mostrado'] ?? null) ?></td>
                                 <td><?= $mostrar($detalle['codigo_sicoin_mostrado'] ?? null) ?></td>
-                                <td><?= $mostrar($detalle['descripcion_mostrada'] ?? null) ?></td>
+                                <td>
+                                    <div class="celda-bien-foto">
+                                        <?= fotoBienThumb((int) ($detalle['id_bien'] ?? 0), $detalle['imagen_bien'] ?? null, $detalle['codigo_interno_mostrado'] ?? null, $detalle['descripcion_mostrada'] ?? null, 'sm', 'raya') ?>
+                                        <span><?= $mostrar($detalle['descripcion_mostrada'] ?? null) ?></span>
+                                    </div>
+                                </td>
                                 <td><?= $mostrar($detalle['serie_mostrada'] ?? null) ?></td>
                                 <td><?= formatearQuetzales($detalle['valor_prestamo'] ?? null) ?></td>
                                 <td><?= $mostrar($detalle['condicion_entrega'] ?? null) ?></td>
@@ -182,3 +187,5 @@ $estadoDevolucion = $devolucion['estado_devolucion'] ?? '';
         <?php endif; ?>
     </div>
 </div>
+
+<?php require __DIR__ . '/../partials/modal_foto_bien.php'; ?>

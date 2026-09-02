@@ -9,7 +9,7 @@ $error = $error ?? null;
 $formaNombre = $formaNombre ?? '';
 $categorias = $categorias ?? [];
 $estados = $estados ?? [];
-$documentoActual = $documentoActual ?? null;
+$documentosBien = $documentosBien ?? [];
 
 $claseBadgeEstado = static function (?string $nombreEstado): string {
     return match ($nombreEstado) {
@@ -17,6 +17,55 @@ $claseBadgeEstado = static function (?string $nombreEstado): string {
         'Baja' => 'badge badge-error',
         default => 'badge',
     };
+};
+
+// Bloque "Documentos de respaldo" — idéntico para Compra / Donación / Traslado (solo se muestra el
+// de la forma real del bien). Lista los documentos ya registrados (acumulativos, solo consulta) y el
+// campo para AGREGAR uno o varios más: nunca reemplaza a los anteriores.
+$bloqueDocumentos = static function () use ($documentosBien): string {
+    ob_start();
+    ?>
+    <div class="form-grid-documento">
+        <div class="form-group form-grid-full">
+            <label class="form-label">Documentos registrados</label>
+            <?php if (empty($documentosBien)): ?>
+                <p class="form-hint">Sin documentos de respaldo registrados.</p>
+            <?php else: ?>
+                <ul class="lista-documentos">
+                    <?php foreach ($documentosBien as $documento): ?>
+                        <li class="lista-documentos-item">
+                            <span class="lista-documentos-info">
+                                <span class="lista-documentos-nombre"><?= htmlspecialchars(($documento['nombre_original'] ?? null) ?: 'Documento de respaldo', ENT_QUOTES, 'UTF-8') ?></span>
+                                <?php $fechaDoc = !empty($documento['fecha_registro']) ? formatDate($documento['fecha_registro']) : null; ?>
+                                <?php if (!empty($fechaDoc)): ?>
+                                    <span class="lista-documentos-fecha">Registrado el <?= htmlspecialchars($fechaDoc, ENT_QUOTES, 'UTF-8') ?></span>
+                                <?php endif; ?>
+                            </span>
+                            <a href="<?= htmlspecialchars(url('index.php?modulo=bienes&accion=ver_documento&id=' . (int) $documento['id_documento_bien']), ENT_QUOTES, 'UTF-8') ?>" target="_blank" rel="noopener noreferrer" class="btn btn-secondary">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/></svg>
+                                Ver
+                            </a>
+                        </li>
+                    <?php endforeach; ?>
+                </ul>
+            <?php endif; ?>
+        </div>
+
+        <div class="form-group form-grid-full">
+            <label class="form-label" for="documento_respaldo">Agregar documento de respaldo</label>
+            <div class="file-picker">
+                <input type="file" id="documento_respaldo" name="documento_respaldo[]" class="file-input visually-hidden" accept=".pdf,.jpg,.jpeg,.png" multiple>
+                <label for="documento_respaldo" class="file-picker-button">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.44 11.05l-9.19 9.19a5 5 0 0 1-7.07-7.07l9.19-9.19a3.5 3.5 0 0 1 4.95 4.95l-9.2 9.19a1.5 1.5 0 0 1-2.12-2.12l8.49-8.48"/></svg>
+                    Seleccionar archivo(s)
+                </label>
+                <span class="file-picker-name">Ningún archivo seleccionado</span>
+            </div>
+            <p class="form-hint">Los documentos se agregan y se conservan: no reemplazan a los anteriores. PDF, JPG o PNG, hasta 5 MB cada uno. Puede seleccionar varios.</p>
+        </div>
+    </div>
+    <?php
+    return (string) ob_get_clean();
 };
 ?>
 <div class="page-header">
@@ -107,13 +156,22 @@ $claseBadgeEstado = static function (?string $nombreEstado): string {
             </div>
 
             <div class="form-group">
-                <label class="form-label" for="id_estado_bien">Estado <span class="required-mark">*</span></label>
-                <select id="id_estado_bien" name="id_estado_bien" class="form-control" required>
-                    <option value="">Seleccione</option>
-                    <?php foreach ($estados as $estado): ?>
-                        <option value="<?= (int) $estado['id_estado_bien'] ?>"<?= ((int) ($datos['id_estado_bien'] ?? 0) === (int) $estado['id_estado_bien']) ? ' selected' : '' ?>><?= htmlspecialchars($estado['nombre_estado'], ENT_QUOTES, 'UTF-8') ?></option>
-                    <?php endforeach; ?>
-                </select>
+                <label class="form-label" for="estado_bien_display">Estado del bien</label>
+                <?php
+                // El estado NO es editable desde aquí: se muestra solo para contexto. Cambia
+                // únicamente por sus flujos formales (Activo -> Baja vía el flujo de Baja). Sin
+                // name= y con readonly+disabled no se envía nada en el POST; el backend además
+                // fuerza el estado actual e ignora cualquier id_estado_bien manipulado.
+                ?>
+                <input
+                    type="text"
+                    id="estado_bien_display"
+                    class="form-control form-control-bloqueado"
+                    value="<?= htmlspecialchars($bien['nombre_estado'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
+                    readonly
+                    disabled
+                    title="El estado del bien solo cambia por sus flujos formales (por ejemplo, Baja).">
+                <p class="form-hint">El estado se actualiza desde el proceso correspondiente.</p>
             </div>
 
             <div class="form-group">
@@ -190,6 +248,29 @@ $claseBadgeEstado = static function (?string $nombreEstado): string {
                     readonly
                     disabled
                 >
+            </div>
+
+            <div class="form-group form-grid-full">
+                <label class="form-label" for="fotografia_bien">Fotografía del bien</label>
+                <?php if (!empty($bien['imagen_bien'])): ?>
+                    <div class="foto-bien-preview">
+                        <img src="<?= htmlspecialchars(url('index.php?modulo=bienes&accion=imagen&id=' . (int) $bien['id_bien']) . '&v=' . (!empty($bien['updated_at']) ? strtotime((string) $bien['updated_at']) : time()), ENT_QUOTES, 'UTF-8') ?>" alt="Fotografía actual del bien">
+                        <span class="form-hint">Fotografía actual. Selecciona una imagen para sustituirla.</span>
+                    </div>
+                <?php endif; ?>
+                <div class="file-picker">
+                    <input type="file" id="fotografia_bien" name="fotografia_bien" class="file-input visually-hidden" accept=".jpg,.jpeg,.png,.webp">
+                    <label for="fotografia_bien" class="file-picker-button">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+                        <?= !empty($bien['imagen_bien']) ? 'Seleccionar nueva imagen' : 'Seleccionar imagen' ?>
+                    </label>
+                    <span class="file-picker-name">Ningún archivo seleccionado</span>
+                </div>
+                <div id="fotografia-bien-preview" class="foto-bien-preview" hidden>
+                    <img id="fotografia-bien-preview-img" alt="Vista previa de la fotografía seleccionada">
+                    <button type="button" id="fotografia-bien-quitar" class="btn btn-secondary">Quitar imagen</button>
+                </div>
+                <p class="form-hint">Opcional. JPG, PNG o WEBP, hasta 5 MB.</p>
             </div>
         </div>
     </div>
@@ -289,31 +370,7 @@ $claseBadgeEstado = static function (?string $nombreEstado): string {
                     <input type="text" id="fecha_fin_garantia" class="form-control" readonly>
                 </div>
 
-                <div class="form-grid-documento">
-                    <div class="form-group">
-                        <label class="form-label">Documento actual</label>
-                        <?php if (!empty($documentoActual)): ?>
-                            <a href="<?= htmlspecialchars($documentoActual, ENT_QUOTES, 'UTF-8') ?>" target="_blank" rel="noopener noreferrer" class="btn btn-secondary">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/></svg>
-                                Ver documento actual
-                            </a>
-                        <?php else: ?>
-                            <p class="form-hint">Sin documento de respaldo</p>
-                        <?php endif; ?>
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label" for="documento_respaldo">Nuevo documento de respaldo</label>
-                        <div class="file-picker">
-                            <input type="file" id="documento_respaldo" name="documento_respaldo" class="file-input visually-hidden" accept=".pdf,.jpg,.jpeg,.png">
-                            <label for="documento_respaldo" class="file-picker-button">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.44 11.05l-9.19 9.19a5 5 0 0 1-7.07-7.07l9.19-9.19a3.5 3.5 0 0 1 4.95 4.95l-9.2 9.19a1.5 1.5 0 0 1-2.12-2.12l8.49-8.48"/></svg>
-                                <?= !empty($documentoActual) ? 'Seleccionar nuevo archivo' : 'Seleccionar archivo' ?>
-                            </label>
-                            <span class="file-picker-name">Ningún archivo seleccionado</span>
-                        </div>
-                    </div>
-                </div>
+                <?= $bloqueDocumentos() ?>
             </div>
         <?php elseif ($formaNombre === 'donacion'): ?>
             <h2 class="form-section-title">Datos de donación</h2>
@@ -348,31 +405,7 @@ $claseBadgeEstado = static function (?string $nombreEstado): string {
                     </div>
                 </div>
 
-                <div class="form-grid-documento">
-                    <div class="form-group">
-                        <label class="form-label">Documento actual</label>
-                        <?php if (!empty($documentoActual)): ?>
-                            <a href="<?= htmlspecialchars($documentoActual, ENT_QUOTES, 'UTF-8') ?>" target="_blank" rel="noopener noreferrer" class="btn btn-secondary">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/></svg>
-                                Ver documento actual
-                            </a>
-                        <?php else: ?>
-                            <p class="form-hint">Sin documento de respaldo</p>
-                        <?php endif; ?>
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label" for="documento_respaldo">Nuevo documento de respaldo</label>
-                        <div class="file-picker">
-                            <input type="file" id="documento_respaldo" name="documento_respaldo" class="file-input visually-hidden" accept=".pdf,.jpg,.jpeg,.png">
-                            <label for="documento_respaldo" class="file-picker-button">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.44 11.05l-9.19 9.19a5 5 0 0 1-7.07-7.07l9.19-9.19a3.5 3.5 0 0 1 4.95 4.95l-9.2 9.19a1.5 1.5 0 0 1-2.12-2.12l8.49-8.48"/></svg>
-                                <?= !empty($documentoActual) ? 'Seleccionar nuevo archivo' : 'Seleccionar archivo' ?>
-                            </label>
-                            <span class="file-picker-name">Ningún archivo seleccionado</span>
-                        </div>
-                    </div>
-                </div>
+                <?= $bloqueDocumentos() ?>
             </div>
         <?php elseif ($formaNombre === 'traslado'): ?>
             <h2 class="form-section-title">Datos de traslado</h2>
@@ -412,31 +445,7 @@ $claseBadgeEstado = static function (?string $nombreEstado): string {
                     </div>
                 </div>
 
-                <div class="form-grid-documento">
-                    <div class="form-group">
-                        <label class="form-label">Documento actual</label>
-                        <?php if (!empty($documentoActual)): ?>
-                            <a href="<?= htmlspecialchars($documentoActual, ENT_QUOTES, 'UTF-8') ?>" target="_blank" rel="noopener noreferrer" class="btn btn-secondary">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/></svg>
-                                Ver documento actual
-                            </a>
-                        <?php else: ?>
-                            <p class="form-hint">Sin documento de respaldo</p>
-                        <?php endif; ?>
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label" for="documento_respaldo">Nuevo documento de respaldo</label>
-                        <div class="file-picker">
-                            <input type="file" id="documento_respaldo" name="documento_respaldo" class="file-input visually-hidden" accept=".pdf,.jpg,.jpeg,.png">
-                            <label for="documento_respaldo" class="file-picker-button">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.44 11.05l-9.19 9.19a5 5 0 0 1-7.07-7.07l9.19-9.19a3.5 3.5 0 0 1 4.95 4.95l-9.2 9.19a1.5 1.5 0 0 1-2.12-2.12l8.49-8.48"/></svg>
-                                <?= !empty($documentoActual) ? 'Seleccionar nuevo archivo' : 'Seleccionar archivo' ?>
-                            </label>
-                            <span class="file-picker-name">Ningún archivo seleccionado</span>
-                        </div>
-                    </div>
-                </div>
+                <?= $bloqueDocumentos() ?>
             </div>
         <?php endif; ?>
     </div>
@@ -691,14 +700,53 @@ $claseBadgeEstado = static function (?string $nombreEstado): string {
             var textoVacio = nombre.textContent;
 
             input.addEventListener('change', function () {
-                if (input.files && input.files.length > 0) {
+                if (input.files && input.files.length === 1) {
                     nombre.textContent = input.files[0].name;
+                    nombre.classList.add('file-picker-name-activo');
+                } else if (input.files && input.files.length > 1) {
+                    nombre.textContent = input.files.length + ' archivos seleccionados';
                     nombre.classList.add('file-picker-name-activo');
                 } else {
                     nombre.textContent = textoVacio;
                     nombre.classList.remove('file-picker-name-activo');
                 }
             });
+        });
+    })();
+</script>
+
+<script>
+    // Previsualización local de la nueva fotografía del bien (sin AJAX). "Quitar imagen" solo
+    // limpia la selección; NO borra la fotografía ya guardada (esa se sustituye únicamente al
+    // guardar con un archivo nuevo).
+    (function () {
+        var input = document.getElementById('fotografia_bien');
+        var caja = document.getElementById('fotografia-bien-preview');
+        var img = document.getElementById('fotografia-bien-preview-img');
+        var quitar = document.getElementById('fotografia-bien-quitar');
+        if (!input || !caja || !img || !quitar) { return; }
+
+        var urlActual = null;
+
+        function limpiarUrl() {
+            if (urlActual) { URL.revokeObjectURL(urlActual); urlActual = null; }
+        }
+
+        input.addEventListener('change', function () {
+            limpiarUrl();
+            if (input.files && input.files[0]) {
+                urlActual = URL.createObjectURL(input.files[0]);
+                img.src = urlActual;
+                caja.hidden = false;
+            } else {
+                img.removeAttribute('src');
+                caja.hidden = true;
+            }
+        });
+
+        quitar.addEventListener('click', function () {
+            input.value = '';
+            input.dispatchEvent(new Event('change'));
         });
     })();
 </script>

@@ -278,7 +278,8 @@ class BienesController extends Controller
         ];
 
         $error = null;
-        $rutaDocumentoRespaldo = null;
+        $documentosRespaldo = [];
+        $rutaFotografia = null;
         $bodegaAlmacen = false;
 
         if ($codigoInterno === '') {
@@ -432,9 +433,19 @@ class BienesController extends Controller
 
             if ($error === null) {
                 try {
-                    $rutaDocumentoRespaldo = guardarDocumentoRespaldo($_FILES['documento_respaldo'] ?? null);
+                    // Documentos de respaldo: colección acumulativa (0..N). En "Registrar bien" el
+                    // formulario admite un solo archivo inicial, pero el flujo de guardado ya es el
+                    // mismo que en "Modificar bien" — cada documento se inserta en documentos_bien.
+                    $documentosRespaldo = guardarDocumentosRespaldo($_FILES['documento_respaldo'] ?? null);
+                    $rutaFotografia = guardarFotografiaBien($_FILES['fotografia_bien'] ?? null);
                 } catch (RuntimeException $errorArchivo) {
                     $error = $errorArchivo->getMessage();
+                    // Si algún archivo sí se guardó y otro falló, no dejar los que entraron
+                    // huérfanos: se limpian y se re-renderiza el formulario con el mensaje de error.
+                    eliminarDocumentosRespaldo($documentosRespaldo);
+                    eliminarFotografiaBien($rutaFotografia);
+                    $documentosRespaldo = [];
+                    $rutaFotografia = null;
                 }
             }
         }
@@ -473,14 +484,16 @@ class BienesController extends Controller
             return;
         }
 
-        $datosIngresoCompra['documento_respaldo'] = $rutaDocumentoRespaldo;
-        $datosIngresoDonacion['documento_respaldo'] = $rutaDocumentoRespaldo;
-        $datosIngresoTraslado['documento_respaldo'] = $rutaDocumentoRespaldo;
+        // Las columnas `ingreso_*.documento_respaldo` quedan como legado: ya no se escriben (los
+        // documentos viven en documentos_bien). Se dejan en NULL para los registros nuevos.
+        $datos['imagen_bien'] = $rutaFotografia;
 
         $bienModel = $this->model('Bien');
         $ingresoCompraModel = $this->model('IngresoCompra');
         $ingresoDonacionModel = $this->model('IngresoDonacion');
         $ingresoTrasladoModel = $this->model('IngresoTraslado');
+        $ingresoBienOriginalModel = $this->model('IngresoBienOriginal');
+        $documentoBienModel = $this->model('DocumentoBien');
         $bitacoraModel = $this->model('Bitacora');
 
         try {
@@ -500,6 +513,22 @@ class BienesController extends Controller
             } elseif ($nombreForma === 'traslado') {
                 $datosIngresoTraslado['id_bien'] = $idBien;
                 $ingresoTrasladoModel->crear($datosIngresoTraslado);
+            }
+
+            // Documento(s) de respaldo del ingreso -> colección acumulativa documentos_bien. Dentro
+            // de la misma transacción: si el registro se revierte, estas filas también. Los archivos
+            // físicos ya movidos se limpian en el catch. El documento inicial NO genera un evento de
+            // "Modificación de información": forma parte del ingreso, no es una edición posterior.
+            $fechaRegistroDocumentos = date('Y-m-d H:i:s');
+            foreach ($documentosRespaldo as $documento) {
+                $documentoBienModel->registrar([
+                    'id_bien' => $idBien,
+                    'tipo_ingreso' => $nombreForma,
+                    'nombre_original' => $documento['nombre_original'],
+                    'ruta_documento' => $documento['ruta'],
+                    'fecha_registro' => $fechaRegistroDocumentos,
+                    'id_usuario_registra' => (int) $_SESSION['id_usuario'],
+                ]);
             }
 
             $nombreFormaTexto = match ($nombreForma) {
@@ -525,6 +554,33 @@ class BienesController extends Controller
             // falla (p. ej. asignación de Bodega pendiente sin confirmar), todo el registro del
             // bien se revierte — nunca queda un bien huérfano ni a medio resguardar.
             $this->asignarBienABodega($idBien, $bodegaAlmacen);
+
+            // Snapshot congelado de los datos de ingreso (mismos que usa el evento "Ingreso del
+            // bien"). Dentro de la transacción: si falla, se revierte todo el registro y no queda
+            // un bien nuevo sin snapshot. Nunca se actualiza después: una edición posterior de
+            // proveedor/procedencia/fecha se refleja solo en historial_modificaciones_bien.
+            $snapshotIngreso = [
+                'id_bien' => $idBien,
+                'tipo_ingreso' => $nombreForma,
+                'fecha_ingreso_original' => $datos['fecha_ingreso'] ?? null,
+                'proveedor_original' => null,
+                'entidad_donante_original' => null,
+                'procedencia_donacion_original' => null,
+                'unidad_ejecutora_origen_original' => null,
+                'procedencia_traslado_original' => null,
+            ];
+
+            if ($nombreForma === 'compra') {
+                $snapshotIngreso['proveedor_original'] = $datosIngresoCompra['proveedor'] ?? null;
+            } elseif ($nombreForma === 'donacion') {
+                $snapshotIngreso['entidad_donante_original'] = $datosIngresoDonacion['entidad_donante'] ?? null;
+                $snapshotIngreso['procedencia_donacion_original'] = $datosIngresoDonacion['procedencia'] ?? null;
+            } elseif ($nombreForma === 'traslado') {
+                $snapshotIngreso['unidad_ejecutora_origen_original'] = $datosIngresoTraslado['unidad_ejecutora_origen'] ?? null;
+                $snapshotIngreso['procedencia_traslado_original'] = $datosIngresoTraslado['procedencia'] ?? null;
+            }
+
+            $ingresoBienOriginalModel->crearSnapshot($snapshotIngreso);
 
             $bienModel->commit();
 
@@ -571,14 +627,13 @@ class BienesController extends Controller
                 $bienModel->rollBack();
             }
 
-            if ($rutaDocumentoRespaldo !== null) {
-                $rutaAbsolutaLimpieza = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR
-                    . str_replace('/', DIRECTORY_SEPARATOR, $rutaDocumentoRespaldo);
+            // Los documentos recién subidos se eliminan: la transacción se revirtió, así que ninguna
+            // fila de documentos_bien apunta a ellos.
+            eliminarDocumentosRespaldo($documentosRespaldo);
 
-                if (is_file($rutaAbsolutaLimpieza)) {
-                    @unlink($rutaAbsolutaLimpieza);
-                }
-            }
+            // La fotografía recién subida se elimina también: la transacción se revirtió, así que
+            // ningún registro apunta a ella.
+            eliminarFotografiaBien($rutaFotografia);
 
             if ($e instanceof RuntimeException) {
                 // Errores controlados propios (p. ej. asignarBienABodega() con la asignación de
@@ -666,6 +721,7 @@ class BienesController extends Controller
             'bien' => $bien,
             'formaNombre' => $formaNombre,
             'datosIngreso' => $datosIngreso !== false ? $datosIngreso : [],
+            'documentosBien' => $this->model('DocumentoBien')->listarPorBien($idBien),
             'tituloPagina' => 'Detalle del bien',
         ], 'main');
     }
@@ -720,13 +776,46 @@ class BienesController extends Controller
         ], 'main');
     }
 
-    // Sirve el DOCUMENTO DE RESPALDO del ingreso (Compra/Donación/Traslado) de un bien — antes
-    // accesible por URL directa a storage/documentos/, ahora bloqueada por storage/.htaccess. Mismos
-    // permisos que ver(): solo sesión activa (el router ya redirige a login sin sesión). GET puro,
-    // sin POST, sin CSRF, sin cambios de datos. El navegador solo envía el id del bien; la ruta
-    // física se obtiene de BD (la tabla de ingreso según la forma) y se valida con realpath() contra
-    // storage/documentos/. Disposition 'inline' porque la acción es "Ver documento de respaldo".
+    // Sirve UN documento de respaldo del ingreso de un bien por su id de documentos_bien — nunca por
+    // URL directa a storage/documentos/ (bloqueada por storage/.htaccess). Mismos permisos que
+    // ver(): solo sesión activa (el router ya redirige a login sin sesión). GET puro, sin POST, sin
+    // CSRF, sin cambios de datos. El navegador solo envía el id del DOCUMENTO; la ruta física se
+    // obtiene de BD y se valida con realpath() contra storage/documentos/. 404 genérico ante
+    // cualquier problema. Disposition 'inline' porque la acción es "Ver documento".
     public function verDocumento(): void
+    {
+        if (!isset($_SESSION['id_usuario'])) {
+            header('Location: index.php');
+            exit;
+        }
+
+        $idDocumento = (int) ($_GET['id'] ?? 0);
+
+        if ($idDocumento <= 0) {
+            http_response_code(404);
+            echo 'Documento no disponible.';
+            return;
+        }
+
+        $documento = $this->model('DocumentoBien')->buscarPorId($idDocumento);
+
+        if ($documento === false || empty($documento['ruta_documento'])) {
+            http_response_code(404);
+            echo 'Documento no disponible.';
+            return;
+        }
+
+        $rutaFisica = resolverRutaArchivoStorage($documento['ruta_documento'], 'documentos');
+
+        servirArchivoControlado($rutaFisica, 'inline');
+    }
+
+    // Sirve la FOTOGRAFÍA principal del bien (bienes.imagen_bien) — nunca por URL directa a
+    // storage/fotos_bienes/ (bloqueada por storage/.htaccess). Mismos permisos y forma que
+    // verDocumento(): solo sesión activa, GET puro, sin CSRF, sin cambios en BD. El navegador solo
+    // envía el id del bien; la ruta física sale de BD y se valida con realpath() contra
+    // storage/fotos_bienes/. 'inline' porque la imagen se muestra (miniatura + modal).
+    public function imagen(): void
     {
         if (!isset($_SESSION['id_usuario'])) {
             header('Location: index.php');
@@ -737,39 +826,19 @@ class BienesController extends Controller
 
         if ($idBien <= 0) {
             http_response_code(404);
-            echo 'Documento no disponible.';
+            echo 'Imagen no disponible.';
             return;
         }
 
         $bien = $this->model('Bien')->findById($idBien);
 
-        if ($bien === false) {
+        if ($bien === false || empty($bien['imagen_bien'])) {
             http_response_code(404);
-            echo 'Documento no disponible.';
+            echo 'Imagen no disponible.';
             return;
         }
 
-        // Misma normalización de la forma de ingreso que ver().
-        $formaNombre = mb_strtolower(trim($bien['nombre_forma'] ?? ''), 'UTF-8');
-        $formaNombre = str_replace(['á', 'é', 'í', 'ó', 'ú'], ['a', 'e', 'i', 'o', 'u'], $formaNombre);
-
-        $datosIngreso = false;
-
-        if ($formaNombre === 'compra') {
-            $datosIngreso = $this->model('IngresoCompra')->findByBienId($idBien);
-        } elseif ($formaNombre === 'donacion') {
-            $datosIngreso = $this->model('IngresoDonacion')->findByBienId($idBien);
-        } elseif ($formaNombre === 'traslado') {
-            $datosIngreso = $this->model('IngresoTraslado')->findByBienId($idBien);
-        }
-
-        if ($datosIngreso === false || empty($datosIngreso['documento_respaldo'])) {
-            http_response_code(404);
-            echo 'Documento no disponible.';
-            return;
-        }
-
-        $rutaFisica = resolverRutaArchivoStorage($datosIngreso['documento_respaldo'], 'documentos');
+        $rutaFisica = resolverRutaArchivoStorage($bien['imagen_bien'], 'fotos_bienes');
 
         servirArchivoControlado($rutaFisica, 'inline');
     }
@@ -801,8 +870,10 @@ class BienesController extends Controller
         $ingresoCompraModel = $this->model('IngresoCompra');
         $ingresoDonacionModel = $this->model('IngresoDonacion');
         $ingresoTrasladoModel = $this->model('IngresoTraslado');
+        $documentoBienModel = $this->model('DocumentoBien');
         $bitacoraModel = $this->model('Bitacora');
         $historialSicoinModel = $this->model('HistorialSicoin');
+        $historialModificacionModel = $this->model('HistorialModificacionBien');
         $formaIngresoModel = $this->model('FormaIngreso');
         $categoriaBienModel = $this->model('CategoriaBien');
         $estadoBienModel = $this->model('EstadoBien');
@@ -839,7 +910,14 @@ class BienesController extends Controller
             return;
         }
 
+        // Valor legado de la columna vieja: NO se escribe ni se borra en esta edición; se conserva
+        // tal cual para que el UPDATE de ingreso_* no lo altere.
         $rutaDocumentoActual = $datosEspecificos['documento_respaldo'] ?? null;
+        $rutaFotografiaActual = $bien['imagen_bien'] ?? null;
+
+        // Colección acumulativa de documentos de respaldo del bien (para mostrar la lista y para el
+        // re-render tras error).
+        $documentosBien = $documentoBienModel->listarPorBien($idBien);
 
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             $datosGenerales = [
@@ -878,7 +956,7 @@ class BienesController extends Controller
                 'categorias' => $categorias,
                 'estados' => $estados,
                 'formasPago' => $formasPago,
-                'documentoActual' => $rutaDocumentoActual,
+                'documentosBien' => $documentosBien,
                 'error' => null,
                 'tituloPagina' => 'Modificar bien',
             ], 'main');
@@ -906,7 +984,10 @@ class BienesController extends Controller
         $modelo = trim($_POST['modelo'] ?? '');
         $serie = trim($_POST['serie'] ?? '');
         $idCategoria = (int) ($_POST['id_categoria'] ?? 0);
-        $idEstadoBien = (int) ($_POST['id_estado_bien'] ?? 0);
+        // El estado del bien NO es editable desde "Modificar bien": se ignora por completo cualquier
+        // id_estado_bien recibido por POST (aunque se manipule el HTML) y se conserva SIEMPRE el que
+        // ya tiene la BD. El cambio de estado ocurre solo por los flujos formales (Baja).
+        $idEstadoBien = (int) ($bien['id_estado_bien'] ?? 0);
         $condicionBien = trim($_POST['condicion_bien'] ?? '');
         $fechaIngreso = trim($_POST['fecha_ingreso'] ?? '');
         $costo = trim($_POST['costo'] ?? '');
@@ -1123,17 +1204,24 @@ class BienesController extends Controller
             }
         }
 
-        $rutaDocumentoNuevo = null;
+        $documentosNuevos = [];
+        $rutaFotografiaNueva = null;
 
         if ($error === null) {
             try {
-                $rutaDocumentoNuevo = guardarDocumentoRespaldo($_FILES['documento_respaldo'] ?? null);
+                // "Agregar documento de respaldo": NUNCA reemplaza los anteriores. Admite varios
+                // archivos en un mismo guardado; todos se acumulan en documentos_bien.
+                $documentosNuevos = guardarDocumentosRespaldo($_FILES['documento_respaldo'] ?? null);
+                $rutaFotografiaNueva = guardarFotografiaBien($_FILES['fotografia_bien'] ?? null);
             } catch (RuntimeException $errorArchivo) {
                 $error = $errorArchivo->getMessage();
+                // Si algún archivo entró y otro falló, limpiar los que sí se guardaron.
+                eliminarDocumentosRespaldo($documentosNuevos);
+                eliminarFotografiaBien($rutaFotografiaNueva);
+                $documentosNuevos = [];
+                $rutaFotografiaNueva = null;
             }
         }
-
-        $rutaDocumentoFinal = $rutaDocumentoNuevo ?? $rutaDocumentoActual;
 
         if ($error !== null) {
             $datosFormulario = array_merge(
@@ -1165,16 +1253,143 @@ class BienesController extends Controller
                 'categorias' => $categorias,
                 'estados' => $estados,
                 'formasPago' => $formasPago,
-                'documentoActual' => $rutaDocumentoActual,
+                'documentosBien' => $documentosBien,
                 'tituloPagina' => 'Modificar bien',
             ], 'main');
 
             return;
         }
 
-        $datosIngresoCompra['documento_respaldo'] = $rutaDocumentoFinal;
-        $datosIngresoDonacion['documento_respaldo'] = $rutaDocumentoFinal;
-        $datosIngresoTraslado['documento_respaldo'] = $rutaDocumentoFinal;
+        // Columna legado `ingreso_*.documento_respaldo`: se reescribe con SU MISMO valor actual para
+        // que este UPDATE no la altere. Los documentos (nuevos y antiguos) viven en documentos_bien.
+        $datosIngresoCompra['documento_respaldo'] = $rutaDocumentoActual;
+        $datosIngresoDonacion['documento_respaldo'] = $rutaDocumentoActual;
+        $datosIngresoTraslado['documento_respaldo'] = $rutaDocumentoActual;
+
+        // ---------------------------------------------------------------------------------------
+        // Diff para historial_modificaciones_bien: SOLO los campos que realmente cambiaron. Se
+        // arma ANTES de la transacción (comparando el estado leído de BD contra los valores ya
+        // validados) y se inserta DENTRO de ella, junto al UPDATE — si el commit no ocurre, el
+        // rollback descarta también estas filas. NO incluye: código interno (inmutable), SICOIN
+        // (historial_sicoin es su fuente única), estado del bien (no editable aquí),
+        // responsable/ubicación/asignación (los mueven los flujos de movimientos), QR ni timestamps.
+        $normTexto = static function ($valor): ?string {
+            if ($valor === null) {
+                return null;
+            }
+            $valor = trim((string) $valor);
+            return $valor === '' ? null : $valor;
+        };
+        // Dinero: "368", "368.0" y "368.00" representan el mismo valor -> no es un cambio.
+        $normDinero = static function ($valor) use ($normTexto): ?string {
+            $limpio = $normTexto($valor);
+            if ($limpio === null || !is_numeric($limpio)) {
+                return $limpio;
+            }
+            return rtrim(rtrim(number_format((float) $limpio, 2, '.', ''), '0'), '.');
+        };
+        $nombreCategoriaPorId = static function (int $id) use ($categorias): ?string {
+            foreach ($categorias as $categoria) {
+                if ((int) $categoria['id_categoria'] === $id) {
+                    return (string) $categoria['nombre_categoria'];
+                }
+            }
+            return null;
+        };
+        $nombreFormaPagoPorId = static function (?int $id) use ($formasPago): ?string {
+            if ($id === null || $id <= 0) {
+                return null;
+            }
+            foreach ($formasPago as $forma) {
+                if ((int) $forma['id_forma_pago'] === $id) {
+                    return (string) $forma['nombre_forma_pago'];
+                }
+            }
+            return null;
+        };
+        $siNo = static fn ($valor): string => ((int) $valor === 1) ? 'Sí' : 'No';
+
+        $detallesHistorial = [];
+        $agregarDetalle = static function (string $seccion, string $campo, ?string $anterior, ?string $nuevo) use (&$detallesHistorial): void {
+            if ($anterior === $nuevo) {
+                return;
+            }
+            $detallesHistorial[] = [
+                'seccion' => $seccion,
+                'campo' => $campo,
+                'valor_anterior' => $anterior,
+                'valor_nuevo' => $nuevo,
+            ];
+        };
+
+        // Sección general (tabla bienes).
+        $agregarDetalle('general', 'Descripción', $normTexto($bien['descripcion'] ?? null), $normTexto($descripcion));
+        $agregarDetalle('general', 'Marca', $normTexto($bien['marca'] ?? null), $normTexto($marca));
+        $agregarDetalle('general', 'Modelo', $normTexto($bien['modelo'] ?? null), $normTexto($modelo));
+        $agregarDetalle('general', 'Serie', $normTexto($bien['serie'] ?? null), $normTexto($serie));
+        $agregarDetalle('general', 'Categoría', $normTexto($bien['nombre_categoria'] ?? null), $normTexto($nombreCategoriaPorId($idCategoria)));
+        $agregarDetalle('general', 'Condición', $normTexto($bien['condicion_bien'] ?? null), $normTexto($condicionBien));
+        $agregarDetalle('general', 'Observaciones', $normTexto($bien['observaciones'] ?? null), $normTexto($observaciones));
+        $agregarDetalle('general', 'Fecha de ingreso', $normTexto($bien['fecha_ingreso'] ?? null), $normTexto($fechaIngreso));
+        $agregarDetalle('general', 'Costo', $normDinero($bien['costo'] ?? null), $normDinero($datos['costo']));
+        $agregarDetalle('general', 'Valor estimado', $normDinero($bien['valor_estimado'] ?? null), $normDinero($datos['valor_estimado']));
+
+        // Sección de ingreso, según la forma (la forma de ingreso está bloqueada y no cambia).
+        if ($formaNombre === 'compra') {
+            $agregarDetalle('compra', 'Proveedor', $normTexto($datosEspecificos['proveedor'] ?? null), $normTexto($proveedor));
+            $agregarDetalle('compra', 'Número de factura', $normTexto($datosEspecificos['numero_factura'] ?? null), $normTexto($numeroFactura));
+            $agregarDetalle('compra', 'Serie de factura', $normTexto($datosEspecificos['serie_factura'] ?? null), $normTexto($serieFactura));
+            $agregarDetalle('compra', 'Fecha de factura', $normTexto($datosEspecificos['fecha_factura'] ?? null), $normTexto($fechaFactura));
+            $agregarDetalle('compra', 'Número de liquidación', $normTexto($datosEspecificos['numero_liquidacion'] ?? null), $normTexto($numeroLiquidacion));
+            $agregarDetalle('compra', 'Forma de pago', $normTexto($datosEspecificos['forma_pago_nombre'] ?? null), $normTexto($nombreFormaPagoPorId($idFormaPagoFinal)));
+            $agregarDetalle('compra', 'Garantía', $siNo($datosEspecificos['tiene_garantia'] ?? 0), $siNo($tieneGarantia));
+            $agregarDetalle('compra', 'Tiempo de garantía (meses)', $normTexto($datosEspecificos['tiempo_garantia'] ?? null), $normTexto($datosIngresoCompra['tiempo_garantia']));
+        } elseif ($formaNombre === 'donacion') {
+            $agregarDetalle('donacion', 'Entidad donante', $normTexto($datosEspecificos['entidad_donante'] ?? null), $normTexto($entidadDonante));
+            $agregarDetalle('donacion', 'Procedencia', $normTexto($datosEspecificos['procedencia'] ?? null), $normTexto($procedencia));
+            $agregarDetalle('donacion', 'Número de acta', $normTexto($datosEspecificos['numero_acta'] ?? null), $normTexto($numeroActa));
+            $agregarDetalle('donacion', 'Fecha de acta', $normTexto($datosEspecificos['fecha_acta'] ?? null), $normTexto($fechaActa));
+        } elseif ($formaNombre === 'traslado') {
+            $agregarDetalle('traslado', 'Unidad ejecutora de origen', $normTexto($datosEspecificos['unidad_ejecutora_origen'] ?? null), $normTexto($unidadEjecutoraOrigen));
+            $agregarDetalle('traslado', 'Código de unidad de origen', $normTexto($datosEspecificos['codigo_unidad_origen'] ?? null), $normTexto($codigoUnidadOrigen));
+            $agregarDetalle('traslado', 'Procedencia', $normTexto($datosEspecificos['procedencia'] ?? null), $normTexto($procedencia));
+            $agregarDetalle('traslado', 'Número de acta', $normTexto($datosEspecificos['numero_acta'] ?? null), $normTexto($numeroActa));
+            $agregarDetalle('traslado', 'Fecha de acta', $normTexto($datosEspecificos['fecha_acta'] ?? null), $normTexto($fechaActa));
+        }
+
+        // Documento de respaldo: los documentos se AGREGAN y se conservan — ya no existe la
+        // sustitución. Se registra una sola entrada agrupada por guardado (nunca rutas ni nombres
+        // internos), dentro del mismo evento "Modificación de información".
+        if ($documentosNuevos !== []) {
+            $totalDocsNuevos = count($documentosNuevos);
+            $detallesHistorial[] = [
+                'seccion' => 'documento',
+                'campo' => 'Documento de respaldo',
+                'valor_anterior' => null,
+                'valor_nuevo' => $totalDocsNuevos === 1
+                    ? 'Documento agregado'
+                    : $totalDocsNuevos . ' documentos agregados',
+            ];
+        }
+
+        // Fotografía del bien: igual criterio que el documento — solo "hubo archivo nuevo", nunca
+        // rutas ni nombres internos. Sin flujo de eliminación: solo alta o sustitución.
+        if ($rutaFotografiaNueva !== null) {
+            $teniaFotografia = $normTexto($rutaFotografiaActual) !== null;
+            $detallesHistorial[] = [
+                'seccion' => 'imagen',
+                'campo' => 'Fotografía del bien',
+                'valor_anterior' => $teniaFotografia ? 'Fotografía anterior' : 'Sin fotografía',
+                'valor_nuevo' => $teniaFotografia ? 'Fotografía sustituida' : 'Fotografía agregada',
+            ];
+        }
+
+        // Un cambio real = al menos un detalle en historial_modificaciones_bien, o un alta de SICOIN
+        // (que vive en su propia tabla). Si NO hubo ningún cambio real no se escribe ni el historial
+        // ni la bitácora genérica MODIFICAR_BIEN.
+        $grupoCambio = bin2hex(random_bytes(16));
+        $fechaHoraCambio = date('Y-m-d H:i:s');
+        $huboCambioReal = $detallesHistorial !== [] || $huboCambioSicoin;
 
         try {
             $bienModel->beginTransaction();
@@ -1187,6 +1402,34 @@ class BienesController extends Controller
                 $ingresoDonacionModel->actualizarPorBienId($idBien, $datosIngresoDonacion);
             } elseif ($formaNombre === 'traslado') {
                 $ingresoTrasladoModel->actualizarPorBienId($idBien, $datosIngresoTraslado);
+            }
+
+            $historialModificacionModel->registrarGrupo(
+                $idBien,
+                $grupoCambio,
+                (int) $_SESSION['id_usuario'],
+                $fechaHoraCambio,
+                $detallesHistorial
+            );
+
+            if ($rutaFotografiaNueva !== null) {
+                $bienModel->actualizarImagen($idBien, $rutaFotografiaNueva);
+            }
+
+            // Documento(s) agregado(s) -> documentos_bien, dentro de la transacción. Nunca se
+            // sustituye ni se borra ninguno de los anteriores.
+            if ($documentosNuevos !== []) {
+                $fechaRegistroDocumentos = date('Y-m-d H:i:s');
+                foreach ($documentosNuevos as $documento) {
+                    $documentoBienModel->registrar([
+                        'id_bien' => $idBien,
+                        'tipo_ingreso' => $formaNombre,
+                        'nombre_original' => $documento['nombre_original'],
+                        'ruta_documento' => $documento['ruta'],
+                        'fecha_registro' => $fechaRegistroDocumentos,
+                        'id_usuario_registra' => (int) $_SESSION['id_usuario'],
+                    ]);
+                }
             }
 
             if ($huboCambioSicoin) {
@@ -1227,19 +1470,29 @@ class BienesController extends Controller
                 );
             }
 
-            $bitacoraModel->registrar(
-                idUsuario: (int) $_SESSION['id_usuario'],
-                accion: 'MODIFICAR_BIEN',
-                modulo: 'Bienes',
-                resultado: 'exitoso',
-                descripcion: 'Se modificó la información del bien con código interno ' . $datos['codigo_interno'] . '.',
-                tablaAfectada: 'bienes',
-                idRegistroAfectado: $idBien,
-                ipOrigen: $_SERVER['REMOTE_ADDR'] ?? null,
-                usuarioIntentado: null
-            );
+            // Resumen en bitácora SOLO si hubo algún cambio real. El detalle campo por campo ya
+            // quedó estructurado en historial_modificaciones_bien; aquí no se repite el diff.
+            if ($huboCambioReal) {
+                $bitacoraModel->registrar(
+                    idUsuario: (int) $_SESSION['id_usuario'],
+                    accion: 'MODIFICAR_BIEN',
+                    modulo: 'Bienes',
+                    resultado: 'exitoso',
+                    descripcion: 'Se modificó la información del bien con código interno ' . $datos['codigo_interno'] . '.',
+                    tablaAfectada: 'bienes',
+                    idRegistroAfectado: $idBien,
+                    ipOrigen: $_SERVER['REMOTE_ADDR'] ?? null,
+                    usuarioIntentado: null
+                );
+            }
 
             $bienModel->commit();
+
+            // La fotografía anterior se borra DESPUÉS del commit (nunca antes): si la transacción
+            // hubiera fallado, ese archivo seguiría siendo la evidencia válida del bien.
+            if ($rutaFotografiaNueva !== null && $rutaFotografiaActual !== null && $rutaFotografiaActual !== $rutaFotografiaNueva) {
+                eliminarFotografiaBien($rutaFotografiaActual);
+            }
 
             setFlash('success', 'Cambios guardados correctamente', 'La información del bien fue actualizada.');
 
@@ -1252,14 +1505,13 @@ class BienesController extends Controller
 
             error_log('Error al actualizar el bien: ' . $e->getMessage());
 
-            if ($rutaDocumentoNuevo !== null) {
-                $rutaAbsolutaLimpieza = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR
-                    . str_replace('/', DIRECTORY_SEPARATOR, $rutaDocumentoNuevo);
+            // Los documentos recién subidos se descartan: la transacción se revirtió y ninguna fila
+            // de documentos_bien apunta a ellos.
+            eliminarDocumentosRespaldo($documentosNuevos);
 
-                if (is_file($rutaAbsolutaLimpieza)) {
-                    @unlink($rutaAbsolutaLimpieza);
-                }
-            }
+            // La fotografía recién subida se descarta: la transacción se revirtió y bienes.imagen_bien
+            // sigue apuntando a la anterior (que no se tocó).
+            eliminarFotografiaBien($rutaFotografiaNueva);
 
             $error = $this->mensajeErrorDuplicado($e)
                 ?? 'No fue posible actualizar el bien. Verifique los datos e intente nuevamente.';
@@ -1293,7 +1545,7 @@ class BienesController extends Controller
                 'categorias' => $categorias,
                 'estados' => $estados,
                 'formasPago' => $formasPago,
-                'documentoActual' => $rutaDocumentoActual,
+                'documentosBien' => $documentosBien,
                 'tituloPagina' => 'Modificar bien',
             ], 'main');
 

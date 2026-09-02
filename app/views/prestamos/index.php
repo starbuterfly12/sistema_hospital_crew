@@ -109,10 +109,12 @@ $claseBadgeEstado = static function (?string $estado): string {
                             <td><?= $mostrar(formatDate($prestamo['fecha_devolucion_estimada'] ?? null)) ?></td>
                             <td><?= (int) ($prestamo['total_bienes'] ?? 0) ?></td>
                             <td>
-                                <span class="<?= $claseBadgeEstado($prestamo['estado_prestamo'] ?? null) ?>"><?= $mostrar($etiquetasEstado[$prestamo['estado_prestamo'] ?? ''] ?? ($prestamo['estado_prestamo'] ?? null)) ?></span>
-                                <?php if ($vencido): ?>
-                                    <span class="badge badge-vencido">Vencido</span>
-                                <?php endif; ?>
+                                <div class="estado-badges">
+                                    <span class="<?= $claseBadgeEstado($prestamo['estado_prestamo'] ?? null) ?>"><?= $mostrar($etiquetasEstado[$prestamo['estado_prestamo'] ?? ''] ?? ($prestamo['estado_prestamo'] ?? null)) ?></span>
+                                    <?php if ($vencido): ?>
+                                        <span class="badge badge-vencido">Vencido</span>
+                                    <?php endif; ?>
+                                </div>
                             </td>
                             <td>
                                 <div class="table-actions">

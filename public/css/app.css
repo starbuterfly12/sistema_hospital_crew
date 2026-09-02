@@ -767,6 +767,47 @@ img {
     gap: 13px 20px;
 }
 
+/* Lista compacta de documentos de respaldo acumulados de un bien (Bienes -> Ver y -> Modificar).
+   Se agregan y se conservan; nunca se reemplazan ni se eliminan desde la interfaz. */
+.lista-documentos {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.lista-documentos-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 12px;
+    border: 1px solid var(--sgb-borde);
+    border-radius: 8px;
+    background: var(--sgb-superficie);
+}
+
+.lista-documentos-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.lista-documentos-nombre {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--sgb-texto);
+    word-break: break-word;
+}
+
+.lista-documentos-fecha {
+    font-size: 12px;
+    color: var(--sgb-texto-secundario);
+}
+
 .form-group {
     display: flex;
     flex-direction: column;
@@ -1736,7 +1777,7 @@ textarea.form-control {
 .table-resizable.table-prestamos thead th:nth-child(5) { width: 155px; min-width: 125px; } /* Ubicación destino */
 .table-resizable.table-prestamos thead th:nth-child(6) { width: 115px; min-width: 100px; } /* Devolución estimada */
 .table-resizable.table-prestamos thead th:nth-child(7) { width: 70px;  min-width: 60px;  } /* Bienes */
-.table-resizable.table-prestamos thead th:nth-child(8) { width: 130px; min-width: 105px; } /* Estado */
+.table-resizable.table-prestamos thead th:nth-child(8) { width: 200px; min-width: 150px; } /* Estado (cabe [Parcialmente devuelto] [Vencido] en una línea) */
 .table-resizable.table-prestamos thead th:nth-child(9) { width: 80px;  min-width: 70px;  } /* Acciones: Ver */
 
 /* --------------------------------------------------------------------------
@@ -2047,6 +2088,30 @@ textarea.form-control {
     font-size: 12px;
     font-weight: 600;
 }
+/* Lista de campos de un evento "Modificación de información" (uno por campo cambiado). */
+.historial-evento-cambios {
+    margin: 6px 0 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.historial-evento-cambios li {
+    font-size: 13px;
+    line-height: 1.45;
+    color: var(--sgb-texto-secundario);
+}
+.historial-evento-campo {
+    font-weight: 600;
+    color: var(--sgb-texto);
+    margin-right: 6px;
+}
+.historial-evento-usuario {
+    margin: 6px 0 0;
+    font-size: 12px;
+    color: var(--sgb-texto-secundario);
+}
 
 /* --------------------------------------------------------------------------
    12. Badges / estados
@@ -2093,6 +2158,24 @@ textarea.form-control {
 .badge-vencido {
     background: var(--sgb-rojo-fondo);
     color: var(--sgb-rojo);
+}
+
+/* Celda "Estado" del listado de Préstamos: cuando coexisten dos indicadores
+   ([Parcialmente devuelto] + [Vencido]) se muestran EN LÍNEA, centrados, sin subir la altura de la
+   fila. Solo aquí; no afecta a los badge sueltos del resto del sistema. */
+.estado-badges {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    flex-wrap: nowrap;
+}
+.estado-badges .badge {
+    padding: 2px 8px;
+    font-size: 11px;
+}
+@media (max-width: 640px) {
+    .estado-badges { flex-wrap: wrap; }
 }
 
 /* --------------------------------------------------------------------------
@@ -2451,6 +2534,69 @@ textarea.form-control {
     text-align: center;
 }
 
+/* Escaneo de QR con la cámara (Verificación física individual). Reutiliza .modal-overlay /
+   .modal-abierto / .modal-caja / .modal-qr-titulo; sólo añade el área de video y la guía. */
+.modal-caja-scanner {
+    max-width: 460px;
+    text-align: center;
+}
+
+.qr-scanner-lanzador {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 12px;
+}
+
+.qr-scanner-lanzador-o {
+    font-size: 13px;
+    color: var(--sgb-texto-secundario);
+}
+
+.qr-scanner-video-wrap {
+    position: relative;
+    width: 100%;
+    max-width: 340px;
+    margin: 12px auto 0;
+    aspect-ratio: 1 / 1;
+    background: #000;
+    border-radius: var(--sgb-radio);
+    overflow: hidden;
+}
+
+.qr-scanner-video {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.qr-scanner-guia {
+    position: absolute;
+    inset: 16%;
+    border: 2px solid rgba(255, 255, 255, 0.9);
+    border-radius: 12px;
+    pointer-events: none;
+}
+
+.qr-scanner-estado {
+    margin: 10px 0 0;
+    font-size: 13px;
+    color: var(--sgb-texto-secundario);
+}
+
+.qr-scanner-mensaje {
+    margin: 10px 0 0;
+    font-size: 13px;
+    color: var(--sgb-rojo);
+}
+
+@media (max-width: 520px) {
+    .qr-scanner-video-wrap {
+        max-width: 100%;
+    }
+}
+
 /* Imagen dentro del modal "Ver foto" de Bajas (Detalle / Editar). A diferencia del QR (cuadrado y
    pequeño), una foto de bien puede ser apaisada o vertical y grande: se limita por ancho y por alto
    de viewport conservando proporción. Reutiliza la estructura .modal-caja-qr / .modal-qr-contenido /
@@ -2466,6 +2612,100 @@ textarea.form-control {
     border-radius: var(--sgb-radio);
     background: var(--sgb-superficie);
     margin-bottom: 8px;
+}
+
+/* Fotografía del bien: miniatura clickeable en el Detalle (abre el modal .modal-foto-imagen) y
+   previsualización en los formularios de Registrar / Modificar. Siempre object-fit: contain para
+   no deformar imágenes apaisadas o verticales. */
+.foto-bien-miniatura {
+    display: block;
+    width: 100%;
+    max-width: 220px;
+    margin: 0 auto;
+    padding: 0;
+    border: 1px solid var(--sgb-borde);
+    border-radius: var(--sgb-radio);
+    background: var(--sgb-superficie);
+    cursor: pointer;
+    overflow: hidden;
+}
+.foto-bien-miniatura img {
+    display: block;
+    width: 100%;
+    height: 180px;
+    object-fit: contain;
+    background: var(--sgb-superficie);
+}
+.foto-bien-preview {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    margin-top: 8px;
+}
+/* El display:flex de arriba anula el atributo [hidden] del bloque de previsualización de
+   una NUEVA selección; con esto vuelve a ocultarse por completo mientras no haya imagen. */
+.foto-bien-preview[hidden] {
+    display: none;
+}
+.foto-bien-preview img {
+    display: block;
+    width: auto;
+    max-width: 240px;
+    max-height: 200px;
+    object-fit: contain;
+    border: 1px solid var(--sgb-borde);
+    border-radius: var(--sgb-radio);
+    background: var(--sgb-superficie);
+}
+.detail-value-discreto {
+    color: var(--sgb-texto-secundario);
+    font-size: 13px;
+}
+
+/* Miniatura de identificación del bien en procesos operativos (Traslados, Préstamos, Devoluciones,
+   Verificación individual y por asignación). Apoyo visual: al hacer clic abre el modal
+   #modal-foto-bien. object-fit: contain para nunca deformar fotos apaisadas o verticales. */
+.foto-bien-thumb {
+    display: inline-block;
+    padding: 0;
+    border: 1px solid var(--sgb-borde);
+    border-radius: 8px;
+    background: var(--sgb-superficie);
+    cursor: pointer;
+    overflow: hidden;
+    line-height: 0;
+    vertical-align: middle;
+}
+.foto-bien-thumb img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    background: var(--sgb-superficie);
+}
+.foto-bien-thumb--sm { width: 52px; height: 52px; }
+.foto-bien-thumb--md { width: 72px; height: 72px; }
+.foto-bien-thumb--lg { width: 180px; height: 180px; border-radius: 12px; }
+.foto-bien-vacio {
+    color: var(--sgb-texto-secundario);
+    font-size: 12px;
+    white-space: nowrap;
+}
+/* Celda "Descripción" que lleva la miniatura del bien a la izquierda del texto (tablas de
+   selección de Traslados / Préstamos / Devoluciones). No estira la fila más que la propia
+   miniatura de 52px. */
+.celda-bien-foto {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    text-align: left;
+}
+.celda-bien-foto > span {
+    min-width: 0;
+}
+@media (max-width: 640px) {
+    .foto-bien-thumb--lg { width: 140px; height: 140px; }
 }
 
 /* Impresión limpia del QR desde el modal: oculta todo lo demás (sidebar, topbar, ficha completa,

@@ -133,6 +133,7 @@ class VerificacionAsignacion extends Model
                 b.modelo,
                 b.serie,
                 b.condicion_bien,
+                b.imagen_bien,
                 b.id_responsable_actual,
                 b.id_ubicacion_actual,
                 r.nombre_completo AS responsable_actual,

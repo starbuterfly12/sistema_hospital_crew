@@ -32,6 +32,7 @@ $claseBadgeTipo = static function (string $tipo): string {
         'Verificación física' => 'badge',
         'SICOIN' => 'badge',
         'Baja' => 'badge badge-error',
+        'Modificación de información' => 'badge badge-info',
         default => 'badge',
     };
 };
@@ -128,6 +129,19 @@ $claseBadgeTipo = static function (string $tipo): string {
                         </div>
                         <p class="historial-evento-titulo"><?= $mostrar($evento['titulo']) ?></p>
                         <p class="historial-evento-desc"><?= $mostrar($evento['descripcion']) ?></p>
+                        <?php if (!empty($evento['detalles'])): ?>
+                            <ul class="historial-evento-cambios">
+                                <?php foreach ($evento['detalles'] as $detalle): ?>
+                                    <li>
+                                        <span class="historial-evento-campo"><?= $mostrar($detalle['campo'] ?? null) ?></span>
+                                        <span class="historial-evento-transicion"><?= $mostrar($detalle['valor_anterior'] ?? null) ?> &rarr; <?= $mostrar($detalle['valor_nuevo'] ?? null) ?></span>
+                                    </li>
+                                <?php endforeach; ?>
+                            </ul>
+                            <?php if (!empty($evento['usuario'])): ?>
+                                <p class="historial-evento-usuario">Usuario: <?= $mostrar($evento['usuario']) ?></p>
+                            <?php endif; ?>
+                        <?php endif; ?>
                         <?php if (!empty($evento['url_detalle'])): ?>
                             <a class="historial-evento-link" href="<?= htmlspecialchars($evento['url_detalle'], ENT_QUOTES, 'UTF-8') ?>">Ver detalle</a>
                         <?php endif; ?>

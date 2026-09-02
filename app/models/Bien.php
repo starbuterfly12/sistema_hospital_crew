@@ -95,7 +95,8 @@ class Bien extends Model
                 valor_estimado,
                 id_responsable_actual,
                 id_ubicacion_actual,
-                observaciones
+                observaciones,
+                imagen_bien
             ) VALUES (
                 :codigo_interno,
                 :codigo_sicoin,
@@ -112,7 +113,8 @@ class Bien extends Model
                 :valor_estimado,
                 :id_responsable_actual,
                 :id_ubicacion_actual,
-                :observaciones
+                :observaciones,
+                :imagen_bien
             )
         ";
 
@@ -133,6 +135,7 @@ class Bien extends Model
             ':id_responsable_actual' => $datos['id_responsable_actual'] ?? null,
             ':id_ubicacion_actual' => $datos['id_ubicacion_actual'] ?? null,
             ':observaciones' => $datos['observaciones'] ?? null,
+            ':imagen_bien' => $datos['imagen_bien'] ?? null,
         ];
 
         $this->query($sql, $params);
@@ -163,6 +166,7 @@ class Bien extends Model
                 b.observaciones,
                 b.codigo_qr,
                 b.ruta_qr,
+                b.imagen_bien,
                 b.created_at,
                 b.updated_at,
                 cb.nombre_categoria,
@@ -189,6 +193,11 @@ class Bien extends Model
     // manipule para enviar otro valor, esta consulta nunca lo escribe. El `codigo_sicoin` SÍ puede
     // escribirse, pero solo para establecerlo por primera vez cuando estaba en NULL/vacío: el
     // controlador (BienesController::editar()) fuerza el valor existente cuando el bien ya tiene uno.
+    //
+    // El `id_estado_bien` tampoco se escribe aquí: el estado del bien cambia SOLO por sus flujos
+    // formales (Activo -> Baja vía Bien::finalizarBaja()). "Modificar bien" ya no ofrece ese campo y
+    // este UPDATE no lo toca, de modo que un POST manipulado con id_estado_bien no puede alterarlo.
+    // Este método lo usa únicamente BienesController::editar() (confirmado: único llamador).
     public function actualizar(int $idBien, array $datos): bool
     {
         $sql = "
@@ -200,7 +209,6 @@ class Bien extends Model
                 modelo = :modelo,
                 serie = :serie,
                 id_categoria = :id_categoria,
-                id_estado_bien = :id_estado_bien,
                 condicion_bien = :condicion_bien,
                 id_forma_ingreso = :id_forma_ingreso,
                 fecha_ingreso = :fecha_ingreso,
@@ -218,7 +226,6 @@ class Bien extends Model
             ':modelo' => $datos['modelo'] ?? null,
             ':serie' => $datos['serie'] ?? null,
             ':id_categoria' => $datos['id_categoria'] ?? null,
-            ':id_estado_bien' => $datos['id_estado_bien'] ?? null,
             ':condicion_bien' => $datos['condicion_bien'] ?? null,
             ':id_forma_ingreso' => $datos['id_forma_ingreso'] ?? null,
             ':fecha_ingreso' => $datos['fecha_ingreso'] ?? null,
@@ -255,6 +262,27 @@ class Bien extends Model
         return true;
     }
 
+    // Fija la fotografía principal del bien. Método propio (no forma parte de actualizar()) porque
+    // la foto solo se ESTABLECE o se SUSTITUYE, nunca se limpia desde el flujo normal de edición:
+    // meterla en actualizar() implicaría nulificarla en cada guardado que no reenvíe archivo.
+    public function actualizarImagen(int $idBien, string $rutaRelativa): bool
+    {
+        $sql = "
+            UPDATE bienes
+            SET
+                imagen_bien = :imagen_bien,
+                updated_at = NOW()
+            WHERE id_bien = :id_bien
+        ";
+
+        $this->query($sql, [
+            ':imagen_bien' => $rutaRelativa,
+            ':id_bien' => $idBien,
+        ]);
+
+        return true;
+    }
+
     // Búsqueda simple para Verificación física: SIN filtro de estado a propósito — un bien en Baja
     // sigue formando parte del inventario histórico y puede existir físicamente en Bodega, así que
     // debe poder localizarse y verificarse igual que uno Activo (a diferencia de
@@ -268,6 +296,7 @@ class Bien extends Model
                 b.codigo_interno,
                 b.codigo_sicoin,
                 b.descripcion,
+                b.imagen_bien,
                 eb.nombre_estado,
                 r.nombre_completo AS responsable_actual,
                 u.nombre_ubicacion AS ubicacion_actual
@@ -430,6 +459,7 @@ class Bien extends Model
                 b.condicion_bien,
                 b.costo,
                 b.valor_estimado,
+                b.imagen_bien,
                 b.id_estado_bien,
                 b.id_asignacion_actual,
                 a.numero_asignacion,
@@ -552,6 +582,7 @@ class Bien extends Model
                 b.condicion_bien,
                 b.costo,
                 b.valor_estimado,
+                b.imagen_bien,
                 b.id_estado_bien,
                 b.id_asignacion_actual,
                 a.numero_asignacion,

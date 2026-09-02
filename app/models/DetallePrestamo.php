@@ -79,10 +79,12 @@ class DetallePrestamo extends Model
                 dd.observaciones AS observaciones_devolucion,
                 dev.id_devolucion,
                 dev.numero_devolucion,
-                dev.fecha_devolucion
+                dev.fecha_devolucion,
+                b.imagen_bien
             FROM detalle_prestamo dp
             LEFT JOIN detalle_devolucion dd ON dd.id_detalle_prestamo = dp.id_detalle_prestamo
             LEFT JOIN devoluciones dev ON dev.id_devolucion = dd.id_devolucion
+            LEFT JOIN bienes b ON b.id_bien = dp.id_bien
             WHERE dp.id_prestamo = :id_prestamo
             ORDER BY dp.id_detalle_prestamo ASC
         ";
@@ -97,19 +99,21 @@ class DetallePrestamo extends Model
     {
         $sql = "
             SELECT
-                id_detalle_prestamo,
-                id_bien,
-                codigo_interno_mostrado,
-                codigo_sicoin_mostrado,
-                descripcion_mostrada,
-                serie_mostrada,
-                modelo_mostrado,
-                valor_prestamo,
-                condicion_entrega
-            FROM detalle_prestamo
-            WHERE id_prestamo = :id_prestamo
-              AND estado_detalle = 'prestado'
-            ORDER BY id_detalle_prestamo ASC
+                dp.id_detalle_prestamo,
+                dp.id_bien,
+                dp.codigo_interno_mostrado,
+                dp.codigo_sicoin_mostrado,
+                dp.descripcion_mostrada,
+                dp.serie_mostrada,
+                dp.modelo_mostrado,
+                dp.valor_prestamo,
+                dp.condicion_entrega,
+                b.imagen_bien
+            FROM detalle_prestamo dp
+            LEFT JOIN bienes b ON b.id_bien = dp.id_bien
+            WHERE dp.id_prestamo = :id_prestamo
+              AND dp.estado_detalle = 'prestado'
+            ORDER BY dp.id_detalle_prestamo ASC
         ";
 
         return $this->fetchAll($sql, [':id_prestamo' => $idPrestamo]);

@@ -53,9 +53,11 @@ class DetalleDevolucion extends Model
                 dp.serie_mostrada,
                 dp.modelo_mostrado,
                 dp.valor_prestamo,
-                dp.condicion_entrega
+                dp.condicion_entrega,
+                b.imagen_bien
             FROM detalle_devolucion dd
             INNER JOIN detalle_prestamo dp ON dp.id_detalle_prestamo = dd.id_detalle_prestamo
+            LEFT JOIN bienes b ON b.id_bien = dd.id_bien
             WHERE dd.id_devolucion = :id_devolucion
             ORDER BY dd.id_detalle_devolucion ASC
         ";

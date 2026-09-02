@@ -77,6 +77,7 @@ require_once __DIR__ . '/app/helpers/archivos.php';
 require_once __DIR__ . '/app/helpers/exportacion.php';
 require_once __DIR__ . '/app/helpers/respaldo_bd.php';
 require_once __DIR__ . '/app/helpers/notificaciones.php';
+require_once __DIR__ . '/app/helpers/vistas.php';
 
 $modulo = $_GET['modulo'] ?? 'auth';
 $accion = $_GET['accion'] ?? 'index';
@@ -121,6 +122,8 @@ switch ($modulo) {
             $bienesController->historial();
         } elseif ($accion === 'ver_documento') {
             $bienesController->verDocumento();
+        } elseif ($accion === 'imagen') {
+            $bienesController->imagen();
         } elseif ($accion === 'editar') {
             $bienesController->editar();
         } elseif ($accion === 'generar_qr') {

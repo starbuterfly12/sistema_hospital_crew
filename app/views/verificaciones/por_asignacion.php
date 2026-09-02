@@ -196,6 +196,12 @@ $ubicacionTexto = static function (?string $nombre, ?string $tipo): string {
                     </legend>
 
                     <div class="detail-grid">
+                        <div class="detail-item">
+                            <span class="detail-label">Fotografía</span>
+                            <span class="detail-value">
+                                <?= fotoBienThumb($idBien, $bien['imagen_bien'] ?? null, $bien['codigo_interno'] ?? null, $bien['descripcion'] ?? null, 'md', 'texto') ?>
+                            </span>
+                        </div>
                         <div class="detail-item detail-full">
                             <span class="detail-label">Descripción</span>
                             <span class="detail-value"><?= $mostrar($bien['descripcion'] ?? null) ?></span>
@@ -394,6 +400,8 @@ $ubicacionTexto = static function (?string $nombre, ?string $tipo): string {
                 refrescar();
             })();
         </script>
+
+        <?php require __DIR__ . '/../partials/modal_foto_bien.php'; ?>
 
     <?php endif; ?>
 

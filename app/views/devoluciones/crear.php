@@ -134,6 +134,8 @@ foreach ($prestamosPendientes as $prestamo) {
         </div>
     </form>
 
+    <?php require __DIR__ . '/../partials/modal_foto_bien.php'; ?>
+
     <link rel="stylesheet" href="<?= url('public/vendor/flatpickr/flatpickr.min.css') ?>">
     <script src="<?= url('public/vendor/flatpickr/flatpickr.min.js') ?>"></script>
     <script src="<?= url('public/vendor/flatpickr/l10n/es.js') ?>"></script>
@@ -232,11 +234,15 @@ foreach ($prestamosPendientes as $prestamo) {
                         ? observacionesPorBienPrevias[idDetalle]
                         : '';
 
+                    var thumb = (typeof fotoBienThumbHtml === 'function')
+                        ? fotoBienThumbHtml(detalle.id_bien, detalle.tiene_foto, detalle.codigo_interno, detalle.descripcion, 'sm')
+                        : '';
+
                     html += '<tr>'
                         + '<td><input type="checkbox" class="chk-detalle" name="detalles[]" value="' + idDetalle + '"' + marcado + '></td>'
                         + '<td>' + escapeHtml(detalle.codigo_interno || '-') + '</td>'
                         + '<td>' + escapeHtml(detalle.codigo_sicoin || '-') + '</td>'
-                        + '<td>' + escapeHtml(detalle.descripcion || '-') + '</td>'
+                        + '<td><div class="celda-bien-foto">' + thumb + '<span>' + escapeHtml(detalle.descripcion || '-') + '</span></div></td>'
                         + '<td>' + escapeHtml(detalle.serie || '-') + '</td>'
                         + '<td>' + escapeHtml(detalle.condicion_entrega || '-') + '</td>'
                         + '<td>' + construirSelectCondicion('condicion_devolucion[' + idDetalle + ']', condicionPrevia) + '</td>'

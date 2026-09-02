@@ -124,6 +124,8 @@ $idResponsableDestinoSeleccionado = (int) ($datosFormulario['id_responsable_dest
     </div>
 </form>
 
+<?php require __DIR__ . '/../partials/modal_foto_bien.php'; ?>
+
 <script>
     var bienesPorResponsable = <?= json_encode($bienesPorResponsable, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE) ?>;
     var bienesSeleccionadosPrevios = <?= json_encode($bienesSeleccionados, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
@@ -175,10 +177,14 @@ $idResponsableDestinoSeleccionado = (int) ($datosFormulario['id_responsable_dest
                 var marcado = bienesSeleccionadosPrevios.indexOf(bien.id_bien) !== -1 ? ' checked' : '';
                 var marcaModelo = [bien.marca, bien.modelo].filter(Boolean).join(' / ') || '-';
 
+                var thumb = (typeof fotoBienThumbHtml === 'function')
+                    ? fotoBienThumbHtml(bien.id_bien, bien.tiene_foto, bien.codigo_mostrado, bien.descripcion, 'sm')
+                    : '';
+
                 html += '<tr>'
                     + '<td><input type="checkbox" name="bienes[]" value="' + bien.id_bien + '"' + marcado + '></td>'
                     + '<td>' + escapeHtml(bien.codigo_mostrado || '-') + '</td>'
-                    + '<td>' + escapeHtml(bien.descripcion || '-') + '</td>'
+                    + '<td><div class="celda-bien-foto">' + thumb + '<span>' + escapeHtml(bien.descripcion || '-') + '</span></div></td>'
                     + '<td>' + escapeHtml(marcaModelo) + '</td>'
                     + '<td>' + escapeHtml(bien.serie || '-') + '</td>'
                     + '<td>' + escapeHtml(bien.condicion_bien || '-') + '</td>'

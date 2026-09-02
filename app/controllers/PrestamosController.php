@@ -376,6 +376,8 @@ class PrestamosController extends Controller
 
             return [
                 'id_bien' => (int) $bien['id_bien'],
+                // Solo un booleano: nunca se expone la ruta / nombre interno de la foto.
+                'tiene_foto' => ($bien['imagen_bien'] ?? null) !== null && trim((string) $bien['imagen_bien']) !== '',
                 'codigo_interno' => $bien['codigo_interno'],
                 'codigo_sicoin' => $codigoSicoin !== '' ? $codigoSicoin : null,
                 'descripcion' => $bien['descripcion'],

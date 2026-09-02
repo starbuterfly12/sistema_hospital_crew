@@ -317,6 +317,8 @@ class TrasladosController extends Controller
 
                     return [
                         'id_bien' => (int) $bien['id_bien'],
+                        // Solo un booleano: nunca se expone la ruta / nombre interno de la foto.
+                        'tiene_foto' => ($bien['imagen_bien'] ?? null) !== null && trim((string) $bien['imagen_bien']) !== '',
                         'codigo_mostrado' => $codigoMostrado,
                         'descripcion' => $bien['descripcion'],
                         'marca' => $bien['marca'],

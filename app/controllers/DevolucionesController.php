@@ -90,6 +90,9 @@ class DevolucionesController extends Controller
                 static function (array $detalle): array {
                     return [
                         'id_detalle_prestamo' => (int) $detalle['id_detalle_prestamo'],
+                        'id_bien' => (int) $detalle['id_bien'],
+                        // Solo un booleano: nunca se expone la ruta / nombre interno de la foto.
+                        'tiene_foto' => ($detalle['imagen_bien'] ?? null) !== null && trim((string) $detalle['imagen_bien']) !== '',
                         'codigo_interno' => $detalle['codigo_interno_mostrado'],
                         'codigo_sicoin' => $detalle['codigo_sicoin_mostrado'],
                         'descripcion' => $detalle['descripcion_mostrada'],

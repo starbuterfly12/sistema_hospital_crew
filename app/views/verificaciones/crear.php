@@ -73,6 +73,22 @@ $rutaVolver = $bienSeleccionado !== null
         </div>
     </form>
 
+    <?php
+        // Segunda vía para localizar el bien: apuntar la cámara al QR que ya tiene pegado. No sustituye
+        // el buscador manual; sólo evita teclear el código. Al leer un QR válido se entra al MISMO
+        // flujo que "Seleccionar" (index.php?modulo=verificaciones&accion=crear&id_bien=<id>).
+    ?>
+    <div class="qr-scanner-lanzador">
+        <span class="qr-scanner-lanzador-o">o</span>
+        <button type="button" class="btn btn-secondary" data-abrir-qr-scanner>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                <rect x="8.5" y="10.5" width="7" height="7" rx="1"/>
+            </svg>
+            Escanear QR
+        </button>
+    </div>
+
     <?php if ($busqueda !== ''): ?>
         <?php if (empty($resultadosBusqueda)): ?>
             <p class="estado-vacio">No se encontraron bienes con ese criterio.</p>
@@ -95,7 +111,12 @@ $rutaVolver = $bienSeleccionado !== null
                             <tr>
                                 <td><?= $mostrar($resultado['codigo_interno']) ?></td>
                                 <td><?= $mostrar($resultado['codigo_sicoin']) ?></td>
-                                <td><?= $mostrar($resultado['descripcion']) ?></td>
+                                <td>
+                                    <div class="celda-bien-foto">
+                                        <?= fotoBienThumb((int) $resultado['id_bien'], $resultado['imagen_bien'] ?? null, $resultado['codigo_interno'] ?? null, $resultado['descripcion'] ?? null, 'sm', 'raya') ?>
+                                        <span><?= $mostrar($resultado['descripcion']) ?></span>
+                                    </div>
+                                </td>
                                 <td><?= $mostrar($resultado['nombre_estado']) ?></td>
                                 <td><?= $mostrar($resultado['responsable_actual']) ?></td>
                                 <td><?= $mostrar($resultado['ubicacion_actual']) ?></td>
@@ -110,6 +131,36 @@ $rutaVolver = $bienSeleccionado !== null
         <?php endif; ?>
     <?php endif; ?>
 </div>
+
+<?php
+    // Modal de cámara para escanear el QR del bien. Sólo aparece mientras no hay bien seleccionado
+    // (una vez cargado el bien, la localización ya está hecha). La lógica vive en
+    // public/js/qr-scanner.js; jsQR (public/vendor/jsqr) se carga antes. Sin CDN.
+?>
+<div id="modal-qr-scanner" class="modal-overlay" data-destino-base="index.php?modulo=verificaciones&accion=crear">
+    <div class="modal-caja modal-caja-scanner" role="dialog" aria-modal="true" aria-labelledby="modal-qr-scanner-titulo">
+        <h2 id="modal-qr-scanner-titulo" class="modal-qr-titulo">Escanear código QR</h2>
+        <p class="form-hint">Coloque el código QR del bien frente a la cámara.</p>
+
+        <div class="qr-scanner-video-wrap">
+            <video id="qr-scanner-video" class="qr-scanner-video" muted playsinline></video>
+            <span class="qr-scanner-guia" aria-hidden="true"></span>
+        </div>
+
+        <p id="qr-scanner-estado" class="qr-scanner-estado" role="status" aria-live="polite"></p>
+        <p id="qr-scanner-mensaje" class="qr-scanner-mensaje" role="alert" hidden></p>
+
+        <canvas id="qr-scanner-canvas" hidden aria-hidden="true"></canvas>
+
+        <div class="form-actions">
+            <button type="button" id="qr-scanner-reintentar" class="btn btn-primary" hidden>Intentar nuevamente</button>
+            <button type="button" class="btn btn-secondary" data-cerrar-qr-scanner>Cerrar</button>
+        </div>
+    </div>
+</div>
+
+<script src="<?= url('public/vendor/jsqr/jsQR.js') ?>"></script>
+<script src="<?= url('public/js/qr-scanner.js') ?>"></script>
 <?php endif; ?>
 
 <?php if ($bienSeleccionado !== null): ?>
@@ -119,6 +170,16 @@ $rutaVolver = $bienSeleccionado !== null
     </div>
 
     <div class="detail-card">
+        <div class="detail-section">
+            <h2 class="form-section-title">Fotografía del bien</h2>
+            <?php if (!empty($bienSeleccionado['imagen_bien'])): ?>
+                <?= fotoBienThumb((int) $bienSeleccionado['id_bien'], $bienSeleccionado['imagen_bien'], $bienSeleccionado['codigo_interno'] ?? null, $bienSeleccionado['descripcion'] ?? null, 'lg', 'nada') ?>
+                <p class="form-hint">Apoyo visual para confirmar que es el bien buscado. Clic en la imagen para ampliarla.</p>
+            <?php else: ?>
+                <p class="detail-value detail-value-discreto">Sin fotografía registrada</p>
+            <?php endif; ?>
+        </div>
+
         <div class="detail-section">
             <h2 class="form-section-title">B. Datos del bien</h2>
             <div class="detail-grid">
@@ -365,3 +426,5 @@ $rutaVolver = $bienSeleccionado !== null
         })();
     </script>
 <?php endif; ?>
+
+<?php require __DIR__ . '/../partials/modal_foto_bien.php'; ?>

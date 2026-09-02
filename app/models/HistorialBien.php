@@ -22,7 +22,10 @@ class HistorialBien extends Model
     //   fecha        string 'Y-m-d H:i:s' o 'Y-m-d'  (clave de orden; comparación lexicográfica = cronológica)
     //   es_datetime  bool   (true si la fuente tiene hora real; false si solo DATE)
     //   tipo         string (Ingreso | Requisición | Traslado | Préstamo | Devolución |
-    //                        Verificación física | SICOIN | Baja)
+    //                        Verificación física | SICOIN | Baja | Modificación de información)
+    //   detalles     array|null (solo "Modificación de información": lista de
+    //                        ['campo','valor_anterior','valor_nuevo'] para render estructurado)
+    //   usuario      string|null (solo "Modificación de información": nombre de quien editó)
     //   titulo       string corto
     //   descripcion  string frase
     //   referencia   string|null  (número de documento)
@@ -37,7 +40,8 @@ class HistorialBien extends Model
             $this->eventosDevolucion($idBien),
             $this->eventosVerificacion($idBien),
             $this->eventosSicoin($idBien),
-            $this->eventosBaja($idBien)
+            $this->eventosBaja($idBien),
+            $this->eventosModificacion($idBien)
         );
 
         // Más reciente primero. Desempate estable por tipo para que dos eventos del mismo instante
@@ -61,9 +65,17 @@ class HistorialBien extends Model
     }
 
     // ---------------------------------------------------------------------------------------
-    // INGRESO — 1 evento. Fecha: bienes.fecha_ingreso (DATE). Incluye forma de ingreso,
-    // procedencia/proveedor, código interno, SICOIN vigente en ese momento (reconstruido) y el
-    // resguardo inicial (primer detalle_asignacion del bien).
+    // INGRESO — 1 evento. Incluye forma de ingreso, procedencia/proveedor, código interno, SICOIN
+    // vigente en ese momento (reconstruido) y el resguardo inicial (primer detalle_asignacion).
+    //
+    // Los datos MUTABLES del ingreso (fecha de ingreso, proveedor, entidad donante, procedencia,
+    // unidad ejecutora de origen) salen del SNAPSHOT congelado `ingreso_bien_original` cuando existe
+    // — así una edición posterior desde "Modificar bien" NO reescribe este evento histórico; el
+    // cambio se ve aparte, en el evento "Modificación de información". COALESCE(snapshot, valor vivo)
+    // deja como fallback el comportamiento anterior si por algún dato antiguo faltara el snapshot
+    // (tras la migración de backfill todo bien tiene uno, así que el fallback es excepcional).
+    // NO se congelan aquí: codigo_interno (inmutable), forma de ingreso (bloqueada), SICOIN
+    // ("al ingreso" ya se reconstruye de historial_sicoin) ni el resguardo inicial (detalle_asignacion).
     // ---------------------------------------------------------------------------------------
     private function eventoIngreso(int $idBien): array
     {
@@ -71,13 +83,13 @@ class HistorialBien extends Model
             SELECT
                 b.codigo_interno,
                 b.codigo_sicoin,
-                b.fecha_ingreso,
+                COALESCE(ibo.fecha_ingreso_original, b.fecha_ingreso) AS fecha_ingreso,
                 fi.nombre_forma,
-                ic.proveedor AS compra_proveedor,
-                idn.entidad_donante AS donacion_entidad,
-                idn.procedencia AS donacion_procedencia,
-                itr.procedencia AS traslado_procedencia,
-                itr.unidad_ejecutora_origen AS traslado_unidad,
+                COALESCE(ibo.proveedor_original, ic.proveedor) AS compra_proveedor,
+                COALESCE(ibo.entidad_donante_original, idn.entidad_donante) AS donacion_entidad,
+                COALESCE(ibo.procedencia_donacion_original, idn.procedencia) AS donacion_procedencia,
+                COALESCE(ibo.procedencia_traslado_original, itr.procedencia) AS traslado_procedencia,
+                COALESCE(ibo.unidad_ejecutora_origen_original, itr.unidad_ejecutora_origen) AS traslado_unidad,
                 (SELECT COUNT(*) FROM historial_sicoin h WHERE h.id_bien = b.id_bien) AS n_hist_sicoin,
                 (
                     SELECT h.sicoin_anterior
@@ -91,6 +103,7 @@ class HistorialBien extends Model
             LEFT JOIN ingreso_compra ic ON ic.id_bien = b.id_bien
             LEFT JOIN ingreso_donacion idn ON idn.id_bien = b.id_bien
             LEFT JOIN ingreso_traslado itr ON itr.id_bien = b.id_bien
+            LEFT JOIN ingreso_bien_original ibo ON ibo.id_bien = b.id_bien
             WHERE b.id_bien = :id_bien
             LIMIT 1
         ";
@@ -457,6 +470,77 @@ class HistorialBien extends Model
                     . ($justificacion !== '' ? ' Justificación: ' . $justificacion : ''),
                 'referencia' => (string) $fila['numero_baja'],
                 'url_detalle' => 'index.php?modulo=bajas&accion=ver&id=' . (int) $fila['id_baja'],
+            ];
+        }
+
+        return $eventos;
+    }
+
+    // ---------------------------------------------------------------------------------------
+    // MODIFICACIÓN DE INFORMACIÓN — historial_modificaciones_bien (fecha_hora DATETIME). Un evento
+    // por `grupo_cambio` (un guardado de "Modificar bien"), con todos los campos que cambiaron en
+    // ese guardado. NO incluye SICOIN (su fuente es historial_sicoin -> eventosSicoin()) ni estado
+    // del bien (deja de ser editable desde Modificar). Consulta propia, mismo patrón self-contained
+    // que el resto de este modelo (no llama a HistorialModificacionBien).
+    // ---------------------------------------------------------------------------------------
+    private function eventosModificacion(int $idBien): array
+    {
+        $sql = "
+            SELECT
+                h.grupo_cambio,
+                h.campo,
+                h.valor_anterior,
+                h.valor_nuevo,
+                h.fecha_hora,
+                u.nombre_completo AS usuario_nombre
+            FROM historial_modificaciones_bien h
+            LEFT JOIN usuarios u ON u.id_usuario = h.id_usuario
+            WHERE h.id_bien = :id_bien
+            ORDER BY h.fecha_hora ASC, h.grupo_cambio ASC, h.id_historial_modificacion ASC
+        ";
+
+        $grupos = [];
+        foreach ($this->fetchAll($sql, [':id_bien' => $idBien]) as $fila) {
+            $clave = (string) $fila['grupo_cambio'];
+
+            if (!isset($grupos[$clave])) {
+                $grupos[$clave] = [
+                    'fecha' => (string) $fila['fecha_hora'],
+                    'usuario' => trim((string) ($fila['usuario_nombre'] ?? '')),
+                    'lineas' => [],
+                    'detalles' => [],
+                ];
+            }
+
+            $anterior = ($fila['valor_anterior'] !== null && trim((string) $fila['valor_anterior']) !== '')
+                ? (string) $fila['valor_anterior']
+                : 'Sin registro';
+            $nuevo = ($fila['valor_nuevo'] !== null && trim((string) $fila['valor_nuevo']) !== '')
+                ? (string) $fila['valor_nuevo']
+                : 'Sin registro';
+
+            $grupos[$clave]['lineas'][] = $fila['campo'] . ': ' . $anterior . ' → ' . $nuevo . '.';
+            $grupos[$clave]['detalles'][] = [
+                'campo' => (string) $fila['campo'],
+                'valor_anterior' => $anterior,
+                'valor_nuevo' => $nuevo,
+            ];
+        }
+
+        $eventos = [];
+        foreach ($grupos as $grupo) {
+            $totalCampos = count($grupo['detalles']);
+            $eventos[] = [
+                'fecha' => $grupo['fecha'],
+                'es_datetime' => true,
+                'tipo' => 'Modificación de información',
+                'titulo' => 'Modificación de información',
+                'descripcion' => ($totalCampos === 1 ? 'Se modificó 1 campo del bien.' : 'Se modificaron ' . $totalCampos . ' campos del bien.')
+                    . ($grupo['usuario'] !== '' ? ' Modificado por ' . $grupo['usuario'] . '.' : ''),
+                'detalles' => $grupo['detalles'],
+                'usuario' => $grupo['usuario'] !== '' ? $grupo['usuario'] : null,
+                'referencia' => null,
+                'url_detalle' => null,
             ];
         }
 

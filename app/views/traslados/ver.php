@@ -138,7 +138,12 @@ $idMovimiento = (int) ($movimiento['id_movimiento'] ?? 0);
                         <?php foreach ($detalles as $detalle): ?>
                             <tr>
                                 <td><?= $mostrar($detalle['codigo_mostrado'] ?? null) ?></td>
-                                <td><?= $mostrar($construirDescripcion($detalle)) ?></td>
+                                <td>
+                                    <div class="celda-bien-foto">
+                                        <?= fotoBienThumb((int) ($detalle['id_bien'] ?? 0), $detalle['imagen_bien'] ?? null, $detalle['codigo_mostrado'] ?? null, $construirDescripcion($detalle), 'sm', 'raya') ?>
+                                        <span><?= $mostrar($construirDescripcion($detalle)) ?></span>
+                                    </div>
+                                </td>
                                 <td><?= $mostrar($detalle['serie'] ?? null) ?></td>
                                 <td><?= $mostrar($detalle['condicion_nueva'] ?? null) ?></td>
                                 <td><?= formatearQuetzales($detalle['valor_movimiento'] ?? null) ?></td>
@@ -151,3 +156,5 @@ $idMovimiento = (int) ($movimiento['id_movimiento'] ?? 0);
         <?php endif; ?>
     </div>
 </div>
+
+<?php require __DIR__ . '/../partials/modal_foto_bien.php'; ?>
